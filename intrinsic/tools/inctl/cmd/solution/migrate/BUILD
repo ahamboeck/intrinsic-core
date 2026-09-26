@@ -15,27 +15,21 @@
 load("//bazel:go_macros.bzl", "go_library")
 
 go_library(
-    name = "solution",
-    srcs = [
-        "solution.go",
-    ],
-    importpath = "intrinsic/tools/inctl/cmd/solution/solution",
-    visibility = [
-        "//intrinsic/skills/tools:__subpackages__",
-        "//intrinsic/tools/inctl:__subpackages__",
-    ],
+    name = "migrate",
+    srcs = ["migrate.go"],
+    importpath = "intrinsic/tools/inctl/cmd/solution/migrate/migrate",
+    visibility = ["//intrinsic/tools/inctl/cmd/solution:__pkg__"],
     deps = [
-        "//intrinsic/tools/inctl/cmd:root",
-        "//intrinsic/tools/inctl/cmd/solution/create",
-        "//intrinsic/tools/inctl/cmd/solution/delete",
-        "//intrinsic/tools/inctl/cmd/solution/get",
-        "//intrinsic/tools/inctl/cmd/solution/list",
-        "//intrinsic/tools/inctl/cmd/solution/migrate",
-        "//intrinsic/tools/inctl/cmd/solution/share",
-        "//intrinsic/tools/inctl/cmd/solution/start",
-        "//intrinsic/tools/inctl/cmd/solution/stop",
+        "//intrinsic/solution_versions/proto/v1alpha1:motion_planner_service_migration_go_proto",
+        "//intrinsic/solution_versions/proto/v1alpha1:solution_migration_go_proto",
+        "//intrinsic/tools/inctl/auth",
+        "//intrinsic/tools/inctl/util:color",
         "//intrinsic/tools/inctl/util:orgutil",
+        "//intrinsic/tools/inctl/util:printer",
         "@com_github_spf13_cobra//:go_default_library",
         "@com_github_spf13_viper//:go_default_library",
-    ] + [],
+        "@org_golang_google_grpc//:go_default_library",
+        "@org_golang_google_protobuf//encoding/protojson",
+        "@org_golang_google_protobuf//proto",
+    ],
 )
