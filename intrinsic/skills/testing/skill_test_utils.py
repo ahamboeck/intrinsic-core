@@ -39,22 +39,10 @@ from intrinsic.motion_planning.proto.v1 import motion_planner_service_pb2_grpc
 from intrinsic.resources.proto import resource_handle_pb2
 from intrinsic.skills.internal import execute_context_impl
 from intrinsic.skills.internal import get_footprint_context_impl
-
-# isort: off
-
-from intrinsic.skills.internal import predict_context_impl
-
-# isort: on
 from intrinsic.skills.internal import preview_context_impl
 from intrinsic.skills.proto import skill_manifest_pb2
 from intrinsic.skills.python import execute_request
 from intrinsic.skills.python import get_footprint_request
-
-# isort: off
-
-from intrinsic.skills.python import predict_request
-
-# isort: on
 from intrinsic.skills.python import preview_request
 from intrinsic.skills.python import skill_canceller
 from intrinsic.skills.python import skill_interface
@@ -367,102 +355,6 @@ def make_test_preview_context(
       resource_handles=resource_handles,
       context_id=context_id,
   )
-
-
-
-def make_test_predict_request(
-    internal_data: Optional[bytes] = None,
-    params: Optional[predict_request.TParamsType] = None,
-) -> skill_interface.PredictRequest[predict_request.TParamsType]:
-  """Makes a PredictRequest for testing.
-
-  All arguments are optional; testing defaults are used for any omitted
-  argument.
-
-  Args:
-    internal_data: Internal data bytes, or None for empty bytes.
-    params: The skill parameters proto, or None for Empty().
-
-  Returns:
-    The testing PredictRequest.
-  """
-  if internal_data is None:
-    internal_data = bytes()
-  if params is None:
-    params = empty_pb2.Empty()
-
-  return skill_interface.PredictRequest(
-      internal_data=internal_data,
-      params=params,
-  )
-
-
-def make_test_predict_context(
-
-    geometry_service: Optional[
-        geometry_service_pb2_grpc.GeometryServiceStub
-    ] = None,
-
-    motion_planner: Optional[motion_planner_client.MotionPlannerClient] = None,
-    object_world: Optional[object_world_client.ObjectWorldClient] = None,
-    resource_handles: Optional[
-        dict[str, resource_handle_pb2.ResourceHandle]
-    ] = None,
-) -> skill_interface.PredictContext:
-  """Makes a PredictContext for testing.
-
-  All arguments are optional; testing defaults are used for any omitted
-  argument.
-
-  Args:
-    geometry_service: Stub to the geometry service, or None for a mock stub.
-    motion_planner: The motion planner client to provide, or None for a mock
-      client.
-    object_world: The object world client to provide, or None for a mock
-      client.
-    resource_handles: Handles for the required resources for this skill, or
-      None for an empty map.
-
-  Returns:
-    The testing PredictContext.
-  """
-
-  if geometry_service is None:
-    geometry_service = cast(
-        geometry_service_pb2_grpc.GeometryServiceStub, mock.MagicMock()
-    )
-
-  if motion_planner is None:
-    motion_planner = motion_planner_client.MotionPlannerClient(
-        world_id=_TEST_WORLD_ID,
-        stub=cast(
-            motion_planner_service_pb2_grpc.MotionPlannerServiceStub,
-            mock.MagicMock(),
-        ),
-    )
-  if object_world is None:
-    object_world = object_world_client.ObjectWorldClient(
-        world_id=_TEST_WORLD_ID,
-        stub=cast(
-            object_world_service_pb2_grpc.ObjectWorldServiceStub,
-            mock.MagicMock(),
-        ),
-
-        geometry_service_stub=geometry_service,
-
-    )
-  if resource_handles is None:
-    resource_handles = {}
-
-  return predict_context_impl.PredictContextImpl(
-      geometry_service=geometry_service,  
-      motion_planner=motion_planner,
-      object_world=object_world,
-      resource_handles=resource_handles,
-  )
-
-
-
 
 
 def make_test_get_footprint_request(
