@@ -199,10 +199,35 @@ func (s *DeployService) StartIdleWorkcellSpec(ctx context.Context) error {
 		return nil
 	}
 
-	if err := s.stopSolution(ctx); err != nil {
-		return fmt.Errorf("stopSolution failed to set an idle state for the cluster: %w", err)
+	if err := s.applyIdleWorkcellSpec(ctx); err != nil {
+		return fmt.Errorf("applyIdleWorkcellSpec failed to set an idle state for the cluster: %w", err)
 	}
 
+	return nil
+}
+
+func (s *DeployService) applyIdleWorkcellSpec(ctx context.Context) error {
+	defaultWorkcellSpec, err := s.defaultWorkcellSpec(ctx)
+	if err != nil {
+		log.ErrorContextf(ctx, "s.defaultWorkcellSpec(ctx) failed: %v", err)
+		return fmt.Errorf("failed to get default workcell spec: %w", err)
+	}
+	ws, err := render.WorkcellSpecFromApplication(&render.ApplicationParams{
+		DefaultWorkcellSpec: defaultWorkcellSpec,
+		ClusterParams:       s.clusterParams,
+		InitDataFilesParams: s.initDataFiles,
+		Simulated:           !s.clusterInfo.CanDoPhysicalExecution, // Unvalidated heuristic for most likely next operation mode.
+	})
+	if err != nil {
+		log.ErrorContextf(ctx, "WorkcellSpecFromApplication(...) failed: %v", err)
+		return fmt.Errorf("failed to render the solution charts: %w", err)
+	}
+
+	log.InfoContext(ctx, "Calling the transfer service to deploy intrinsic-app-chart, resources, and skills charts")
+	if err := s.transferService.ApplyWorkcellSpec(ctx, ws); err != nil {
+		log.ErrorContextf(ctx, "s.transferService.ApplyWorkcellSpec(ws=%v) failed: %v", ws, err)
+		return fmt.Errorf("failed to apply the workcell spec: %w", err)
+	}
 	return nil
 }
 
@@ -684,26 +709,9 @@ func (s *DeployService) stopSolution(ctx context.Context) error {
 		return fmt.Errorf("failed to cluster the solution state: %w", err)
 	}
 
-	defaultWorkcellSpec, err := s.defaultWorkcellSpec(ctx)
-	if err != nil {
-		log.ErrorContextf(ctx, "s.defaultWorkcellSpec(ctx) failed: %v", err)
-		return status.Errorf(codes.Internal, "failed to get default workcell spec: %v", err)
-	}
-	ws, err := render.WorkcellSpecFromApplication(&render.ApplicationParams{
-		DefaultWorkcellSpec: defaultWorkcellSpec,
-		ClusterParams:       s.clusterParams,
-		InitDataFilesParams: s.initDataFiles,
-		Simulated:           !s.clusterInfo.CanDoPhysicalExecution, // Unvalidated heuristic for most likely next operation mode.
-	})
-	if err != nil {
-		log.ErrorContextf(ctx, "WorkcellSpecFromApplication(...) failed: %v", err)
-		return status.Errorf(codes.Internal, "render workcell spec: %v", err)
-	}
-
-	log.InfoContext(ctx, "Calling the transfer service to deploy intrinsic-app-chart, resources, and skills charts")
-	if err := s.transferService.ApplyWorkcellSpec(ctx, ws); err != nil {
-		log.ErrorContextf(ctx, "s.transferService.ApplyWorkcellSpec(ws=%v) failed: %v", ws, err)
-		return status.Errorf(codes.Internal, "failed to create and apply workcell spec: %v", err)
+	if err := s.applyIdleWorkcellSpec(ctx); err != nil {
+		log.ErrorContextf(ctx, "s.applyIdleWorkcellSpec(ctx) failed: %v", err)
+		return status.Errorf(codes.Internal, "failed to move charts back to an idle state: %v", err)
 	}
 
 	if err := s.resourceTypeRuntimeClient.Clear(ctx); err != nil {
