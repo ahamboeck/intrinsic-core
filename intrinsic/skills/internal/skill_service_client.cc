@@ -70,6 +70,7 @@ namespace {
 
 constexpr int kAsyncLogQueueSize = 200;
 
+
 absl::StatusOr<intrinsic_proto::skills::PredictRequest>
 BuildPredictRequestAndContextWithoutWorld(
     const intrinsic_proto::skills::SkillInstance& instance,
@@ -86,6 +87,7 @@ BuildPredictRequestAndContextWithoutWorld(
 
   return request;
 }
+
 
 absl::StatusOr<intrinsic_proto::skills::GetFootprintRequest>
 BuildGetFootprintRequestAndContextWithoutWorld(
@@ -312,6 +314,7 @@ absl::Status SkillServiceClient::AddLogRequest(
   return absl::OkStatus();
 }
 
+
 absl::StatusOr<intrinsic_proto::skills::PredictResult>
 SkillServiceClient::Predict(
     absl::string_view world_id, const google::protobuf::Any& params,
@@ -400,6 +403,7 @@ SkillServiceClient::Predict(
 
   return response;
 }
+
 
 absl::StatusOr<intrinsic_proto::skills::GetFootprintResult>
 SkillServiceClient::GetFootprint(

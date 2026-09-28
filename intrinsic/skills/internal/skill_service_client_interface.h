@@ -46,6 +46,7 @@ class SkillServiceClientInterface {
   virtual void InitConcurrentLogging() = 0;
   virtual void TearDownConcurrentLogging() = 0;
 
+
   // Invokes the Predict rpc.
   //
   // If timeout is omitted, a default timeout will be used.
@@ -53,6 +54,7 @@ class SkillServiceClientInterface {
       absl::string_view world_id, const google::protobuf::Any& params,
       absl::string_view internal_data, std::optional<absl::Duration> timeout,
       const intrinsic_proto::data_logger::Context& context) = 0;
+
 
   // Invokes the GetFootprint rpc.
   //

@@ -1296,9 +1296,10 @@ void ClipsSkillDispatcher::StartSkillProjection(
           skill_instance.GetClient()->TearDownConcurrentLogging();
         };
 
-        // actual prediction call, this is potentially long-running
         LOG(INFO) << "Calling skill " << behavior_call_proto.skill_id()
-                  << " (Projecting-Predict)";
+                  << " (Projecting)";
+
+        // actual prediction call, this is potentially long-running
         absl::StatusOr<intrinsic_proto::skills::PredictResult> predict_result =
             skill_instance.GetClient()->Predict(
                 world_id, behavior_call_proto.parameters(),
@@ -1366,6 +1367,7 @@ void ClipsSkillDispatcher::StartSkillProjection(
                       << " internal_data.";
           }
         }
+
 
         // actual get footprint call, this is potentially long-running
         absl::StatusOr<intrinsic_proto::skills::GetFootprintResult>
