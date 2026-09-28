@@ -119,30 +119,6 @@ options {
 }
 dependencies {
   required_equipment {
-    key: "camera_1"
-    value {
-      capability_names: "CameraConfig"
-    }
-  }
-  required_equipment {
-    key: "camera_2"
-    value {
-      capability_names: "CameraConfig"
-    }
-  }
-  required_equipment {
-    key: "camera_3"
-    value {
-      capability_names: "CameraConfig"
-    }
-  }
-  required_equipment {
-    key: "camera_4"
-    value {
-      capability_names: "CameraConfig"
-    }
-  }
-  required_equipment {
     key: "perception"
     value {
       capability_names: "intrinsic_proto.perception.v1.PoseEstimationService"
