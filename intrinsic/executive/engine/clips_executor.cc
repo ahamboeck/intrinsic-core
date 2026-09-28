@@ -1030,7 +1030,8 @@ absl::Status ClipsExecutor::RecordOperationExtendedStatus(
   // stored in operation_extended_status_with_legacy_errors_ and log and record
   // that.
   absl::StatusOr<intrinsic_proto::status::ExtendedStatus> operation_es =
-      GetOperationExtendedStatusNoLock(operation_name);
+      BuildOperationExtendedStatusWithLegacyErrors(
+          clips_.get(), proto_mgr_.get(), operation_name);
   if (operation_es.ok()) {
     operation_extended_status_full.emplace(std::move(*operation_es));
   } else {
@@ -1039,10 +1040,10 @@ absl::Status ClipsExecutor::RecordOperationExtendedStatus(
     intrinsic_proto::status::ExtendedStatus op_es = CreateExtendedStatus(
         13000, "Failed to get additional error information.");
     op_es.mutable_debug_report()->set_message(operation_es.status().ToString());
+    AddExtendedStatusLegacyErrors(clips_.get(), op_es);
     operation_extended_status_full.emplace(op_es);
   }
 
-  AddExtendedStatusLegacyErrors(clips_.get(), *operation_extended_status_full);
   AddExtendedStatusDebugInformation(*operation_extended_status_full,
                                     facts_before, trace);
   absl::Status log_status = LogExecutiveExtendedStatus(
@@ -1132,30 +1133,6 @@ absl::Status ClipsExecutor::LogExecutiveExtendedStatus(
       data_logger::Builder::From(es)
           .WithContext(GetStateLogContextNoLock(operation_name))
           .Item());
-}
-
-absl::StatusOr<intrinsic_proto::status::ExtendedStatus>
-ClipsExecutor::GetOperationExtendedStatusNoLock(std::string_view operation_name)
-    ABSL_EXCLUSIVE_LOCKS_REQUIRED(clips_->mutex()) {
-  clips_->mutex()->AssertHeld();
-  INTR_ASSIGN_OR_RETURN(
-      clips::Fact op_fact,
-      clips_->GetUniqueFact("operation-envelope", {{"name", operation_name}}));
-  INTR_ASSIGN_OR_RETURN(clips::Value extended_status_proto_id_val,
-                        op_fact.GetSlotValue("extended-status-proto-id"));
-  INTR_ASSIGN_OR_RETURN(int64_t extended_status_proto_id_int,
-                        extended_status_proto_id_val.GetInteger());
-  clips::ProtoMessageId extended_status_proto_id(extended_status_proto_id_int);
-  if (extended_status_proto_id == clips::ProtobufManager::kInvalidId) {
-    return absl::InternalError(absl::StrFormat(
-        "Failed to retrieve extended status from operation '%s'",
-        operation_name));
-  }
-  INTR_ASSIGN_OR_RETURN(
-      auto extended_status_ptr,
-      proto_mgr_->GetProtoAs<intrinsic_proto::status::ExtendedStatus>(
-          extended_status_proto_id));
-  return *extended_status_ptr;
 }
 
 absl::StatusOr<clips::TraceSpanReferenceId>
@@ -2349,7 +2326,8 @@ absl::Status ClipsExecutor::DeleteOperation(std::string_view operation_name)
           run_status.status().message());
     }
     absl::StatusOr<intrinsic_proto::status::ExtendedStatus> operation_es =
-        GetOperationExtendedStatusNoLock(operation_name);
+        GetOperationExtendedStatus(clips_.get(), proto_mgr_.get(),
+                                   operation_name);
     if (operation_es.ok()) {
       *delete_fail_es.add_context() = std::move(*operation_es);
     }

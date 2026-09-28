@@ -14,17 +14,23 @@
 
 #include "intrinsic/executive/clips/cc/operation_error.h"
 
+#include <cstdint>
+#include <memory>
 #include <string>
+#include <string_view>
 #include <vector>
 
 #include "absl/base/nullability.h"
 #include "absl/log/log.h"
+#include "absl/status/status.h"
 #include "absl/status/statusor.h"
 #include "absl/strings/str_format.h"
 #include "intrinsic/executive/clips_cpp/environment.h"
 #include "intrinsic/executive/clips_cpp/fact.h"
+#include "intrinsic/executive/clips_cpp/protobuf.h"
 #include "intrinsic/executive/clips_cpp/value.h"
 #include "intrinsic/util/status/extended_status.pb.h"
+#include "intrinsic/util/status/status_macros.h"
 #include "intrinsic/util/status/status_specs.h"
 
 namespace intrinsic::executive {
@@ -87,6 +93,44 @@ void AddExtendedStatusLegacyErrors(
         kLegacyErrorStatusCode,
         absl::StrFormat("Additional error info: %s", error_msg));
   }
+}
+
+absl::StatusOr<intrinsic_proto::status::ExtendedStatus>
+GetOperationExtendedStatus(clips::Environment* absl_nonnull env,
+                           clips::ProtobufManager* absl_nonnull proto_mgr,
+                           std::string_view operation_name) {
+  env->mutex()->AssertHeld();
+  INTR_ASSIGN_OR_RETURN(
+      clips::Fact op_fact,
+      env->GetUniqueFact("operation-envelope", {{"name", operation_name}}));
+  INTR_ASSIGN_OR_RETURN(clips::Value extended_status_proto_id_val,
+                        op_fact.GetSlotValue("extended-status-proto-id"));
+  INTR_ASSIGN_OR_RETURN(int64_t extended_status_proto_id_int,
+                        extended_status_proto_id_val.GetInteger());
+  clips::ProtoMessageId extended_status_proto_id(extended_status_proto_id_int);
+  if (extended_status_proto_id == clips::ProtobufManager::kInvalidId) {
+    return absl::InternalError(absl::StrFormat(
+        "Failed to retrieve extended status from operation '%s'",
+        operation_name));
+  }
+  INTR_ASSIGN_OR_RETURN(
+      std::unique_ptr<intrinsic_proto::status::ExtendedStatus>
+          extended_status_ptr,
+      proto_mgr->GetProtoAs<intrinsic_proto::status::ExtendedStatus>(
+          extended_status_proto_id));
+  return *extended_status_ptr;
+}
+
+absl::StatusOr<intrinsic_proto::status::ExtendedStatus>
+BuildOperationExtendedStatusWithLegacyErrors(
+    clips::Environment* absl_nonnull env,
+    clips::ProtobufManager* absl_nonnull proto_mgr,
+    std::string_view operation_name) {
+  INTR_ASSIGN_OR_RETURN(
+      intrinsic_proto::status::ExtendedStatus es,
+      GetOperationExtendedStatus(env, proto_mgr, operation_name));
+  AddExtendedStatusLegacyErrors(env, es);
+  return es;
 }
 
 }  // namespace intrinsic::executive

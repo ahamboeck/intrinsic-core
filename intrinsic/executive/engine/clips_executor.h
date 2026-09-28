@@ -480,10 +480,6 @@ class ClipsExecutor {
   intrinsic_proto::data_logger::Context GetStateLogContextNoLock(
       std::string_view operation_name)
       ABSL_EXCLUSIVE_LOCKS_REQUIRED(clips_->mutex());
-  // Retrieves the extended status on the operation-envelope
-  absl::StatusOr<intrinsic_proto::status::ExtendedStatus>
-  GetOperationExtendedStatusNoLock(std::string_view operation_name)
-      ABSL_EXCLUSIVE_LOCKS_REQUIRED(clips_->mutex());
   absl::Status SetWorldId(absl::string_view flag_name,
                           absl::string_view world_id)
       ABSL_EXCLUSIVE_LOCKS_REQUIRED(clips_->mutex());

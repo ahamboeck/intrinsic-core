@@ -16,11 +16,14 @@
 #define INTRINSIC_EXECUTIVE_CLIPS_CC_OPERATION_ERROR_H_
 
 #include <string>
+#include <string_view>
 #include <vector>
 
 #include "absl/base/nullability.h"
 #include "absl/base/thread_annotations.h"
+#include "absl/status/statusor.h"
 #include "intrinsic/executive/clips_cpp/environment.h"
+#include "intrinsic/executive/clips_cpp/protobuf.h"
 #include "intrinsic/util/status/extended_status.pb.h"
 
 namespace intrinsic::executive {
@@ -43,6 +46,22 @@ std::vector<std::string> GetClipsLegacyErrorMessages(
 // These are errors that have not been migrated to ExtendedStatus, yet.
 void AddExtendedStatusLegacyErrors(clips::Environment* absl_nonnull env,
                                    intrinsic_proto::status::ExtendedStatus& es)
+    ABSL_EXCLUSIVE_LOCKS_REQUIRED(env->mutex());
+
+// Retrieves the ExtendedStatus of the operation-envelope of the given
+// operation, as-is.
+absl::StatusOr<intrinsic_proto::status::ExtendedStatus>
+GetOperationExtendedStatus(clips::Environment* absl_nonnull env,
+                           clips::ProtobufManager* absl_nonnull proto_mgr,
+                           std::string_view operation_name)
+    ABSL_EXCLUSIVE_LOCKS_REQUIRED(env->mutex());
+
+// As GetOperationExtendedStatus, but with the errors facts added as context.
+absl::StatusOr<intrinsic_proto::status::ExtendedStatus>
+BuildOperationExtendedStatusWithLegacyErrors(
+    clips::Environment* absl_nonnull env,
+    clips::ProtobufManager* absl_nonnull proto_mgr,
+    std::string_view operation_name)
     ABSL_EXCLUSIVE_LOCKS_REQUIRED(env->mutex());
 
 }  // namespace intrinsic::executive
