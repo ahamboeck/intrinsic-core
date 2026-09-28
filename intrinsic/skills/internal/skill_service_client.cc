@@ -90,12 +90,17 @@ BuildPredictRequestAndContextWithoutWorld(
 absl::StatusOr<intrinsic_proto::skills::GetFootprintRequest>
 BuildGetFootprintRequestAndContextWithoutWorld(
     const intrinsic_proto::skills::SkillInstance& instance,
-    const google::protobuf::Any& params, absl::string_view internal_data,
+    const google::protobuf::Any& params,
+
+    absl::string_view internal_data,
+
     const intrinsic_proto::data_logger::Context& log_context) {
   intrinsic_proto::skills::GetFootprintRequest request;
   *request.mutable_instance() = instance;
   *request.mutable_parameters() = params;
+
   request.set_internal_data(internal_data);
+
 
   intrinsic_proto::data_logger::Context skill_context = log_context;
   skill_context.set_skill_id(data_logger::GenerateUid());
@@ -109,13 +114,17 @@ BuildExecuteRequestAndContextWithoutWorld(
     const intrinsic_proto::skills::SkillInstance& instance,
     const google::protobuf::Message& params,
     const intrinsic_proto::skills::Footprint& footprint,
+
     absl::string_view internal_data,
+
     const intrinsic_proto::data_logger::Context& log_context) {
   intrinsic_proto::skills::ExecuteRequest request;
   *request.mutable_instance() = instance;
   request.mutable_parameters()->PackFrom(params);
   *request.mutable_footprint() = footprint;
+
   request.set_internal_data(internal_data);
+
 
   intrinsic_proto::data_logger::Context skill_context = log_context;
   if (log_context.skill_id() != 0) {
@@ -134,13 +143,17 @@ BuildExecuteRequestAndContextWithoutWorld(
     const intrinsic_proto::skills::SkillInstance& instance,
     const google::protobuf::Any& params,
     const intrinsic_proto::skills::Footprint& footprint,
+
     absl::string_view internal_data,
+
     const intrinsic_proto::data_logger::Context& log_context) {
   intrinsic_proto::skills::ExecuteRequest request;
   *request.mutable_instance() = instance;
   *request.mutable_parameters() = params;
   *request.mutable_footprint() = footprint;
+
   request.set_internal_data(internal_data);
+
 
   intrinsic_proto::data_logger::Context skill_context = log_context;
   if (log_context.skill_id() != 0) {
@@ -159,13 +172,17 @@ BuildPreviewRequestAndContextWithoutWorld(
     const intrinsic_proto::skills::SkillInstance& instance,
     const google::protobuf::Message& params,
     const intrinsic_proto::skills::Footprint& footprint,
+
     absl::string_view internal_data,
+
     const intrinsic_proto::data_logger::Context& log_context) {
   intrinsic_proto::skills::PreviewRequest request;
   *request.mutable_instance() = instance;
   request.mutable_parameters()->PackFrom(params);
   *request.mutable_footprint() = footprint;
+
   request.set_internal_data(internal_data);
+
 
   intrinsic_proto::data_logger::Context skill_context = log_context;
   if (log_context.skill_id() != 0) {
@@ -184,13 +201,17 @@ BuildPreviewRequestAndContextWithoutWorld(
     const intrinsic_proto::skills::SkillInstance& instance,
     const google::protobuf::Any& params,
     const intrinsic_proto::skills::Footprint& footprint,
+
     absl::string_view internal_data,
+
     const intrinsic_proto::data_logger::Context& log_context) {
   intrinsic_proto::skills::PreviewRequest request;
   *request.mutable_instance() = instance;
   *request.mutable_parameters() = params;
   *request.mutable_footprint() = footprint;
+
   request.set_internal_data(internal_data);
+
 
   intrinsic_proto::data_logger::Context skill_context = log_context;
   if (log_context.skill_id() != 0) {
@@ -383,11 +404,18 @@ SkillServiceClient::Predict(
 absl::StatusOr<intrinsic_proto::skills::GetFootprintResult>
 SkillServiceClient::GetFootprint(
     absl::string_view world_id, const google::protobuf::Any& params,
-    absl::string_view internal_data, std::optional<absl::Duration> timeout,
+
+    absl::string_view internal_data,
+
+    std::optional<absl::Duration> timeout,
     const intrinsic_proto::data_logger::Context& log_context) {
   INTR_ASSIGN_OR_RETURN(intrinsic_proto::skills::GetFootprintRequest request,
                         BuildGetFootprintRequestAndContextWithoutWorld(
-                            instance_, params, internal_data, log_context));
+                            instance_, params,
+
+                            internal_data,
+
+                            log_context));
 
   request.set_world_id(world_id);
 
@@ -482,13 +510,19 @@ SkillServiceClient::GetFootprint(
 absl::StatusOr<intrinsic_proto::skills::ExecuteResult>
 SkillServiceClient::Execute(
     absl::string_view world_id, intrinsic_proto::skills::Footprint footprint,
-    const google::protobuf::Message& params, absl::string_view internal_data,
+    const google::protobuf::Message& params,
+
+    absl::string_view internal_data,
+
     std::optional<absl::Duration> timeout,
     const intrinsic_proto::data_logger::Context& log_context) {
-  INTR_ASSIGN_OR_RETURN(
-      intrinsic_proto::skills::ExecuteRequest request,
-      BuildExecuteRequestAndContextWithoutWorld(instance_, params, footprint,
-                                                internal_data, log_context));
+  INTR_ASSIGN_OR_RETURN(intrinsic_proto::skills::ExecuteRequest request,
+                        BuildExecuteRequestAndContextWithoutWorld(
+                            instance_, params, footprint,
+
+                            internal_data,
+
+                            log_context));
   request.set_world_id(world_id);
 
   return Execute(request, timeout, request.context());
@@ -497,13 +531,19 @@ SkillServiceClient::Execute(
 absl::StatusOr<intrinsic_proto::skills::ExecuteResult>
 SkillServiceClient::Execute(
     absl::string_view world_id, intrinsic_proto::skills::Footprint footprint,
-    const google::protobuf::Any& params, absl::string_view internal_data,
+    const google::protobuf::Any& params,
+
+    absl::string_view internal_data,
+
     std::optional<absl::Duration> timeout,
     const intrinsic_proto::data_logger::Context& log_context) {
-  INTR_ASSIGN_OR_RETURN(
-      intrinsic_proto::skills::ExecuteRequest request,
-      BuildExecuteRequestAndContextWithoutWorld(instance_, params, footprint,
-                                                internal_data, log_context));
+  INTR_ASSIGN_OR_RETURN(intrinsic_proto::skills::ExecuteRequest request,
+                        BuildExecuteRequestAndContextWithoutWorld(
+                            instance_, params, footprint,
+
+                            internal_data,
+
+                            log_context));
   request.set_world_id(world_id);
 
   return Execute(request, timeout, request.context());
@@ -573,12 +613,18 @@ absl::StatusOr<
     std::unique_ptr<SkillServiceClientInterface::ExecuteClientContextInterface>>
 SkillServiceClient::StartExecute(
     absl::string_view world_id, intrinsic_proto::skills::Footprint footprint,
-    const google::protobuf::Message& params, absl::string_view internal_data,
+    const google::protobuf::Message& params,
+
+    absl::string_view internal_data,
+
     const intrinsic_proto::data_logger::Context& log_context) {
-  INTR_ASSIGN_OR_RETURN(
-      intrinsic_proto::skills::ExecuteRequest request,
-      BuildExecuteRequestAndContextWithoutWorld(instance_, params, footprint,
-                                                internal_data, log_context));
+  INTR_ASSIGN_OR_RETURN(intrinsic_proto::skills::ExecuteRequest request,
+                        BuildExecuteRequestAndContextWithoutWorld(
+                            instance_, params, footprint,
+
+                            internal_data,
+
+                            log_context));
   request.set_world_id(world_id);
 
   return StartExecute(request);
@@ -588,12 +634,18 @@ absl::StatusOr<
     std::unique_ptr<SkillServiceClientInterface::ExecuteClientContextInterface>>
 SkillServiceClient::StartExecute(
     absl::string_view world_id, intrinsic_proto::skills::Footprint footprint,
-    const google::protobuf::Any& params, absl::string_view internal_data,
+    const google::protobuf::Any& params,
+
+    absl::string_view internal_data,
+
     const intrinsic_proto::data_logger::Context& log_context) {
-  INTR_ASSIGN_OR_RETURN(
-      intrinsic_proto::skills::ExecuteRequest request,
-      BuildExecuteRequestAndContextWithoutWorld(instance_, params, footprint,
-                                                internal_data, log_context));
+  INTR_ASSIGN_OR_RETURN(intrinsic_proto::skills::ExecuteRequest request,
+                        BuildExecuteRequestAndContextWithoutWorld(
+                            instance_, params, footprint,
+
+                            internal_data,
+
+                            log_context));
   request.set_world_id(world_id);
 
   return StartExecute(request);
@@ -686,13 +738,19 @@ absl::Status SkillServiceClient::TryCancelExecute() {
 absl::StatusOr<intrinsic_proto::skills::PreviewResult>
 SkillServiceClient::Preview(
     absl::string_view world_id, intrinsic_proto::skills::Footprint footprint,
-    const google::protobuf::Message& params, absl::string_view internal_data,
+    const google::protobuf::Message& params,
+
+    absl::string_view internal_data,
+
     std::optional<absl::Duration> timeout,
     const intrinsic_proto::data_logger::Context& log_context) {
-  INTR_ASSIGN_OR_RETURN(
-      intrinsic_proto::skills::PreviewRequest request,
-      BuildPreviewRequestAndContextWithoutWorld(instance_, params, footprint,
-                                                internal_data, log_context));
+  INTR_ASSIGN_OR_RETURN(intrinsic_proto::skills::PreviewRequest request,
+                        BuildPreviewRequestAndContextWithoutWorld(
+                            instance_, params, footprint,
+
+                            internal_data,
+
+                            log_context));
   request.set_world_id(world_id);
 
   return Preview(request, timeout, request.context());
@@ -701,13 +759,19 @@ SkillServiceClient::Preview(
 absl::StatusOr<intrinsic_proto::skills::PreviewResult>
 SkillServiceClient::Preview(
     absl::string_view world_id, intrinsic_proto::skills::Footprint footprint,
-    const google::protobuf::Any& params, absl::string_view internal_data,
+    const google::protobuf::Any& params,
+
+    absl::string_view internal_data,
+
     std::optional<absl::Duration> timeout,
     const intrinsic_proto::data_logger::Context& log_context) {
-  INTR_ASSIGN_OR_RETURN(
-      intrinsic_proto::skills::PreviewRequest request,
-      BuildPreviewRequestAndContextWithoutWorld(instance_, params, footprint,
-                                                internal_data, log_context));
+  INTR_ASSIGN_OR_RETURN(intrinsic_proto::skills::PreviewRequest request,
+                        BuildPreviewRequestAndContextWithoutWorld(
+                            instance_, params, footprint,
+
+                            internal_data,
+
+                            log_context));
   request.set_world_id(world_id);
 
   return Preview(request, timeout, request.context());
@@ -768,12 +832,18 @@ SkillServiceClient::Preview(
 
 absl::Status SkillServiceClient::StartPreview(
     absl::string_view world_id, intrinsic_proto::skills::Footprint footprint,
-    const google::protobuf::Message& params, absl::string_view internal_data,
+    const google::protobuf::Message& params,
+
+    absl::string_view internal_data,
+
     const intrinsic_proto::data_logger::Context& log_context) {
-  INTR_ASSIGN_OR_RETURN(
-      intrinsic_proto::skills::PreviewRequest request,
-      BuildPreviewRequestAndContextWithoutWorld(instance_, params, footprint,
-                                                internal_data, log_context));
+  INTR_ASSIGN_OR_RETURN(intrinsic_proto::skills::PreviewRequest request,
+                        BuildPreviewRequestAndContextWithoutWorld(
+                            instance_, params, footprint,
+
+                            internal_data,
+
+                            log_context));
   request.set_world_id(world_id);
 
   return StartPreview(request);
@@ -781,12 +851,18 @@ absl::Status SkillServiceClient::StartPreview(
 
 absl::Status SkillServiceClient::StartPreview(
     absl::string_view world_id, intrinsic_proto::skills::Footprint footprint,
-    const google::protobuf::Any& params, absl::string_view internal_data,
+    const google::protobuf::Any& params,
+
+    absl::string_view internal_data,
+
     const intrinsic_proto::data_logger::Context& log_context) {
-  INTR_ASSIGN_OR_RETURN(
-      intrinsic_proto::skills::PreviewRequest request,
-      BuildPreviewRequestAndContextWithoutWorld(instance_, params, footprint,
-                                                internal_data, log_context));
+  INTR_ASSIGN_OR_RETURN(intrinsic_proto::skills::PreviewRequest request,
+                        BuildPreviewRequestAndContextWithoutWorld(
+                            instance_, params, footprint,
+
+                            internal_data,
+
+                            log_context));
   request.set_world_id(world_id);
 
   return StartPreview(request);
