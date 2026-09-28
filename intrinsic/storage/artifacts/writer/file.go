@@ -21,7 +21,6 @@ import (
 	"io"
 	"os"
 	"path/filepath"
-	"strings"
 	"time"
 
 	"github.com/containerd/containerd/content"
@@ -39,31 +38,12 @@ const (
 )
 
 func newFileWriter(ctx context.Context, store ArtifactStore, req *artifactpb.UpdateRequest) (UpdateWriter, error) {
-	if req.Ref == "" {
-		return nil, fmt.Errorf("%w: reference cannot be empty", ErrInvalidReference)
-	}
-
-	cleanRef := filepath.Clean(req.Ref)
-	if cleanRef == "." || cleanRef == ".." || filepath.IsAbs(cleanRef) || filepath.Base(cleanRef) != cleanRef || strings.ContainsAny(cleanRef, `/\`) {
-		return nil, fmt.Errorf("%w: %q", ErrInvalidReference, req.Ref)
-	}
-
 	tempDir := filepath.Join(store.EphemeralFileStore(), temporaryDestination)
 	if err := os.MkdirAll(tempDir, 0o700); err != nil {
 		return nil, fmt.Errorf("cannot create write destination: %w", err)
 	}
 
-	filename := filepath.Join(tempDir, cleanRef)
-	relTemp, err := filepath.Rel(tempDir, filename)
-	if err != nil || strings.HasPrefix(relTemp, "..") || relTemp == "." {
-		return nil, fmt.Errorf("%w: %q", ErrInvalidReference, req.Ref)
-	}
-
-	targetName := filepath.Join(store.EphemeralFileStore(), cleanRef)
-	relTarget, err := filepath.Rel(store.EphemeralFileStore(), targetName)
-	if err != nil || strings.HasPrefix(relTarget, "..") || relTarget == "." {
-		return nil, fmt.Errorf("%w: %q", ErrInvalidReference, req.Ref)
-	}
+	filename := filepath.Join(tempDir, req.Ref)
 
 	file, err := os.Create(filename)
 	if err != nil {
@@ -72,7 +52,7 @@ func newFileWriter(ctx context.Context, store ArtifactStore, req *artifactpb.Upd
 
 	writer := &fileWriter{
 		store:      store,
-		reference:  cleanRef,
+		reference:  req.Ref,
 		filename:   filename,
 		writer:     file,
 		finalized:  atomic.NewBool(false),
@@ -195,12 +175,7 @@ func (f *fileWriter) Commit(size int64, expected digest.Digest) error {
 		}
 	}
 
-	targetName, err := f.getTargetName()
-	if err != nil {
-		return fmt.Errorf("error determining target name: %w", err)
-	}
-
-	if err := os.Rename(f.filename, targetName); err != nil {
+	if err := os.Rename(f.filename, f.getTargetName()); err != nil {
 		return fmt.Errorf("error materializing file: %w", err)
 	}
 
@@ -223,15 +198,6 @@ func (f *fileWriter) Digest() digest.Digest {
 	return f.expectedDigest
 }
 
-func (f *fileWriter) getTargetName() (string, error) {
-	cleanRef := filepath.Clean(f.reference)
-	if cleanRef == "." || cleanRef == ".." || filepath.IsAbs(cleanRef) || filepath.Base(cleanRef) != cleanRef || strings.ContainsAny(cleanRef, `/\`) {
-		return "", fmt.Errorf("%w: %q", ErrInvalidReference, f.reference)
-	}
-	target := filepath.Join(f.store.EphemeralFileStore(), cleanRef)
-	rel, err := filepath.Rel(f.store.EphemeralFileStore(), target)
-	if err != nil || strings.HasPrefix(rel, "..") || rel == "." {
-		return "", fmt.Errorf("%w: %q", ErrInvalidReference, f.reference)
-	}
-	return target, nil
+func (f *fileWriter) getTargetName() string {
+	return filepath.Join(f.store.EphemeralFileStore(), f.reference)
 }
