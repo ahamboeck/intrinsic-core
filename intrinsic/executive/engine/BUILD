@@ -87,6 +87,7 @@ cc_library(
         "//intrinsic/config/proto:process_cc_proto",
         "//intrinsic/executive/clips:clips_init",
         "//intrinsic/executive/clips/cc:clips_cel",
+        "//intrinsic/executive/clips/cc:operation_error",
         "//intrinsic/executive/clips/cc:recovery",
         "//intrinsic/executive/clips/cc:time",
         "//intrinsic/executive/clips_cpp",

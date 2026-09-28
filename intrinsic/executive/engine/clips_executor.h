@@ -445,9 +445,11 @@ class ClipsExecutor {
       const std::vector<clips::Fact>& facts_before, const clips::Trace& trace)
       ABSL_EXCLUSIVE_LOCKS_REQUIRED(clips_->mutex());
 
-  // Adds additional debug information and legacy errors from (error) facts as
-  // context to the given ExtendedStatus.
-  void AddExtendedStatusDebugAndLegacyErrors(
+  // Adds additional debug information to the given ExtendedStatus.
+  //
+  // This is only available after a run has finished, as it reports on the facts
+  // and the trace of that run.
+  void AddExtendedStatusDebugInformation(
       intrinsic_proto::status::ExtendedStatus& es,
       const std::vector<clips::Fact>& facts_before, const clips::Trace& trace)
       ABSL_EXCLUSIVE_LOCKS_REQUIRED(clips_->mutex());

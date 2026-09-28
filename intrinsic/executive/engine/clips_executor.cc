@@ -57,6 +57,7 @@
 #include "intrinsic/assets/proto/id.pb.h"
 #include "intrinsic/config/proto/process.pb.h"
 #include "intrinsic/executive/clips/cc/cel.h"
+#include "intrinsic/executive/clips/cc/operation_error.h"
 #include "intrinsic/executive/clips/cc/recovery.h"
 #include "intrinsic/executive/clips/cc/time.h"
 #include "intrinsic/executive/clips/clips_init.h"
@@ -204,47 +205,6 @@ absl::Status LoadInitFiles(
   return absl::OkStatus();
 }
 
-std::vector<std::string> GetErrorMessages(clips::Environment* env,
-                                          bool message_only = false,
-                                          bool fatal_only = false)
-    ABSL_EXCLUSIVE_LOCKS_REQUIRED(env->mutex()) {
-  std::vector<std::string> error_msgs;
-  std::vector<clips::SlotValue> type_constraint;
-  if (fatal_only) {
-    type_constraint.emplace_back(
-        clips::SlotValue("type", clips::Symbol("FATAL")));
-  }
-  auto facts = env->QueryFacts("error", type_constraint);
-  for (const auto& fact : facts) {
-    auto status_or_name_val = fact.GetSlotValue("name");
-    auto status_or_type_val = fact.GetSlotValue("type");
-    auto status_or_message_val = fact.GetSlotValue("message");
-    if (!status_or_type_val.ok() || !status_or_message_val.ok() ||
-        !status_or_name_val.ok()) {
-      LOG(WARNING) << "Failed to get values from error fact: "
-                   << fact.DebugString();
-      continue;
-    }
-    auto status_or_name_str = status_or_name_val.value().GetSymbolAsString();
-    auto status_or_type_str = status_or_type_val.value().GetSymbolAsString();
-    auto status_or_message_str = status_or_message_val.value().GetString();
-    if (!status_or_type_str.ok() || !status_or_message_str.ok() ||
-        !status_or_name_str.ok()) {
-      LOG(WARNING) << "Failed to get strings from error fact: "
-                   << fact.DebugString();
-      continue;
-    }
-    if (message_only) {
-      error_msgs.push_back(status_or_message_str.value());
-    } else {
-      error_msgs.push_back(absl::StrFormat(
-          "%s|%s (%s)", status_or_name_str.value(),
-          status_or_message_str.value(), status_or_type_str.value()));
-    }
-  }
-  return error_msgs;
-}
-
 absl::Status AssertNoFatalClipsErrors(clips::Environment* env)
     ABSL_EXCLUSIVE_LOCKS_REQUIRED(env->mutex()) {
   std::vector<clips::Fact> fatal_error_facts =
@@ -252,8 +212,8 @@ absl::Status AssertNoFatalClipsErrors(clips::Environment* env)
   if (!fatal_error_facts.empty()) {
     return absl::InternalError(absl::StrFormat(
         "Init failed: %s",
-        absl::StrJoin(GetErrorMessages(env, /*message_only=*/false,
-                                       /*fatal_only=*/true),
+        absl::StrJoin(GetClipsLegacyErrorMessages(env, /*message_only=*/false,
+                                                  /*fatal_only=*/true),
                       ", ")));
   }
   return absl::OkStatus();
@@ -1082,8 +1042,9 @@ absl::Status ClipsExecutor::RecordOperationExtendedStatus(
     operation_extended_status_full.emplace(op_es);
   }
 
-  AddExtendedStatusDebugAndLegacyErrors(*operation_extended_status_full,
-                                        facts_before, trace);
+  AddExtendedStatusLegacyErrors(clips_.get(), *operation_extended_status_full);
+  AddExtendedStatusDebugInformation(*operation_extended_status_full,
+                                    facts_before, trace);
   absl::Status log_status = LogExecutiveExtendedStatus(
       *operation_extended_status_full, operation_name);
   if (!log_status.ok()) {
@@ -1112,64 +1073,54 @@ absl::Status ClipsExecutor::RecordOperationExtendedStatus(
   return absl::OkStatus();
 }
 
-void ClipsExecutor::AddExtendedStatusDebugAndLegacyErrors(
+void ClipsExecutor::AddExtendedStatusDebugInformation(
     intrinsic_proto::status::ExtendedStatus& es,
     const std::vector<clips::Fact>& facts_before, const clips::Trace& trace)
     ABSL_EXCLUSIVE_LOCKS_REQUIRED(clips_->mutex()) {
-  std::vector<std::string> error_msgs =
-      GetErrorMessages(clips_.get(), /*message_only=*/true);
-
-  for (const std::string& error_msg : error_msgs) {
-    intrinsic_proto::status::ExtendedStatus context_es = CreateExtendedStatus(
-        13020, absl::StrFormat("Additional error info: %s", error_msg));
-    *es.add_context() = std::move(context_es);
+  if (config_.google_cloud_project() != kIntrinsicInternalProject) {
+    return;
   }
+  std::stringstream report_stream;
+  if (absl::GetFlag(FLAGS_enable_detailed_extended_status_debug)) {
+    // Internally, we can add all information
+    const std::vector<std::string> facts_after_str = clips_->GetFactsAsStrings(
+        /*template_name=*/"", /*include_identifier=*/true);
+    std::vector<std::string> facts_before_str;
+    facts_before_str.reserve(facts_before.size());
+    absl::c_transform(facts_before, std::back_inserter(facts_before_str),
+                      [](const clips::Fact& f) {
+                        return f.DebugString(/*include_identifier=*/true);
+                      });
 
-  if (config_.google_cloud_project() == kIntrinsicInternalProject) {
-    std::stringstream report_stream;
-    if (absl::GetFlag(FLAGS_enable_detailed_extended_status_debug)) {
-      // Internally, we can add all information
-      const std::vector<std::string> facts_after_str =
-          clips_->GetFactsAsStrings(
-              /*template_name=*/"", /*include_identifier=*/true);
-      std::vector<std::string> facts_before_str;
-      facts_before_str.reserve(facts_before.size());
-      absl::c_transform(facts_before, std::back_inserter(facts_before_str),
-                        [](const clips::Fact& f) {
-                          return f.DebugString(/*include_identifier=*/true);
-                        });
-
-      report_stream << "Facts before run:" << std::endl
-                    << absl::StrJoin(facts_before_str, "\n") << std::endl
-                    << std::endl
-                    << "Trace:" << std::endl
-                    << trace << std::endl
-                    << std::endl
-                    << "Facts after run:" << std::endl
-                    << absl::StrJoin(facts_after_str, "\n");
-    } else {
-      // Internally, by default add information about the operation-envelope
-      // fact only
-      const std::vector<std::string> facts_after_str =
-          clips_->GetFactsAsStrings(
-              /*template_name=*/"operation-envelope",
-              /*include_identifier=*/true);
-      std::vector<std::string> facts_before_str;
-      for (const clips::Fact& f : facts_before) {
-        if (f.GetTemplateName() != "operation-envelope") {
-          continue;
-        }
-        facts_before_str.push_back(f.DebugString(/*include_identifier=*/true));
+    report_stream << "Facts before run:" << std::endl
+                  << absl::StrJoin(facts_before_str, "\n") << std::endl
+                  << std::endl
+                  << "Trace:" << std::endl
+                  << trace << std::endl
+                  << std::endl
+                  << "Facts after run:" << std::endl
+                  << absl::StrJoin(facts_after_str, "\n");
+  } else {
+    // Internally, by default add information about the operation-envelope
+    // fact only
+    const std::vector<std::string> facts_after_str = clips_->GetFactsAsStrings(
+        /*template_name=*/"operation-envelope",
+        /*include_identifier=*/true);
+    std::vector<std::string> facts_before_str;
+    for (const clips::Fact& f : facts_before) {
+      if (f.GetTemplateName() != "operation-envelope") {
+        continue;
       }
-      report_stream << "Facts before run:" << std::endl
-                    << absl::StrJoin(facts_before_str, "\n") << std::endl
-                    << std::endl
-                    << "Facts after run:" << std::endl
-                    << absl::StrJoin(facts_after_str, "\n");
+      facts_before_str.push_back(f.DebugString(/*include_identifier=*/true));
     }
-
-    es.mutable_debug_report()->mutable_message()->append(report_stream.str());
+    report_stream << "Facts before run:" << std::endl
+                  << absl::StrJoin(facts_before_str, "\n") << std::endl
+                  << std::endl
+                  << "Facts after run:" << std::endl
+                  << absl::StrJoin(facts_after_str, "\n");
   }
+
+  es.mutable_debug_report()->mutable_message()->append(report_stream.str());
 }
 
 absl::Status ClipsExecutor::LogExecutiveExtendedStatus(
@@ -2402,7 +2353,8 @@ absl::Status ClipsExecutor::DeleteOperation(std::string_view operation_name)
     if (operation_es.ok()) {
       *delete_fail_es.add_context() = std::move(*operation_es);
     }
-    AddExtendedStatusDebugAndLegacyErrors(delete_fail_es, facts_before, trace);
+    AddExtendedStatusLegacyErrors(clips_.get(), delete_fail_es);
+    AddExtendedStatusDebugInformation(delete_fail_es, facts_before, trace);
     LogExecutiveExtendedStatus(delete_fail_es, operation_name).IgnoreError();
 
     full_status.AttachExtendedStatus(std::move(delete_fail_es));

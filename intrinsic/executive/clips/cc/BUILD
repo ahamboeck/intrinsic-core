@@ -158,6 +158,22 @@ cc_library(
 )
 
 cc_library(
+    name = "operation_error",
+    srcs = ["operation_error.cc"],
+    hdrs = ["operation_error.h"],
+    deps = [
+        "//intrinsic/executive/clips_cpp",
+        "//intrinsic/util/status:status_specs",
+        "@abseil-cpp//absl/base:core_headers",
+        "@abseil-cpp//absl/base:nullability",
+        "@abseil-cpp//absl/log",
+        "@abseil-cpp//absl/status:statusor",
+        "@abseil-cpp//absl/strings:str_format",
+        "@intrinsic_apis//intrinsic/util/status:extended_status_cc_proto",
+    ],
+)
+
+cc_library(
     name = "skill_info",
     srcs = ["skill_info.cc"],
     hdrs = ["skill_info.h"],
