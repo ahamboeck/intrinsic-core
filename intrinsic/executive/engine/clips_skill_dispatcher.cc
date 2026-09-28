@@ -897,7 +897,10 @@ ClipsSkillDispatcher::PerformSkillExecute(
       execute_context = skill_instance.GetClient()->StartExecute(
           world_id, behavior_call.skill_execution_data().footprint(),
           behavior_call.parameters(),
-          behavior_call.skill_execution_data().internal_data(), context);
+
+          behavior_call.skill_execution_data().internal_data(),
+
+          context);
   {
     absl::MutexLock clips_lock(*assert_facade_->GetClipsMutex());
     // It is important to report RUNNING only after the Start call has been run.
@@ -1210,7 +1213,9 @@ ClipsSkillDispatcher::PreviewSkill(
       skill_instance.GetClient()->Preview(
           world_id, behavior_call_proto.skill_execution_data().footprint(),
           behavior_call_proto.parameters(),
+
           behavior_call_proto.skill_execution_data().internal_data(),
+
           execute_timeout, context_proto));
 
   // Get the preview result and corresponding prediction.
@@ -1281,8 +1286,10 @@ void ClipsSkillDispatcher::StartSkillProjection(
         std::optional<absl::Duration> project_timeout =
             GetProjectTimeoutOrDefault(behavior_call_proto);
 
+
         auto behavior_call_proto_internal_data =
             behavior_call_proto.skill_execution_data().internal_data();
+
 
         skill_instance.GetClient()->InitConcurrentLogging();
         absl::Cleanup cleanup_conclog = [&skill_instance] {
@@ -1364,8 +1371,10 @@ void ClipsSkillDispatcher::StartSkillProjection(
         absl::StatusOr<intrinsic_proto::skills::GetFootprintResult>
             footprint_result = skill_instance.GetClient()->GetFootprint(
                 world_id, behavior_call_proto.parameters(),
-                behavior_call_proto_internal_data, project_timeout,
-                context_proto);
+
+                behavior_call_proto_internal_data,
+
+                project_timeout, context_proto);
 
         {
           absl::MutexLock clips_lock(*assert_facade_->GetClipsMutex());

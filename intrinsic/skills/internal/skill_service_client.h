@@ -89,7 +89,10 @@ class SkillServiceClient : public SkillServiceClientInterface {
   // If timeout is omitted, a default timeout will be used.
   absl::StatusOr<intrinsic_proto::skills::GetFootprintResult> GetFootprint(
       absl::string_view world_id, const google::protobuf::Any& params,
-      absl::string_view internal_data, std::optional<absl::Duration> timeout,
+
+      absl::string_view internal_data,
+
+      std::optional<absl::Duration> timeout,
       const intrinsic_proto::data_logger::Context& log_context) final;
 
   absl::Status TryCancelGetFootprint() final;
@@ -109,7 +112,10 @@ class SkillServiceClient : public SkillServiceClientInterface {
   // If timeout is omitted, a default timeout will be used.
   absl::StatusOr<intrinsic_proto::skills::ExecuteResult> Execute(
       absl::string_view world_id, intrinsic_proto::skills::Footprint footprint,
-      const google::protobuf::Message& params, absl::string_view internal_data,
+      const google::protobuf::Message& params,
+
+      absl::string_view internal_data,
+
       std::optional<absl::Duration> timeout,
       const intrinsic_proto::data_logger::Context& log_context) final;
 
@@ -118,7 +124,10 @@ class SkillServiceClient : public SkillServiceClientInterface {
   // requested skill.
   absl::StatusOr<intrinsic_proto::skills::ExecuteResult> Execute(
       absl::string_view world_id, intrinsic_proto::skills::Footprint footprint,
-      const google::protobuf::Any& params, absl::string_view internal_data,
+      const google::protobuf::Any& params,
+
+      absl::string_view internal_data,
+
       std::optional<absl::Duration> timeout,
       const intrinsic_proto::data_logger::Context& log_context) final;
 
@@ -142,7 +151,9 @@ class SkillServiceClient : public SkillServiceClientInterface {
   StartExecute(absl::string_view world_id,
                intrinsic_proto::skills::Footprint footprint,
                const google::protobuf::Message& params,
+
                absl::string_view internal_data,
+
                const intrinsic_proto::data_logger::Context& log_context) final;
 
   // The same as above except that defaults are applied by the service, and the
@@ -153,7 +164,9 @@ class SkillServiceClient : public SkillServiceClientInterface {
   StartExecute(absl::string_view world_id,
                intrinsic_proto::skills::Footprint footprint,
                const google::protobuf::Any& params,
+
                absl::string_view internal_data,
+
                const intrinsic_proto::data_logger::Context& log_context) final;
 
   // If timeout is omitted, a default timeout will be used.
@@ -178,7 +191,10 @@ class SkillServiceClient : public SkillServiceClientInterface {
   // If timeout is omitted, a default timeout will be used.
   absl::StatusOr<intrinsic_proto::skills::PreviewResult> Preview(
       absl::string_view world_id, intrinsic_proto::skills::Footprint footprint,
-      const google::protobuf::Message& params, absl::string_view internal_data,
+      const google::protobuf::Message& params,
+
+      absl::string_view internal_data,
+
       std::optional<absl::Duration> timeout,
       const intrinsic_proto::data_logger::Context& log_context) final;
 
@@ -187,7 +203,10 @@ class SkillServiceClient : public SkillServiceClientInterface {
   // requested skill.
   absl::StatusOr<intrinsic_proto::skills::PreviewResult> Preview(
       absl::string_view world_id, intrinsic_proto::skills::Footprint footprint,
-      const google::protobuf::Any& params, absl::string_view internal_data,
+      const google::protobuf::Any& params,
+
+      absl::string_view internal_data,
+
       std::optional<absl::Duration> timeout,
       const intrinsic_proto::data_logger::Context& log_context) final;
 
@@ -204,7 +223,10 @@ class SkillServiceClient : public SkillServiceClientInterface {
   //   Protobuf default value.
   absl::Status StartPreview(
       absl::string_view world_id, intrinsic_proto::skills::Footprint footprint,
-      const google::protobuf::Message& params, absl::string_view internal_data,
+      const google::protobuf::Message& params,
+
+      absl::string_view internal_data,
+
       const intrinsic_proto::data_logger::Context& log_context) final;
 
   // The same as above except that defaults are applied by the service, and the
@@ -212,7 +234,10 @@ class SkillServiceClient : public SkillServiceClientInterface {
   // requested skill.
   absl::Status StartPreview(
       absl::string_view world_id, intrinsic_proto::skills::Footprint footprint,
-      const google::protobuf::Any& params, absl::string_view internal_data,
+      const google::protobuf::Any& params,
+
+      absl::string_view internal_data,
+
       const intrinsic_proto::data_logger::Context& log_context) final;
 
   // If timeout is omitted, a default timeout will be used.
