@@ -125,7 +125,7 @@ type DeployService struct {
 	runner                        *operations.Runner
 
 	defaultWorkcellSpec func(context.Context) (*transferpb.WorkcellSpec, error)
-	clusterName         string
+	clusterInfo         transfersvc.ClusterInfo
 	clusterParams       render.ClusterParams
 	initDataFiles       render.InitDataFilesParams
 }
@@ -153,7 +153,7 @@ type Options struct {
 	// operation of the deploy service.  Not all values will restart the
 	// workcell cluster service.
 	DefaultWorkcellSpec func(context.Context) (*transferpb.WorkcellSpec, error)
-	ClusterName         string
+	ClusterInfo         transfersvc.ClusterInfo
 	render.ClusterParams
 	render.InitDataFilesParams
 }
@@ -170,7 +170,7 @@ func New(opts Options) *DeployService {
 		resourceTypeRuntimeClient:     opts.ResourceTypeRuntimeClient,
 		skillRuntimeClient:            opts.SkillRuntimeClient,
 		transferService:               opts.TransferService,
-		clusterName:                   opts.ClusterName,
+		clusterInfo:                   opts.ClusterInfo,
 		svsc:                          opts.SolutionVersionServiceClient,
 		loggerClient:                  opts.LoggerClient,
 		defaultWorkcellSpec:           opts.DefaultWorkcellSpec,
@@ -218,7 +218,20 @@ func (s *DeployService) updateApplicationInHSS(ctx context.Context, app *apb.App
 	return nil
 }
 
-func checkOperationMode(app *apb.Application, cluster *cpb.Cluster) error {
+func checkOperationMode(app *apb.Application, clusterInfo transfersvc.ClusterInfo) error {
+	switch app.GetOperationMode() {
+	case opmodepb.OperationMode_REAL_HARDWARE:
+		if !clusterInfo.CanDoPhysicalExecution {
+			return fmt.Errorf("cluster %s cannot run a real solution", clusterInfo.Name)
+		}
+	case opmodepb.OperationMode_SIMULATION:
+		if !clusterInfo.CanDoSim {
+			return fmt.Errorf("%v cannot run a simulation", clusterInfo.Name)
+		}
+	default:
+		return fmt.Errorf("cannot deploy an app with operation mode %v", app.GetOperationMode())
+	}
+
 	return nil
 }
 
@@ -368,7 +381,7 @@ func (s *DeployService) updateAppMetadataInFirestore(ctx context.Context, cluste
 		log.ErrorContextf(ctx, "updateAppMetadataInFirestore: adding identity information from incoming context to outgoing context failed: %v", err)
 		return clientcontext.ErrGRPC(err)
 	}
-	res, err := s.cloudClusterClient.GetCluster(ctx, &idbcspb.GetClusterRequest{Name: s.clusterName})
+	res, err := s.cloudClusterClient.GetCluster(ctx, &idbcspb.GetClusterRequest{Name: s.clusterInfo.Name})
 	if c := status.Code(err); c == codes.NotFound {
 		// Very improbable case that the cluster is not available in Firestore. Then use the cluster
 		// proto from HSS "as is".
@@ -420,7 +433,7 @@ func (s *DeployService) DeployApplication(ctx context.Context, req *deploypb.Dep
 
 	span.AddAttributes(
 		trace.StringAttribute("name", req.GetApplication().GetMetadata().GetDisplayName()),
-		trace.StringAttribute("cluster", s.clusterName),
+		trace.StringAttribute("cluster", s.clusterInfo.Name),
 	)
 
 	if branchName := req.GetApplication().GetMetadata().GetName(); branchName != "" {
@@ -490,15 +503,16 @@ func (s *DeployService) deployApplication(
 
 	span.AddAttributes(
 		trace.StringAttribute("name", app.GetMetadata().GetDisplayName()),
-		trace.StringAttribute("cluster", s.clusterName))
+		trace.StringAttribute("cluster", s.clusterInfo.Name))
+
+	if err := checkOperationMode(app, s.clusterInfo); err != nil {
+		log.ErrorContextf(ctx, "checkOperationMode(%v, %v) failed with: %v", app, s.clusterInfo, err)
+		return nil, status.Errorf(codes.FailedPrecondition, "solution %q: %v", app.GetMetadata().GetDisplayName(), err)
+	}
 
 	cluster, _, err := s.getClusterNoApp(ctx)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "get cluster: %v", err)
-	}
-	if err := checkOperationMode(app, cluster); err != nil {
-		log.ErrorContextf(ctx, "checkOperationMode(%v, %v) failed with: %v", app, cluster, err)
-		return nil, status.Errorf(codes.FailedPrecondition, "solution %q: %v", app.GetMetadata().GetDisplayName(), err)
 	}
 
 	log.InfoContext(ctx, "Gathering asset data from asset and resource catalogs")
@@ -679,7 +693,7 @@ func (s *DeployService) stopSolution(ctx context.Context) error {
 		DefaultWorkcellSpec: defaultWorkcellSpec,
 		ClusterParams:       s.clusterParams,
 		InitDataFilesParams: s.initDataFiles,
-		Simulated:           !cluster.GetCanDoReal(), // Unvalidated heuristic for most likely next operation mode.
+		Simulated:           !s.clusterInfo.CanDoPhysicalExecution, // Unvalidated heuristic for most likely next operation mode.
 	})
 	if err != nil {
 		log.ErrorContextf(ctx, "WorkcellSpecFromApplication(...) failed: %v", err)

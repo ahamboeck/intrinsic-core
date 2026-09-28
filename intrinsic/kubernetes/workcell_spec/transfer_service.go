@@ -56,6 +56,7 @@ import (
 type ClusterInfo struct {
 	Name                   string
 	CanDoPhysicalExecution bool
+	CanDoSim               bool
 	HasGpu                 bool
 	// By fixing GCPProject and Registry here, we rely on the assumption that
 	// intrinsic-app-chart is released to the same repository as
