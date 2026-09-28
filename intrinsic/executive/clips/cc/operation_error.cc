@@ -15,6 +15,7 @@
 #include "intrinsic/executive/clips/cc/operation_error.h"
 
 #include <cstdint>
+#include <functional>
 #include <memory>
 #include <string>
 #include <string_view>
@@ -25,11 +26,14 @@
 #include "absl/status/status.h"
 #include "absl/status/statusor.h"
 #include "absl/strings/str_format.h"
+#include "google/longrunning/operations.pb.h"
+#include "google/rpc/status.pb.h"
 #include "intrinsic/executive/clips_cpp/environment.h"
 #include "intrinsic/executive/clips_cpp/fact.h"
 #include "intrinsic/executive/clips_cpp/protobuf.h"
 #include "intrinsic/executive/clips_cpp/value.h"
 #include "intrinsic/util/status/extended_status.pb.h"
+#include "intrinsic/util/status/status_conversion_rpc.h"
 #include "intrinsic/util/status/status_macros.h"
 #include "intrinsic/util/status/status_specs.h"
 
@@ -38,6 +42,7 @@ namespace {
 
 // Status code of the ExtendedStatus that carries a legacy (error) fact.
 constexpr int kLegacyErrorStatusCode = 13020;
+constexpr char kOperationProtoSetErrorFunction[] = "operation-proto-set-error";
 
 }  // namespace
 
@@ -131,6 +136,64 @@ BuildOperationExtendedStatusWithLegacyErrors(
       GetOperationExtendedStatus(env, proto_mgr, operation_name));
   AddExtendedStatusLegacyErrors(env, es);
   return es;
+}
+
+void SetOperationProtoError(clips::Environment* absl_nonnull env,
+                            clips::ProtobufManager* absl_nonnull proto_mgr,
+                            clips::ProtoMessageId operation_proto_id,
+                            std::string_view operation_name) {
+  env->mutex()->AssertHeld();
+  absl::StatusOr<google::longrunning::Operation*> operation =
+      proto_mgr->GetMutableProtoAs<google::longrunning::Operation>(
+          operation_proto_id);
+  if (!operation.ok()) {
+    LOG(ERROR) << "Failed to retrieve the Operation proto of operation '"
+               << operation_name << "': " << operation.status();
+    return;
+  }
+
+  absl::StatusOr<intrinsic_proto::status::ExtendedStatus> extended_status =
+      BuildOperationExtendedStatusWithLegacyErrors(env, proto_mgr,
+                                                   operation_name);
+
+  // Check if the operation extended status contains a title or user report
+  // message and use that as the operation error message, otherwise fall back to
+  // a generic message.
+  google::rpc::Status& error = *(*operation)->mutable_error();
+  if (extended_status.ok() && !extended_status->title().empty()) {
+    error = SaveStatusAsRpcStatus(absl::AbortedError(extended_status->title()));
+  } else if (extended_status.ok() &&
+             !extended_status->user_report().message().empty()) {
+    error = SaveStatusAsRpcStatus(
+        absl::AbortedError(extended_status->user_report().message()));
+  } else if (extended_status.ok()) {
+    error = SaveStatusAsRpcStatus(
+        absl::AbortedError("Operation failed, please check details."));
+  } else {
+    LOG(ERROR) << "Failed to retrieve the extended status of operation '"
+               << operation_name << "': " << extended_status.status();
+    error = SaveStatusAsRpcStatus(
+        absl::InternalError("Operation failed with unknown error."));
+  }
+
+  if (extended_status.ok()) {
+    error.add_details()->PackFrom(*extended_status);
+  }
+}
+
+absl::Status AddClipsOperationErrorFunctions(
+    clips::Environment* absl_nonnull env,
+    clips::ProtobufManager* absl_nonnull proto_mgr) {
+  env->mutex()->AssertHeld();
+  return env->AddFunction(
+      kOperationProtoSetErrorFunction,
+      std::function([env, proto_mgr](int64_t operation_proto_id,
+                                     const std::string& operation_name) {
+        env->mutex()->AssertHeld();
+        SetOperationProtoError(env, proto_mgr,
+                               clips::ProtoMessageId(operation_proto_id),
+                               operation_name);
+      }));
 }
 
 }  // namespace intrinsic::executive

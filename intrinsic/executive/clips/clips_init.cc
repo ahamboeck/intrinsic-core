@@ -37,6 +37,7 @@
 #include "google/protobuf/message.h"
 #include "google/rpc/status.pb.h"
 #include "intrinsic/executive/clips/cc/id_handling.h"
+#include "intrinsic/executive/clips/cc/operation_error.h"
 #include "intrinsic/executive/clips/cc/recovery.h"
 #include "intrinsic/executive/clips/cc/time.h"
 #include "intrinsic/executive/clips/cc/tracing.h"
@@ -218,6 +219,7 @@ absl::Status InitClipsBehaviorTreeSupportImpl(Environment* env,
 
   google::protobuf::LinkMessageReflection<
       intrinsic_proto::executive::WorldQuery>();
+  INTR_RETURN_IF_ERROR(AddClipsOperationErrorFunctions(env, proto_mgr));
   for (const std::string& file : BehaviorTreeClipsFiles()) {
     INTR_ASSIGN_OR_RETURN(clips::Value loaded,
                           env->EvaluateExpectSingleReturn(

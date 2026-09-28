@@ -1214,6 +1214,9 @@ void ClipsExecutiveService::UpdateOperationData(
     ClipsExecutiveService::OperationData* operation_data)
     ABSL_EXCLUSIVE_LOCKS_REQUIRED(operations_mutex_)
         ABSL_SHARED_LOCKS_REQUIRED(executor_mutex_) {
+  // TODO(b/493547558): Replace the logic below by reusing the operation's
+  // Operation and RunMetadata protos in the ProtobufManager, which CLIPS
+  // already keeps up to date (see state_proto_update.clp).
   operation_data->metadata.set_behavior_tree_state(
       intrinsic_proto::executive::BehaviorTree::UNSPECIFIED);
   operation_data->metadata.set_operation_state(

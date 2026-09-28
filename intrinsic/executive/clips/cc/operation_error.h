@@ -21,6 +21,7 @@
 
 #include "absl/base/nullability.h"
 #include "absl/base/thread_annotations.h"
+#include "absl/status/status.h"
 #include "absl/status/statusor.h"
 #include "intrinsic/executive/clips_cpp/environment.h"
 #include "intrinsic/executive/clips_cpp/protobuf.h"
@@ -36,6 +37,9 @@ namespace intrinsic::executive {
 //   message_only: Only return the message, instead of a combination of the
 //     error's name, message and type.
 //   fatal_only: Only consider errors of type FATAL.
+//
+// TODO(b/381078902): Remove this function once the remaining error facts have
+// been migrated to ExtendedStatus or are reported through a dedicated channel.
 std::vector<std::string> GetClipsLegacyErrorMessages(
     clips::Environment* absl_nonnull env, bool message_only = false,
     bool fatal_only = false) ABSL_EXCLUSIVE_LOCKS_REQUIRED(env->mutex());
@@ -62,6 +66,31 @@ BuildOperationExtendedStatusWithLegacyErrors(
     clips::Environment* absl_nonnull env,
     clips::ProtobufManager* absl_nonnull proto_mgr,
     std::string_view operation_name)
+    ABSL_EXCLUSIVE_LOCKS_REQUIRED(env->mutex());
+
+// Sets the error field of the given Operation proto from the ExtendedStatus of
+// the given operation.
+//
+// The error message is taken from the extended status' title, or its user
+// report message if there is no title. The full extended status is added as
+// detail.
+//
+// An error is always set, even if no extended status can be retrieved, so that
+// an Operation is never reported as done without a reason.
+//
+// Exposed in CLIPS as operation-proto-set-error.
+void SetOperationProtoError(clips::Environment* absl_nonnull env,
+                            clips::ProtobufManager* absl_nonnull proto_mgr,
+                            clips::ProtoMessageId operation_proto_id,
+                            std::string_view operation_name)
+    ABSL_EXCLUSIVE_LOCKS_REQUIRED(env->mutex());
+
+// Adds the operation error functions to the CLIPS environment.
+// The ProtobufManager must be available as long as the functions are registered
+// in the environment.
+absl::Status AddClipsOperationErrorFunctions(
+    clips::Environment* absl_nonnull env,
+    clips::ProtobufManager* absl_nonnull proto_mgr)
     ABSL_EXCLUSIVE_LOCKS_REQUIRED(env->mutex());
 
 }  // namespace intrinsic::executive

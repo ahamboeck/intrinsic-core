@@ -33,6 +33,7 @@ cc_library(
     ],
     deps = [
         "//intrinsic/executive/clips/cc:id_handling",
+        "//intrinsic/executive/clips/cc:operation_error",
         "//intrinsic/executive/clips/cc:recovery",
         "//intrinsic/executive/clips/cc:time",
         "//intrinsic/executive/clips/cc:tracing",

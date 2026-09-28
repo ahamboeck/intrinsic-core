@@ -518,8 +518,8 @@
         (pb-set-field ?operation-proto "done" TRUE)
       )
       (case FAILED then
-        ; TODO(b/493547558): Handle the FAILED state, which must set done and the
-        ; error field.
+        (operation-proto-set-error ?operation-proto ?operation-name)
+        (pb-set-field ?operation-proto "done" TRUE)
       )
       (case CANCELED then
         (bind ?error-proto (pb-create "google.rpc.Status"))
@@ -542,4 +542,3 @@
     )
   )
 )
-

@@ -164,6 +164,7 @@ cc_library(
     deps = [
         "//intrinsic/executive/clips_cpp",
         "//intrinsic/executive/clips_cpp:clips_protobuf",
+        "//intrinsic/util/status:status_conversion_rpc",
         "//intrinsic/util/status:status_macros",
         "//intrinsic/util/status:status_specs",
         "@abseil-cpp//absl/base:core_headers",
@@ -172,6 +173,8 @@ cc_library(
         "@abseil-cpp//absl/status",
         "@abseil-cpp//absl/status:statusor",
         "@abseil-cpp//absl/strings:str_format",
+        "@com_google_googleapis//google/longrunning:longrunning_cc_proto",
+        "@com_google_googleapis//google/rpc:status_cc_proto",
         "@intrinsic_apis//intrinsic/util/status:extended_status_cc_proto",
     ],
 )
