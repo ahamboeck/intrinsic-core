@@ -29,6 +29,8 @@ import "intrinsic/util/status/extended_status.proto";
 
 option go_package = "intrinsic/skills/proto/skill_service_go_proto";
 
+
+
 message PredictRequest {
   google.protobuf.Any parameters = 2;
 
@@ -66,6 +68,8 @@ message PredictResult {
   reserved "initial_world_snapshot_id";
 }
 
+
+
 message GetFootprintRequest {
   google.protobuf.Any parameters = 1;
 
@@ -88,9 +92,13 @@ message GetFootprintResult {
 }
 
 service Projector {
+
+
   // Returns a distribution of possible states that the world could be in after
   // executing the skill with the provided parameters.
   rpc Predict(PredictRequest) returns (PredictResult) {}
+
+
 
   // Returns the anticipated resources needed, given the nominal initial world.
   rpc GetFootprint(GetFootprintRequest) returns (GetFootprintResult) {}
@@ -234,6 +242,8 @@ service SkillInformation {
   rpc GetSkillInfo(google.protobuf.Empty) returns (SkillInformationResult) {}
 }
 
+
+
 // Logged by the skills client library after a skill prediction.
 message PredictionSummary {
   intrinsic_proto.skills.SkillInstance instance = 1;
@@ -251,6 +261,8 @@ message PredictionSummary {
   // On error, optionally detailed error information.
   intrinsic_proto.status.ExtendedStatus extended_status = 7;
 }
+
+
 
 // Logged by the skills client library after a skill get footprint.
 message FootprintSummary {

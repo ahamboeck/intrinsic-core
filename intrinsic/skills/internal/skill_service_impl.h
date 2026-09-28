@@ -286,9 +286,11 @@ class SkillProjectorServiceImpl
       const intrinsic_proto::skills::GetFootprintRequest* request,
       intrinsic_proto::skills::GetFootprintResult* result) override;
 
+
   grpc::Status Predict(grpc::ServerContext* context,
                        const intrinsic_proto::skills::PredictRequest* request,
                        intrinsic_proto::skills::PredictResult* result) override;
+
 
  private:
   absl::StatusOr<GetFootprintRequest> ProtoToGetFootprintRequest(

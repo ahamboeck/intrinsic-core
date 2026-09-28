@@ -458,6 +458,7 @@ grpc::Status SkillProjectorServiceImpl::GetFootprint(
   return ::grpc::Status::OK;
 }
 
+
 grpc::Status SkillProjectorServiceImpl::Predict(
     grpc::ServerContext* /*context*/,
     const intrinsic_proto::skills::PredictRequest* req,
@@ -466,6 +467,7 @@ grpc::Status SkillProjectorServiceImpl::Predict(
   result->add_outcomes()->set_probability(1.0);
   return ::grpc::Status::OK;
 }
+
 
 SkillExecutorServiceImpl::SkillExecutorServiceImpl(
     SkillRepository& skill_repository,
