@@ -74,6 +74,7 @@ class SkillServiceClient : public SkillServiceClientInterface {
   // Stops the logging thread. Remaining log items may be discarded.
   void TearDownConcurrentLogging() final;
 
+
   // Calls the Predict rpc on a skill and returns the results. Composes the
   // request from the given inputs.
   //
@@ -82,6 +83,7 @@ class SkillServiceClient : public SkillServiceClientInterface {
       absl::string_view world_id, const google::protobuf::Any& params,
       absl::string_view internal_data, std::optional<absl::Duration> timeout,
       const intrinsic_proto::data_logger::Context& log_context) final;
+
 
   // Calls the GetFootprint rpc on a skill and returns the results. Composes the
   // request from the given inputs.
@@ -277,10 +279,12 @@ class SkillServiceClient : public SkillServiceClientInterface {
   };
 
  private:
+
   absl::StatusOr<intrinsic_proto::skills::PredictResult> Predict(
       const intrinsic_proto::skills::PredictRequest& request,
       std::optional<absl::Duration> timeout,
       const intrinsic_proto::data_logger::Context& log_context);
+
   absl::StatusOr<intrinsic_proto::skills::GetFootprintResult> GetFootprint(
       const intrinsic_proto::skills::GetFootprintRequest& request,
       std::optional<absl::Duration> timeout,
@@ -308,9 +312,11 @@ class SkillServiceClient : public SkillServiceClientInterface {
       executor_stub_;
   SkillServiceClientConfig config_;
 
+
   absl::Mutex predict_mutex_;
   std::unique_ptr<::grpc::ClientContext> predict_context_
       ABSL_GUARDED_BY(predict_mutex_);
+
   absl::Mutex footprint_mutex_;
   std::unique_ptr<::grpc::ClientContext> footprint_context_
       ABSL_GUARDED_BY(footprint_mutex_);
