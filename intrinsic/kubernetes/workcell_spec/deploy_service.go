@@ -462,7 +462,7 @@ func (s *DeployService) DeployApplication(ctx context.Context, req *deploypb.Dep
 	)
 
 	if branchName := req.GetApplication().GetMetadata().GetName(); branchName != "" {
-		op, err := s.scheduleVersionedSolution(ctx, branchName, req.GetApplication().GetOperationMode())
+		op, err := s.scheduleVersionedSolution(ctx, branchName, req.GetApplication().GetOperationMode(), true /* allowRunning */)
 		if err != nil {
 			return nil, err
 		}
@@ -933,14 +933,14 @@ func normalizeApp(ctx context.Context, app *apb.Application, rts map[string]*rtr
 func (s *DeployService) CreateSolutionDeploymentFromVersionedSolution(ctx context.Context, req *solutiondeploymentpb.CreateSolutionDeploymentFromVersionedSolutionRequest) (*lropb.Operation, error) {
 	ctx, span := trace.StartSpan(ctx, "DeployService.CreateSolutionDeploymentFromVersionedSolution")
 	defer span.End()
-	op, err := s.scheduleVersionedSolution(ctx, req.GetSolutionId(), req.GetOperationMode())
+	op, err := s.scheduleVersionedSolution(ctx, req.GetSolutionId(), req.GetOperationMode(), false /* allowRunning */)
 	if err != nil {
 		return nil, err
 	}
 	return op.Proto(), nil
 }
 
-func (s *DeployService) scheduleVersionedSolution(ctx context.Context, solutionID string, operationMode opmodepb.OperationMode) (*operations.Operation, error) {
+func (s *DeployService) scheduleVersionedSolution(ctx context.Context, solutionID string, operationMode opmodepb.OperationMode, allowRunning bool) (*operations.Operation, error) {
 	op := operations.New(&lropb.Operation{
 		Name: path.Join(deploymentPrefix, "create-from-versioned-solution", newOperationName()),
 	})
@@ -971,7 +971,7 @@ func (s *DeployService) scheduleVersionedSolution(ctx context.Context, solutionI
 			log.ErrorContextf(ctx, "CreateSolutionDeploymentFromVersionedSolution: failed to get branch %q: %v", solutionID, err)
 			return nil, err
 		}
-		if branch.GetExecStatus().GetOperationMode() != opmodepb.OperationMode_OPERATION_MODE_UNSPECIFIED {
+		if !allowRunning && branch.GetExecStatus().GetOperationMode() != opmodepb.OperationMode_OPERATION_MODE_UNSPECIFIED {
 			log.ErrorContextf(ctx, "CreateSolutionDeploymentFromVersionedSolution: solution %q is currently running", solutionID)
 			return nil, status.Errorf(codes.FailedPrecondition, "solution %q is currently running", solutionID)
 		}
