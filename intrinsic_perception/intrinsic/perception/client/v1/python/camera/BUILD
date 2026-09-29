@@ -49,3 +49,53 @@ py_library(
         "@intrinsic_apis//intrinsic/perception/proto/v1:sensor_image_py_pb2",
     ],
 )
+
+py_library(
+    name = "camera_client",
+    srcs = ["camera_client.py"],
+    deps = [
+        "//intrinsic/assets:interface_utils_py",
+        "//intrinsic/assets/dependencies:utils_py",
+        "//intrinsic/util/grpc:connection",
+        "//intrinsic/util/grpc:error_handling",
+        "//intrinsic/util/grpc:interceptor",
+        "@com_github_grpc_grpc//src/python/grpcio/grpc:grpcio",
+        "@intrinsic_apis//intrinsic/assets/proto/v1:resolved_dependency_py_pb2",
+        "@intrinsic_apis//intrinsic/perception/proto/v1:camera_config_py_pb2",
+        "@intrinsic_apis//intrinsic/perception/proto/v1:camera_identifier_py_pb2",
+        "@intrinsic_apis//intrinsic/perception/proto/v1:camera_service_py_pb2",
+        "@intrinsic_apis//intrinsic/perception/proto/v1:camera_service_py_pb2_grpc",
+        "@intrinsic_apis//intrinsic/perception/proto/v1:camera_settings_py_pb2",
+        "@intrinsic_apis//intrinsic/perception/proto/v1:capture_result_py_pb2",
+    ],
+)
+
+py_library(
+    name = "cameras",
+    srcs = ["cameras.py"],
+    deps = [
+        ":_camera_utils",
+        ":camera_client",
+        ":data_classes",
+        "//intrinsic/assets:interface_utils_py",
+        "//intrinsic/assets/dependencies:utils_py",
+        "//intrinsic/resources/client:resource_registry_client",
+        "//intrinsic/util/grpc:connection",
+        "//intrinsic/util/grpc:error_handling",
+        "//intrinsic_sdk/intrinsic/math/python:pose3",
+        "//intrinsic_sdk/intrinsic/skills/python:skill_interface",
+        "//intrinsic_sdk/intrinsic/world/python:object_world_client",
+        "//intrinsic_sdk/intrinsic/world/python:object_world_resources",
+        "@ai_intrinsic_sdks_pip_deps//numpy",
+        "@com_github_grpc_grpc//src/python/grpcio/grpc:grpcio",
+        "@com_google_absl_py//absl/logging",
+        "@com_google_protobuf//:protobuf_python",
+        "@intrinsic_apis//intrinsic/assets/proto/v1:resolved_dependency_py_pb2",
+        "@intrinsic_apis//intrinsic/perception/proto/v1:camera_config_py_pb2",
+        "@intrinsic_apis//intrinsic/perception/proto/v1:camera_config_service_py_pb2",
+        "@intrinsic_apis//intrinsic/perception/proto/v1:camera_config_service_py_pb2_grpc",
+        "@intrinsic_apis//intrinsic/perception/proto/v1:settings_py_pb2",
+        "@intrinsic_apis//intrinsic/resources/proto:resource_handle_py_pb2",
+        "@intrinsic_apis//intrinsic/skills/proto:equipment_py_pb2",
+    ],
+)
