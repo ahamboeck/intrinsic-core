@@ -672,6 +672,7 @@ func (s *DeployService) deployApplication(
 	}
 	return &solutiondeploymentpb.SolutionDeployment{
 		Name:          app.GetMetadata().GetSolutionDeploymentId(),
+		DisplayName:   app.GetMetadata().GetDisplayName(),
 		SolutionId:    app.GetMetadata().GetName(),
 		OperationMode: app.GetOperationMode(),
 		Solution:      solution,
@@ -1104,6 +1105,7 @@ func (s *DeployService) UpdateSolutionDeployment(ctx context.Context, req *solut
 			app.Metadata.Name = solutionID
 		}
 		app.Metadata.SolutionDeploymentId = solutionDeploymentID
+		app.Metadata.DisplayName = req.GetSolutionDeployment().GetDisplayName()
 		app.OperationMode = req.GetSolutionDeployment().GetOperationMode()
 
 		var validateDependencies deployValidator = func(ctx context.Context, app *apb.Application, rts map[string]*rtrpb.ResourceTypeRuntime) error {
@@ -1171,6 +1173,7 @@ func (s *DeployService) GetSolutionDeployment(ctx context.Context, req *solution
 	log.InfoContext(ctx, "Returning solution deployment")
 	return &solutiondeploymentpb.SolutionDeployment{
 		Name:          app.GetMetadata().GetSolutionDeploymentId(),
+		DisplayName:   app.GetMetadata().GetDisplayName(),
 		SolutionId:    app.GetMetadata().GetName(),
 		OperationMode: app.GetOperationMode(),
 		Solution:      solution,
@@ -1249,6 +1252,7 @@ func asSolution(app *apb.Application, rts map[string]*rtrpb.ResourceTypeRuntime)
 func basicSolutionDeploymentView(sd *solutiondeploymentpb.SolutionDeployment) *solutiondeploymentpb.SolutionDeployment {
 	return &solutiondeploymentpb.SolutionDeployment{
 		Name:          sd.GetName(),
+		DisplayName:   sd.GetDisplayName(),
 		Solution:      basicSolutionView(sd.GetSolution()),
 		SolutionId:    sd.GetSolutionId(),
 		OperationMode: sd.GetOperationMode(),
