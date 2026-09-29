@@ -133,6 +133,7 @@ go_library(
         ":asset_go_proto",
         "//intrinsic/assets:bundle",
         "//intrinsic/assets:idutils",
+        "//intrinsic/assets:throttle",
         "//intrinsic/config/proto:application_go_proto",
         "//intrinsic/config/proto:common_go_proto",
         "//intrinsic/config/proto:process_go_proto",
@@ -148,7 +149,6 @@ go_library(
         "@org_golang_google_protobuf//reflect/protoregistry:go_default_library",
         "@org_golang_google_protobuf//types/descriptorpb:go_default_library",
         "@org_golang_google_protobuf//types/known/anypb",
-        "@org_golang_x_sync//errgroup:go_default_library",
     ],
 )
 

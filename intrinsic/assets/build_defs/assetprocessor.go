@@ -25,11 +25,11 @@ import (
 
 	"intrinsic/assets/bundle"
 	"intrinsic/assets/idutils"
+	"intrinsic/assets/throttle"
 	"intrinsic/util/proto/registryutil"
 
 	log "github.com/golang/glog"
 	"go.opencensus.io/trace" 
-	"golang.org/x/sync/errgroup"
 	"google.golang.org/protobuf/encoding/prototext"
 	"google.golang.org/protobuf/reflect/protoregistry"
 	descriptorpb "google.golang.org/protobuf/types/descriptorpb"
@@ -171,19 +171,18 @@ func convertAssets(ctx context.Context, solutionAssets []*assetpb.LocalSolution_
 
 	// NOTE: Pre-allocate all results to avoid data races in the goroutines below.
 	results := make([]*processedAsset, len(solutionAssets))
-	g, gCtx := errgroup.WithContext(ctx)
-	g.SetLimit(15)
+	fns := make([]func(context.Context) error, len(solutionAssets))
 	for i, a := range solutionAssets {
-		g.Go(func() error {
-			pa, err := processAsset(gCtx, a, proc)
+		fns[i] = func(ctx context.Context) error {
+			pa, err := processAsset(ctx, a, proc)
 			if err != nil {
 				return err
 			}
 			results[i] = pa
 			return nil
-		})
+		}
 	}
-	if err := g.Wait(); err != nil {
+	if err := proc.ConcurrencyLimiter.Do(ctx, fns...); err != nil {
 		return nil, err
 	}
 
@@ -322,6 +321,7 @@ type Processor struct {
 	bundle.Processor
 	PathResolver
 	CatalogFileDescriptorProvider bundle.CatalogFileDescriptorProvider
+	ConcurrencyLimiter            *throttle.ConcurrencyLimiter
 }
 
 // Process processes the solution assets and returns the corresponding

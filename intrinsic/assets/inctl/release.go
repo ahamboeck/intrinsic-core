@@ -82,6 +82,7 @@ func GetCommand() *cobra.Command {
 				releaseasset.WithIgnoreExisting(flags.GetFlagIgnoreExisting()),
 				releaseasset.WithImageTransferer(transferer),
 				releaseasset.WithPrinter(printer.PrintSf),
+				releaseasset.WithProcessingConcurrencyLimiter(throttle.NewConcurrencyLimiter(flags.GetFlagProcessingConcurrency())),
 				releaseasset.WithReleaseNotes(flags.GetFlagReleaseNotes()),
 				releaseasset.WithVersion(flags.GetFlagVersion()),
 				releaseasset.WithProgressWriter(cmd.OutOrStdout()),
@@ -96,6 +97,7 @@ func GetCommand() *cobra.Command {
 	flags.AddFlagOrganizationOptional()
 	flags.AddFlagOrgPrivate()
 	flags.AddFlagsRateLimit(throttle.CloudRateLimit, throttle.CloudBurst)
+	flags.AddFlagProcessingConcurrency(throttle.ReleaseProcessingConcurrency)
 	flags.AddFlagReleaseNotes("asset")
 	flags.AddFlagVersion("asset")
 

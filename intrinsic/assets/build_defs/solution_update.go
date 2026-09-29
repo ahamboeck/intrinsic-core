@@ -254,6 +254,7 @@ $ bazel run //intrinsic/config:empty_application --\
 				filetocas.WithRunfilesFS(runfilesFS),
 				filetocas.UseChunkSize(releaseutil.CASUploadChunkSize),
 			)
+			processingLimiter := throttle.NewConcurrencyLimiter(flags.GetFlagProcessingConcurrency())
 			gu, err := casgeometryuploader.New(f2c, 8)
 			if err != nil {
 				return fmt.Errorf("failed to create a CAS geometry uploader: %w", err)
@@ -287,8 +288,12 @@ $ bazel run //intrinsic/config:empty_application --\
 			defer rdProcessor.Close()
 			proc := &assetprocessor.Processor{
 				Processor: bundle.Processor{
-					ImageProcessor:          bundleimages.CreateImageProcessor(transfer),
-					GZFProcessor:            gzfprocessor.New(rdProcessor, gzfprocessor.WithLegacyUploader(gu)),
+					ImageProcessor: bundleimages.CreateImageProcessor(transfer),
+					GZFProcessor: gzfprocessor.New(
+						rdProcessor,
+						gzfprocessor.WithLegacyUploader(gu),
+						gzfprocessor.WithConcurrencyLimiter(processingLimiter),
+					),
 					ReferencedDataProcessor: rdProcessor,
 				},
 				PathResolver: func(path string) (string, error) {
@@ -298,6 +303,7 @@ $ bazel run //intrinsic/config:empty_application --\
 					}
 					return r.Rlocation(path)
 				},
+				ConcurrencyLimiter: processingLimiter,
 			}
 			app, err := proc.Process(ctx, assets)
 			if err != nil {
@@ -339,6 +345,7 @@ $ bazel run //intrinsic/config:empty_application --\
 	flags.AddFlagsProjectOrg()
 	flags.AddFlagsAddressClusterSolution()
 	flags.AddFlagsRateLimit(throttle.OnPremRateLimit, throttle.OnPremBurst)
+	flags.AddFlagProcessingConcurrency(throttle.LocalProcessingConcurrency)
 	flags.AddFlagRegistry()
 	flags.AddFlagsRegistryAuthUserPassword()
 	flags.AddFlagSkipDirectUpload("app")
