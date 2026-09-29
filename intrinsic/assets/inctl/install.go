@@ -31,6 +31,7 @@ import (
 	"intrinsic/assets/referenceddata"
 	"intrinsic/assets/scene_objects/gzfprocessor"
 	"intrinsic/assets/services/bundleimages"
+	"intrinsic/assets/throttle"
 	"intrinsic/skills/tools/skill/cmd/directupload/directupload"
 	"intrinsic/storage/content_addressable_storage/pkg/filetocas" 
 	"intrinsic/tools/inctl/util/casgeometryuploader"              
@@ -103,11 +104,13 @@ func GetCommand() *cobra.Command {
 			if err != nil {
 				return fmt.Errorf("failed to add org information to context: %w", err)
 			}
-			ctx, conn, _, err := clientutils.DialClusterFromInctl(ctx, flags)
+			ctx, rawConn, _, err := clientutils.DialClusterFromInctl(ctx, flags)
 			if err != nil {
 				return err
 			}
-			defer conn.Close()
+			defer rawConn.Close()
+
+			conn := throttle.ConnectionWithRateLimit(rawConn, flags.GetFlagRateLimit(), flags.GetFlagRateBurst())
 
 			// Determine the image transferer to use. Default to direct injection into the cluster.
 			var transfer imagetransfer.Transferer
@@ -198,6 +201,7 @@ func GetCommand() *cobra.Command {
 	flags.AddFlagsAddressClusterSolution()
 	flags.AddFlagPolicy("asset")
 	flags.AddFlagsProjectOrg()
+	flags.AddFlagsRateLimit(throttle.OnPremRateLimit, throttle.OnPremBurst)
 	flags.AddFlagRegistry()
 	flags.AddFlagsRegistryAuthUserPassword()
 	flags.AddFlagSkipDirectUpload("asset")

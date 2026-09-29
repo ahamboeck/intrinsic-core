@@ -180,6 +180,7 @@ go_binary(
         "//intrinsic/assets:cmdutils",
         "//intrinsic/assets:imagetransfer",
         "//intrinsic/assets:referenceddata",
+        "//intrinsic/assets:throttle",
         "//intrinsic/assets/platformlevelswitch",
         "//intrinsic/assets/scene_objects:gzfprocessor",
         "//intrinsic/assets/services:bundleimages",

@@ -95,7 +95,7 @@ func WithCASClient(casc caspb.ContentAddressableStorageServiceClient) FromBundle
 
 
 // WithConnection specifies the connection to use for all gRPC clients.
-func WithConnection(conn *grpc.ClientConn) FromBundleOption {
+func WithConnection(conn grpc.ClientConnInterface) FromBundleOption {
 	return func(opts *fromBundleOptions) {
 		opts.aaClient = assetartifactspb.NewAssetArtifactsClient(conn)
 		opts.acClient = acpb.NewAssetCatalogClient(conn)
