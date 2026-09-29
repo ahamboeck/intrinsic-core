@@ -462,7 +462,7 @@ func (s *DeployService) DeployApplication(ctx context.Context, req *deploypb.Dep
 	)
 
 	if branchName := req.GetApplication().GetMetadata().GetName(); branchName != "" {
-		op, err := s.scheduleVersionedSolution(ctx, branchName, req.GetApplication().GetOperationMode(), true /* allowRunning */)
+		op, err := s.scheduleVersionedSolution(ctx, branchName, req.GetApplication().GetOperationMode(), true /* allowRunning */, solutiondeploymentpb.SolutionDeploymentView_SOLUTION_DEPLOYMENT_VIEW_UNSPECIFIED)
 		if err != nil {
 			return nil, err
 		}
@@ -933,14 +933,19 @@ func normalizeApp(ctx context.Context, app *apb.Application, rts map[string]*rtr
 func (s *DeployService) CreateSolutionDeploymentFromVersionedSolution(ctx context.Context, req *solutiondeploymentpb.CreateSolutionDeploymentFromVersionedSolutionRequest) (*lropb.Operation, error) {
 	ctx, span := trace.StartSpan(ctx, "DeployService.CreateSolutionDeploymentFromVersionedSolution")
 	defer span.End()
-	op, err := s.scheduleVersionedSolution(ctx, req.GetSolutionId(), req.GetOperationMode(), false /* allowRunning */)
+	if view, err := viewOrDefault(req.GetView(), solutiondeploymentpb.SolutionDeploymentView_SOLUTION_DEPLOYMENT_VIEW_BASIC); err != nil {
+		return nil, err
+	} else {
+		req.View = view
+	}
+	op, err := s.scheduleVersionedSolution(ctx, req.GetSolutionId(), req.GetOperationMode(), false /* allowRunning */, req.GetView())
 	if err != nil {
 		return nil, err
 	}
 	return op.Proto(), nil
 }
 
-func (s *DeployService) scheduleVersionedSolution(ctx context.Context, solutionID string, operationMode opmodepb.OperationMode, allowRunning bool) (*operations.Operation, error) {
+func (s *DeployService) scheduleVersionedSolution(ctx context.Context, solutionID string, operationMode opmodepb.OperationMode, allowRunning bool, view solutiondeploymentpb.SolutionDeploymentView) (*operations.Operation, error) {
 	op := operations.New(&lropb.Operation{
 		Name: path.Join(deploymentPrefix, "create-from-versioned-solution", newOperationName()),
 	})
@@ -1009,7 +1014,7 @@ func (s *DeployService) scheduleVersionedSolution(ctx context.Context, solutionI
 		if err != nil {
 			return nil, err
 		}
-		return basicSolutionDeploymentView(solutionDeployment), nil
+		return asView(solutionDeployment, view), nil
 	}); err == operations.ErrQueueFull {
 		return nil, status.Error(codes.ResourceExhausted, err.Error())
 	} else if err != nil {
@@ -1052,6 +1057,12 @@ func (s *DeployService) scheduleDeleteSolutionDeployment(ctx context.Context) (*
 func (s *DeployService) UpdateSolutionDeployment(ctx context.Context, req *solutiondeploymentpb.UpdateSolutionDeploymentRequest) (*lropb.Operation, error) {
 	ctx, span := trace.StartSpan(ctx, "DeployService.UpdateSolutionDeployment")
 	defer span.End()
+
+	if view, err := viewOrDefault(req.GetView(), solutiondeploymentpb.SolutionDeploymentView_SOLUTION_DEPLOYMENT_VIEW_BASIC); err != nil {
+		return nil, err
+	} else {
+		req.View = view
+	}
 
 	op := operations.New(&lropb.Operation{
 		Name: path.Join(deploymentPrefix, "update", newOperationName()),
@@ -1132,7 +1143,7 @@ func (s *DeployService) UpdateSolutionDeployment(ctx context.Context, req *solut
 			return nil, err
 		}
 
-		return basicSolutionDeploymentView(solutionDeployment), nil
+		return asView(solutionDeployment, req.GetView()), nil
 	}); err == operations.ErrQueueFull {
 		log.ErrorContextf(ctx, "queue full: %v", err)
 		return nil, status.Error(codes.ResourceExhausted, err.Error())
@@ -1147,6 +1158,12 @@ func (s *DeployService) UpdateSolutionDeployment(ctx context.Context, req *solut
 func (s *DeployService) GetSolutionDeployment(ctx context.Context, req *solutiondeploymentpb.GetSolutionDeploymentRequest) (*solutiondeploymentpb.SolutionDeployment, error) {
 	ctx, span := trace.StartSpan(ctx, "DeployService.GetSolutionDeployment")
 	defer span.End()
+
+	if view, err := viewOrDefault(req.GetView(), solutiondeploymentpb.SolutionDeploymentView_SOLUTION_DEPLOYMENT_VIEW_FULL); err != nil {
+		return nil, err
+	} else {
+		req.View = view
+	}
 
 	resp, err := s.applicationClient.GetCurrentApplication(ctx, &aspb.GetCurrentApplicationRequest{})
 	if status.Code(err) == codes.NotFound {
@@ -1171,13 +1188,14 @@ func (s *DeployService) GetSolutionDeployment(ctx context.Context, req *solution
 	}
 
 	log.InfoContext(ctx, "Returning solution deployment")
-	return &solutiondeploymentpb.SolutionDeployment{
+	sd := &solutiondeploymentpb.SolutionDeployment{
 		Name:          app.GetMetadata().GetSolutionDeploymentId(),
 		DisplayName:   app.GetMetadata().GetDisplayName(),
 		SolutionId:    app.GetMetadata().GetName(),
 		OperationMode: app.GetOperationMode(),
 		Solution:      solution,
-	}, nil
+	}
+	return asView(sd, req.GetView()), nil
 }
 
 func asApplication(sol *solutionpb.Solution) (*apb.Application, error) {
@@ -1249,13 +1267,31 @@ func asSolution(app *apb.Application, rts map[string]*rtrpb.ResourceTypeRuntime)
 	}, nil
 }
 
-func basicSolutionDeploymentView(sd *solutiondeploymentpb.SolutionDeployment) *solutiondeploymentpb.SolutionDeployment {
-	return &solutiondeploymentpb.SolutionDeployment{
-		Name:          sd.GetName(),
-		DisplayName:   sd.GetDisplayName(),
-		Solution:      basicSolutionView(sd.GetSolution()),
-		SolutionId:    sd.GetSolutionId(),
-		OperationMode: sd.GetOperationMode(),
+func viewOrDefault(view solutiondeploymentpb.SolutionDeploymentView, defaultView solutiondeploymentpb.SolutionDeploymentView) (solutiondeploymentpb.SolutionDeploymentView, error) {
+	switch view {
+	case solutiondeploymentpb.SolutionDeploymentView_SOLUTION_DEPLOYMENT_VIEW_UNSPECIFIED:
+		return defaultView, nil
+	case solutiondeploymentpb.SolutionDeploymentView_SOLUTION_DEPLOYMENT_VIEW_BASIC,
+		solutiondeploymentpb.SolutionDeploymentView_SOLUTION_DEPLOYMENT_VIEW_FULL:
+		return view, nil
+	default:
+		return solutiondeploymentpb.SolutionDeploymentView_SOLUTION_DEPLOYMENT_VIEW_UNSPECIFIED, status.Errorf(codes.Unimplemented, "unsupported view %q", view)
+	}
+}
+
+// asView filters the SolutionDeployment based on the requested view.
+func asView(sd *solutiondeploymentpb.SolutionDeployment, view solutiondeploymentpb.SolutionDeploymentView) *solutiondeploymentpb.SolutionDeployment {
+	switch view {
+	case solutiondeploymentpb.SolutionDeploymentView_SOLUTION_DEPLOYMENT_VIEW_BASIC:
+		return &solutiondeploymentpb.SolutionDeployment{
+			Name:          sd.GetName(),
+			DisplayName:   sd.GetDisplayName(),
+			Solution:      basicSolutionView(sd.GetSolution()),
+			SolutionId:    sd.GetSolutionId(),
+			OperationMode: sd.GetOperationMode(),
+		}
+	default:
+		return sd // Validation and defaults are handled on entry to the RPC.
 	}
 }
 
