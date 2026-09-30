@@ -15,9 +15,7 @@ limitations under the License.
 -->
 <sdf version='1.6' xmlns:xacro='http://www.ros.org/wiki/xacro'>
 
-  <xacro:macro name="timeslicer_plugins">
-    <plugin filename="static://intrinsic::simulation::TimeslicerWorld" name="TimeslicerPlugin">
-    </plugin>
+  <xacro:macro name="simulation_plugins">
 
     <!-- HAL Digital IO Block simulation -->
     <plugin filename="static://intrinsic::simulation::DigitalInputOutput" name="DigitalInputOutput">
