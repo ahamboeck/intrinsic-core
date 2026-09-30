@@ -35,40 +35,11 @@
 #include "intrinsic/world/proto/collision_settings.pb.h"
 #include "intrinsic/world/proto/object_world_service.grpc.pb.h"
 #include "intrinsic/world/proto/object_world_service.pb.h"
-#include "intrinsic/world/service/world_service.grpc.pb.h"
-#include "intrinsic/world/service/world_service.pb.h"
 #include "intrinsic/world/world.h"
 #include "intrinsic/world/world.pb.h"
 
 namespace intrinsic {
 namespace skills {
-
-absl::StatusOr<intrinsic_proto::world::internal::World>
-DownloadWorldProtoFromWorldService(
-    absl::string_view world_id,
-    intrinsic_proto::world::internal::WorldService::StubInterface*
-        world_service) {
-  intrinsic_proto::world::internal::GetWorldRequest request;
-  request.set_world_id(world_id);
-  request.set_keep_frame_entity_collection_members_hack(true);
-  intrinsic_proto::world::internal::WorldWithMetadata response;
-  grpc::ClientContext ctx;
-  ConfigureClientContext(&ctx);
-  INTR_RETURN_IF_ERROR(
-      ToAbslStatus(world_service->GetWorld(&ctx, request, &response)));
-  return response.world_data();
-}
-
-absl::StatusOr<World> DownloadWorldFromWorldService(
-    absl::string_view world_id,
-    const GeometryDeserializer& geometry_deserializer,
-    intrinsic_proto::world::internal::WorldService::StubInterface*
-        world_service) {
-  INTR_ASSIGN_OR_RETURN(
-      intrinsic_proto::world::internal::World world_proto,
-      DownloadWorldProtoFromWorldService(world_id, world_service));
-  return World::Deserialize(world_proto, geometry_deserializer);
-}
 
 using ::intrinsic::world::CreateEntityWorldFromProto;
 using ::intrinsic_proto::world::CollisionSettings;

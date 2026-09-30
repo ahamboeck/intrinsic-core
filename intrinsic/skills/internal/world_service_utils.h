@@ -24,27 +24,11 @@
 #include "intrinsic/geometry/storage/geometry_library.h"
 #include "intrinsic/geometry/storage/geometry_serializer.h"
 #include "intrinsic/world/proto/object_world_service.grpc.pb.h"
-#include "intrinsic/world/service/world_service.grpc.pb.h"
 #include "intrinsic/world/world.h"
 #include "intrinsic/world/world.pb.h"
 
 namespace intrinsic {
 namespace skills {
-
-// Downloads the world with the given Id from the world service as proto.
-absl::StatusOr<intrinsic_proto::world::internal::World>
-DownloadWorldProtoFromWorldService(
-    absl::string_view world_id,
-    intrinsic_proto::world::internal::WorldService::StubInterface*
-        world_service);
-
-// Downloads the world with the given Id from the world service and deserializes
-// it to a World instance.
-absl::StatusOr<World> DownloadWorldFromWorldService(
-    absl::string_view world_id,
-    const GeometryDeserializer& geometry_deserializer,
-    intrinsic_proto::world::internal::WorldService::StubInterface*
-        world_service);
 
 // Deserializes all geometry components in the world in-place using the given
 // deserializer.

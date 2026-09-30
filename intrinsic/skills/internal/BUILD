@@ -768,8 +768,6 @@ cc_library(
         "//intrinsic/world/conversion:world_from_object_proto",
         "//intrinsic/world/proto:object_world_service_cc_grpc_proto",
         "//intrinsic/world/proto:object_world_service_cc_proto",
-        "//intrinsic/world/service:world_service_cc_grpc_proto",
-        "//intrinsic/world/service:world_service_cc_proto",
         "//intrinsic_sdk/intrinsic/geometry/storage:geometry_deserializer",
         "//intrinsic_sdk/intrinsic/geometry/storage:geometry_serializer",
         "//intrinsic_sdk/intrinsic/world:entity_id",
