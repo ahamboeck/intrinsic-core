@@ -34,9 +34,6 @@ option go_package = "intrinsic/world/service/world_service_go_proto";
 service WorldService {
   /// World management APIs
 
-  // Gets the World data for a specific World object.
-  rpc GetWorld(GetWorldRequest) returns (WorldWithMetadata) {}
-
   /// Robot APIs
 
   // Get IK solution for a specified segment of kinematic chain and target pose.
@@ -64,17 +61,6 @@ message WorldWithMetadata {
 
   // Arbitrary user tag.
   optional string user_tag = 7;
-}
-
-// Request message for getting the data from a specific world managed by the
-// service.
-message GetWorldRequest {
-  // The id of the world
-  string world_id = 1;
-
-  // TODO: b/325289138 -- Remove this once we've updated ICON to actually
-  // use object world APIs.
-  bool keep_frame_entity_collection_members_hack = 2;
 }
 
 // A single update to make to the world
