@@ -48,6 +48,7 @@ cc_library(
     visibility = [
         "//intrinsic/geometry:__subpackages__",
         "//intrinsic/geometry/internal/util:__pkg__",
+        "//intrinsic/perception:__subpackages__",
         "//intrinsic/scene/sdf:__pkg__",
         "//intrinsic/simulation/world:__pkg__",
         "//intrinsic/world:__subpackages__",

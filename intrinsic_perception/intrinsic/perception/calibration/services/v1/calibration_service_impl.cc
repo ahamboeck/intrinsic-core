@@ -24,14 +24,18 @@
 #include "absl/algorithm/container.h"
 #include "absl/cleanup/cleanup.h"
 #include "absl/container/flat_hash_map.h"
+#include "absl/container/flat_hash_set.h"
 #include "absl/log/check.h"
 #include "absl/log/log.h"
 #include "absl/status/status.h"
 #include "absl/strings/str_cat.h"
+#include "absl/strings/str_format.h"
+#include "absl/strings/str_join.h"
 #include "absl/strings/string_view.h"
 #include "absl/synchronization/mutex.h"
 #include "absl/time/clock.h"
 #include "absl/time/time.h"
+#include "absl/types/span.h"
 #include "google/longrunning/operations.grpc.pb.h"
 #include "google/protobuf/any.pb.h"
 #include "google/protobuf/repeated_ptr_field.h"
@@ -74,6 +78,7 @@
 #include "intrinsic/perception/proto/v1/camera_params.pb.h"
 #include "intrinsic/perception/proto/v1/camera_setup.pb.h"
 #include "intrinsic/perception/proto/v1/camera_to_robot_calibration.pb.h"
+#include "intrinsic/perception/proto/v1/capture_data.pb.h"
 #include "intrinsic/perception/proto_conversion/v1/camera_params.h"
 #include "intrinsic/perception/proto_conversion/v1/capture_result.h"
 #include "intrinsic/perception/proto_conversion/v1/dimensions.h"
@@ -116,6 +121,31 @@ constexpr double kHorizontalPixelWiseDifferenceFactorForRedundantDetections =
     0.01;
 constexpr int32_t kBlurDetectionFilterSize = 60;
 constexpr double kBlurDetectionFilterThreshold = 1.5;
+
+// Checks whether `pattern_detection_result` holds exactly one pattern detection
+// which is usable for calibration.
+intrinsic_proto::perception::v1::CaptureDataResponse::CaptureDataStatus
+CheckPatternDetectionResult(
+    const intrinsic_proto::perception::v1::PatternDetectionResult&
+        pattern_detection_result) {
+  if (pattern_detection_result.pattern_detections().empty()) {
+    return intrinsic_proto::perception::v1::CaptureDataResponse::
+        CAPTURE_DATA_STATUS_NO_DETECTIONS;
+  }
+  if (pattern_detection_result.pattern_detections_size() > 1) {
+    return intrinsic_proto::perception::v1::CaptureDataResponse::
+        CAPTURE_DATA_STATUS_MULTIPLE_DETECTIONS;
+  }
+  const intrinsic_proto::perception::v1::PatternDetection& pattern_detection =
+      pattern_detection_result.pattern_detections(0);
+  if (pattern_detection.image_points_size() < kMinNumberPatternImagePoints ||
+      IsLowRankPatternDetection(pattern_detection)) {
+    return intrinsic_proto::perception::v1::CaptureDataResponse::
+        CAPTURE_DATA_STATUS_INSUFFICIENT_MARKER_POINTS;
+  }
+  return intrinsic_proto::perception::v1::CaptureDataResponse::
+      CAPTURE_DATA_STATUS_NO_ERRORS;
+}
 
 absl::StatusOr<StereoCalibrationResult> ComputeStereoCalibrationResult(
     const std::vector<intrinsic_proto::perception::v1::PatternDetection>&
@@ -402,8 +432,8 @@ CalibrationServiceImpl::CalibrationServiceImpl(
         asset_deployment_service_stub,
     std::shared_ptr<intrinsic_proto::world::ObjectWorldService::StubInterface>
         object_world_service_stub,
-    std::unique_ptr<KeyValueStore> kvstore)
-    : kvstore_(std::move(kvstore)),
+    KeyValueStoreFactory kvstore_factory)
+    : kvstore_factory_(std::move(kvstore_factory)),
       operations_stub_(std::move(operations_stub)),
       asset_instances_stub_(std::move(asset_instances_stub)),
       asset_deployment_service_stub_(std::move(asset_deployment_service_stub)),
@@ -432,20 +462,16 @@ grpc::Status CalibrationServiceImpl::Initialize(
                           ? std::string(kDefaultInitialWorldId)
                           : request->edit_world_id();
 
-  if (kvstore_ == nullptr) {
-    INTR_ASSIGN_OR_RETURN_GRPC(
-        KeyValueStore kvstore,
-        pubsub_.KeyValueStore(std::string(kDefaultKeyPrefix)));
-    kvstore_ = std::make_unique<KeyValueStore>(kvstore);
-  }
+  INTR_ASSIGN_OR_RETURN_GRPC(std::shared_ptr<KeyValueStore> kvstore,
+                             kvstore_factory_(kDefaultKeyPrefix));
   absl::Notification notification;
   INTR_ASSIGN_OR_RETURN_GRPC(
       absl::StatusOr<intrinsic::KVQuery> query,
-      kvstore_->GetAll(
+      kvstore->GetAll(
           absl::StrCat(kCalibrationKVStoragePrefix, "**"),
-          [this](std::string_view key, std::unique_ptr<google::protobuf::Any>) {
-            mutex_.AssertHeld();
-            kvstore_->Delete(key).IgnoreError();
+          [kvstore](std::string_view key,
+                    std::unique_ptr<google::protobuf::Any>) {
+            kvstore->Delete(key).IgnoreError();
           },
           [&notification](std::string_view) { notification.Notify(); }));
   const absl::Cleanup on_return = [&notification] {
@@ -756,32 +782,20 @@ grpc::Status CalibrationServiceImpl::CaptureData(
           "Unsupported image type for annotation (only RGB/Gray supported).");
     }
 
-    if (pattern_detection_result.pattern_detections().empty()) {
-      LOG(WARNING) << "Detected no calibration board from camera "
-                   << camera_name;
-      response->add_capture_data_status(
-          intrinsic_proto::perception::v1::CaptureDataResponse::
-              CAPTURE_DATA_STATUS_NO_DETECTIONS);
-      continue;
-    }
-    if (pattern_detection_result.pattern_detections_size() > 1) {
-      LOG(WARNING) << "Detected multiple calibration boards from camera "
-                   << camera_name;
-      response->add_capture_data_status(
-          intrinsic_proto::perception::v1::CaptureDataResponse::
-              CAPTURE_DATA_STATUS_MULTIPLE_DETECTIONS);
+    if (const auto detection_status =
+            CheckPatternDetectionResult(pattern_detection_result);
+        detection_status !=
+        intrinsic_proto::perception::v1::CaptureDataResponse::
+            CAPTURE_DATA_STATUS_NO_ERRORS) {
+      LOG(WARNING) << "Unusable pattern detection from camera " << camera_name
+                   << ": "
+                   << intrinsic_proto::perception::v1::CaptureDataResponse::
+                          CaptureDataStatus_Name(detection_status);
+      response->add_capture_data_status(detection_status);
       continue;
     }
     const intrinsic_proto::perception::v1::PatternDetection& pattern_detection =
         pattern_detection_result.pattern_detections(0);
-    if (pattern_detection.image_points_size() < kMinNumberPatternImagePoints ||
-        IsLowRankPatternDetection(pattern_detection)) {
-      LOG(WARNING) << "Insufficient marker points from camera " << camera_name;
-      response->add_capture_data_status(
-          intrinsic_proto::perception::v1::CaptureDataResponse::
-              CAPTURE_DATA_STATUS_INSUFFICIENT_MARKER_POINTS);
-      continue;
-    }
 
     // Compute sharpness score.
     LOG(INFO) << "Computing sharpness score for camera " << camera_name;
@@ -832,10 +846,8 @@ grpc::Status CalibrationServiceImpl::CaptureData(
       ImagePointsPerCamera(calibration_data_point.pattern_detections),
       AddPolygonToCoverageMap));
 
-  if (kvstore_ == nullptr) {
-    return grpc::Status(grpc::StatusCode::FAILED_PRECONDITION,
-                        "KVStore is not initialized.");
-  }
+  INTR_ASSIGN_OR_RETURN_GRPC(std::shared_ptr<KeyValueStore> kvstore,
+                             kvstore_factory_(kDefaultKeyPrefix));
   for (int i = 0; i < annotated_image_buffers.size(); ++i) {
     const intrinsic_proto::perception::v1::ImageBuffer& annotated_image_buffer =
         annotated_image_buffers[i];
@@ -843,7 +855,7 @@ grpc::Status CalibrationServiceImpl::CaptureData(
         kCalibrationKVStoragePrefix, session_id_, "/captures/",
         calibration_data_point.capture_id, "/cameras/", i, "/annotated_image");
     INTR_RETURN_IF_ERROR_GRPC(
-        kvstore_->Set(key, annotated_image_buffer, /*high_consistency=*/true));
+        kvstore->Set(key, annotated_image_buffer, /*high_consistency=*/true));
     LOG(INFO) << "Stored annotated image in KV Store " << kDefaultKeyPrefix
               << " with key " << key;
     intrinsic_proto::kvstore::StorageLocation* annotated_image_location =
@@ -861,8 +873,8 @@ grpc::Status CalibrationServiceImpl::CaptureData(
       const std::string sharpness_key = absl::StrCat(
           kCalibrationKVStoragePrefix, session_id_, "/captures/",
           calibration_data_point.capture_id, "/cameras/", i, "/sharpness");
-      INTR_RETURN_IF_ERROR_GRPC(kvstore_->Set(sharpness_key, sharpness_val,
-                                              /*high_consistency=*/true));
+      INTR_RETURN_IF_ERROR_GRPC(kvstore->Set(sharpness_key, sharpness_val,
+                                             /*high_consistency=*/true));
       LOG(INFO) << "Stored sharpness score in KV Store " << kDefaultKeyPrefix
                 << " with key " << sharpness_key;
     }
@@ -1348,6 +1360,177 @@ absl::Status CalibrationServiceImpl::CalibrateCaptureToCapture(
 
   return absl::OkStatus();
 }
+
+absl::StatusOr<CalibrationServiceImpl::ProvidedCaptureDetection>
+CalibrationServiceImpl::PatternDetectionFromProvidedCapture(
+    const intrinsic_proto::perception::v1::CaptureData& capture_data,
+    absl::string_view capture_set, absl::string_view camera_name,
+    grpc::ServerContext* context) {
+  LOG(INFO) << "Reading the capture result of camera " << camera_name << " in "
+            << capture_set << " from key-value store "
+            << capture_data.capture_result_location().store() << " with key "
+            << capture_data.capture_result_location().key();
+  INTR_ASSIGN_OR_RETURN(
+      const CaptureResult capture_result,
+      GetCaptureResult(capture_data.capture_result_location(), kvstore_factory_,
+                       kDefaultImageGrabbingTimeout),
+      _ << "Failed to read the capture result of camera " << camera_name
+        << " in " << capture_set);
+  if (capture_result.sensor_images.empty()) {
+    return absl::InvalidArgumentError(
+        absl::StrCat("The capture result of camera ", camera_name, " in ",
+                     capture_set, " does not contain any sensor images."));
+  }
+  INTR_ASSIGN_OR_RETURN(
+      const SensorImage* absl_nonnull sensor_image,
+      (GetFirstSensorImageOfType<Rgb8u, Gray8u, Gray32f>(capture_result)),
+      _ << "The capture result of camera " << camera_name << " in "
+        << capture_set << " contains no supported image");
+
+  ProvidedCaptureDetection detection{.camera_params =
+                                         sensor_image->camera_params()};
+
+  INTR_ASSIGN_OR_RETURN(intrinsic_proto::perception::v1::PatternDetectionResult
+                            pattern_detection_result,
+                        pattern_detector_->Run(capture_result, context));
+
+  if (const auto detection_status =
+          CheckPatternDetectionResult(pattern_detection_result);
+      detection_status != intrinsic_proto::perception::v1::CaptureDataResponse::
+                              CAPTURE_DATA_STATUS_NO_ERRORS) {
+    LOG(WARNING) << "Unusable pattern detection in the image of camera "
+                 << camera_name << " in " << capture_set << ": "
+                 << intrinsic_proto::perception::v1::CaptureDataResponse::
+                        CaptureDataStatus_Name(detection_status);
+    return detection;
+  }
+  intrinsic_proto::perception::v1::PatternDetection& pattern_detection =
+      *pattern_detection_result.mutable_pattern_detections(0);
+
+  detection.pattern_detection = std::move(pattern_detection);
+  return detection;
+}
+
+absl::StatusOr<std::vector<CalibrationServiceImpl::CalibrationDataPoint>>
+CalibrationServiceImpl::CalibrationDataFromProvidedCaptures(
+    const google::protobuf::RepeatedPtrField<
+        intrinsic_proto::perception::v1::CaptureDataList>& captures,
+    grpc::ServerContext* context) {
+  if (pattern_detector_ == std::nullopt) {
+    return absl::FailedPreconditionError(
+        "Pattern detector is not initialized. `Initialize` needs to be called "
+        "before validating externally provided captures.");
+  }
+  if (camera_info_.empty()) {
+    return absl::FailedPreconditionError(
+        "No cameras initialized. `Initialize` needs to be called before "
+        "validating externally provided captures.");
+  }
+
+  // Camera captures are matched to cameras by position, so every capture set
+  // needs one capture result per camera, in `Initialize` order.
+  std::vector<absl::string_view> camera_names;
+  camera_names.reserve(camera_info_.size());
+  for (const CameraInfo& camera_info : camera_info_) {
+    camera_names.push_back(camera_info.camera_resource_handle.name());
+  }
+  for (int capture_index = 0; capture_index < captures.size();
+       ++capture_index) {
+    const intrinsic_proto::perception::v1::CaptureDataList& capture =
+        captures[capture_index];
+    if (capture.capture_data_size() != camera_info_.size()) {
+      return absl::InvalidArgumentError(absl::StrCat(
+          "Capture set ", capture_index, " contains ",
+          capture.capture_data_size(), " camera captures, but ",
+          camera_info_.size(),
+          camera_info_.size() == 1 ? " camera was" : " cameras were",
+          " initialized. Every capture set needs exactly one camera capture "
+          "per camera, in this order: ",
+          absl::StrJoin(camera_names, ", "), "."));
+    }
+    for (int camera_index = 0; camera_index < camera_info_.size();
+         ++camera_index) {
+      // Checks the key rather than the presence of `capture_result_location`,
+      // since skill parameter editors set that submessage even for entries
+      // left empty.
+      if (capture.capture_data(camera_index)
+              .capture_result_location()
+              .key()
+              .empty()) {
+        return absl::InvalidArgumentError(absl::StrCat(
+            "Capture set ", capture_index, " has no capture result for camera ",
+            camera_names[camera_index], " (position ", camera_index,
+            "). Every camera needs an image in every capture set; use a "
+            "separate run for the pattern poses which a camera cannot see."));
+      }
+    }
+  }
+
+  std::vector<std::optional<CameraParams>> camera_params_by_index(
+      camera_info_.size(), std::nullopt);
+  std::vector<int> num_detections_by_index(camera_info_.size(), 0);
+
+  std::vector<CalibrationDataPoint> calibration_data;
+  calibration_data.reserve(captures.size());
+
+  for (int capture_index = 0; capture_index < captures.size();
+       ++capture_index) {
+    const intrinsic_proto::perception::v1::CaptureDataList& capture =
+        captures[capture_index];
+
+    const std::string capture_set = absl::StrCat("capture set ", capture_index);
+
+    CalibrationDataPoint calibration_data_point;
+    calibration_data_point.capture_id = capture_set;
+    // Cameras without a usable detection keep an empty one, so that there is
+    // one detection per camera.
+    calibration_data_point.pattern_detections.assign(
+        camera_info_.size(),
+        intrinsic_proto::perception::v1::PatternDetection());
+
+    for (int camera_index = 0; camera_index < camera_info_.size();
+         ++camera_index) {
+      const intrinsic_proto::perception::v1::CaptureData& camera_capture =
+          capture.capture_data(camera_index);
+      const std::string& camera_name =
+          camera_info_[camera_index].camera_resource_handle.name();
+
+      INTR_ASSIGN_OR_RETURN(
+          ProvidedCaptureDetection capture_detection,
+          PatternDetectionFromProvidedCapture(camera_capture, capture_set,
+                                              camera_name, context));
+
+      if (!camera_params_by_index[camera_index].has_value()) {
+        camera_params_by_index[camera_index] = capture_detection.camera_params;
+      }
+      if (capture_detection.pattern_detection.has_value()) {
+        calibration_data_point.pattern_detections[camera_index] =
+            std::move(*capture_detection.pattern_detection);
+        ++num_detections_by_index[camera_index];
+      }
+    }
+
+    calibration_data.push_back(std::move(calibration_data_point));
+  }
+
+  // Otherwise the camera would silently be missing from the results.
+  for (int camera_index = 0; camera_index < camera_info_.size();
+       ++camera_index) {
+    if (num_detections_by_index[camera_index] == 0) {
+      return absl::FailedPreconditionError(absl::StrCat(
+          "No calibration board was detected in any image of camera ",
+          camera_names[camera_index],
+          ". Make sure the board is fully visible to every camera."));
+    }
+  }
+
+  for (CalibrationDataPoint& calibration_data_point : calibration_data) {
+    calibration_data_point.camera_params_from_capture = camera_params_by_index;
+  }
+
+  return calibration_data;
+}
+
 absl::Status CalibrationServiceImpl::ValidateIntrinsics(
     const intrinsic_proto::perception::v1::ValidateRequest* request,
     intrinsic_proto::perception::v1::ValidationResult* response,
@@ -1612,21 +1795,45 @@ grpc::Status CalibrationServiceImpl::Validate(
   response->Clear();
   absl::MutexLock lock(mutex_);
 
-  if (calibration_data_.empty()) {
+  std::vector<CalibrationDataPoint> provided_validation_data;
+  absl::Span<const CalibrationDataPoint> validation_data;
+
+  if (!request->captures().empty()) {
+    if (request->validate_camera_to_robot()) {
+      return grpc::Status(
+          grpc::StatusCode::INVALID_ARGUMENT,
+          "Camera-to-robot validation is not supported with externally "
+          "provided captures, because the robot poses that belong to the "
+          "individual captures are not part of the provided capture data. "
+          "Collect the validation data via `CollectCalibrationData`.");
+    }
+    INTR_ASSIGN_OR_RETURN_GRPC(
+        provided_validation_data,
+        CalibrationDataFromProvidedCaptures(request->captures(), context));
+    validation_data = provided_validation_data;
+    LOG(INFO) << "Validating with " << validation_data.size()
+              << " externally provided capture(s).";
+  } else {
+    validation_data = calibration_data_;
+    LOG(INFO) << "Validating with " << validation_data.size()
+              << " capture(s) collected via `CaptureData`.";
+  }
+
+  if (validation_data.empty()) {
     return grpc::Status(grpc::StatusCode::FAILED_PRECONDITION,
                         "Validation data is empty.");
   }
   if (request->validate_intrinsics()) {
     INTR_RETURN_IF_ERROR_GRPC(
-        ValidateIntrinsics(request, response, calibration_data_));
+        ValidateIntrinsics(request, response, validation_data));
   }
   if (request->validate_camera_to_robot()) {
     INTR_RETURN_IF_ERROR_GRPC(
-        ValidateCameraToRobot(request, response, calibration_data_));
+        ValidateCameraToRobot(request, response, validation_data));
   }
   if (request->validate_camera_to_camera()) {
     INTR_RETURN_IF_ERROR_GRPC(
-        ValidateCameraToCamera(request, response, calibration_data_));
+        ValidateCameraToCamera(request, response, validation_data));
   }
   return grpc::Status::OK;
 }
