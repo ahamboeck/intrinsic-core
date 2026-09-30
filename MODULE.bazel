@@ -717,10 +717,10 @@ oci.pull(
 # are not required.
 oci.pull(
     name = "tritonserver-cpu",
-    digest = "sha256:48ed7ee5f91189b4d98d90bffce503f1ac6127f9a234bad30511399102f5be4e",
-    image = "gcr.io/giza-workcells/tritonserver-input-validation",
+    digest = "sha256:e24bc1f53155c2e37212f00053fdf382b91033b4fc20e779b3468a76f3b90667",
+    image = "gcr.io/giza-workcells/tritonserver-base",
     platforms = ["linux/amd64"],
-    tag = "25.06-py3-cpu-v1",
+    tag = "25.06-py3-cpu-v3",
 )
 
 # Minimal Triton image with TF support for presubmits, validation and testing with legacy TF models.
@@ -735,10 +735,10 @@ oci.pull(
 # IVM-specific tritonserver image used in cloud deployments.
 oci.pull(
     name = "tritonserver-ivm",
-    digest = "sha256:1d285506a1da48af22d92c8103e13e32f9b24486f57f5c4a09e0057eee5f4d3a",
+    digest = "sha256:8016f5526ef33e110b536d7be75e944e7f6f860cf772b6f9bced6d964ae7fde1",
     image = "gcr.io/giza-workcells/tritonserver-ivm",
     platforms = ["linux/amd64"],
-    tag = "25.06-py3",
+    tag = "25.06-py3-v2",
 )
 
 # This image is updated manually via //incode/agent/agents/hmi/sandbox_runner/base_image:build_and_push.
