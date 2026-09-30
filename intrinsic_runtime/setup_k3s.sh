@@ -243,9 +243,13 @@ function check_nvidia_support() {
 
 function main() {
     local K3S_VERSION="v1.36.2+k3s1"
+    local K3S_INSTALL_SHA256="46177d4c99440b4c0311b67233823a8e8a2fc09693f6c89af1a7161e152fbfad"
     local HELM_VERSION="v4.2.3"
+    local HELM_INSTALL_SHA256="b68c5f694cff19f14ee8a5784ffd3de27fa7034ec8f973d703fc6fb85496ced7"
     local K9S_VERSION="v0.51.0"
+    local K9S_SHA256="c3752ad51a5a4015a113819c4eeb6e55a4d0e4b8e652494797532f6fc8161dd7"
     local ISTIO_VERSION="1.29.6"
+    local ISTIO_SHA256="d260852df36a987d278a0c530a9438e9c410b436e20204c13fcb0042dbc253a9"
     local CHART_ASSIGNMENT_CONTROLLER_VERSION="0.1.0-cf378be"
     local PROMETHEUS_OPERATOR_CRDS_VERSION="30.0.1"
 
@@ -264,18 +268,32 @@ function main() {
     fi
 
     echo "Installing K3s version ${K3S_VERSION}..."
-    run_silent sh -c "curl -sfL https://get.k3s.io | INSTALL_K3S_VERSION='${K3S_VERSION}' sh -s - ${k3s_args[*]}"
+    local k3s_install="${WORK_DIR}/install_k3s.sh"
+    curl -fsSL "https://raw.githubusercontent.com/k3s-io/k3s/${K3S_VERSION}/install.sh" -o "${k3s_install}"
+    echo "${K3S_INSTALL_SHA256}  ${k3s_install}" | sha256sum -c --quiet
+    chmod +x "${k3s_install}"
+    run_silent env INSTALL_K3S_VERSION="${K3S_VERSION}" "${k3s_install}" "${k3s_args[@]}"
 
     configure_kubeconfig
 
     echo "Installing Helm version ${HELM_VERSION}..."
-    run_silent sh -c "curl -fsSL https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-4 | bash -s -- -v '${HELM_VERSION}'"
+    local helm_install="${WORK_DIR}/get_helm.sh"
+    curl -fsSL "https://raw.githubusercontent.com/helm/helm/${HELM_VERSION}/scripts/get-helm-4" -o "${helm_install}"
+    echo "${HELM_INSTALL_SHA256}  ${helm_install}" | sha256sum -c --quiet
+    chmod +x "${helm_install}"
+    run_silent "${helm_install}" -v "${HELM_VERSION}"
 
     echo "Installing k9s version ${K9S_VERSION}..."
-    run_silent sh -c "curl -fsSL 'https://github.com/derailed/k9s/releases/download/${K9S_VERSION}/k9s_Linux_amd64.tar.gz' | sudo tar -C /usr/local/bin -zx k9s"
+    local k9s_tarball="${WORK_DIR}/k9s_Linux_amd64.tar.gz"
+    curl -fsSL "https://github.com/derailed/k9s/releases/download/${K9S_VERSION}/k9s_Linux_amd64.tar.gz" -o "${k9s_tarball}"
+    echo "${K9S_SHA256}  ${k9s_tarball}" | sha256sum -c --quiet
+    run_silent sudo tar -C /usr/local/bin -zxf "${k9s_tarball}" k9s
 
     echo "Installing Istio CLI version ${ISTIO_VERSION}..."
-    run_silent sh -c "curl -fsL 'https://storage.googleapis.com/istio-release/releases/${ISTIO_VERSION}/istioctl-${ISTIO_VERSION}-linux-amd64.tar.gz' | sudo tar -C /usr/local/bin -zx istioctl"
+    local istio_tarball="${WORK_DIR}/istioctl-${ISTIO_VERSION}-linux-amd64.tar.gz"
+    curl -fsSL "https://storage.googleapis.com/istio-release/releases/${ISTIO_VERSION}/istioctl-${ISTIO_VERSION}-linux-amd64.tar.gz" -o "${istio_tarball}"
+    echo "${ISTIO_SHA256}  ${istio_tarball}" | sha256sum -c --quiet
+    run_silent sudo tar -C /usr/local/bin -zxf "${istio_tarball}" istioctl
 
     write_istio_config "${ISTIO_CONFIG_FILE}"
     run_silent /usr/local/bin/istioctl install -f "${ISTIO_CONFIG_FILE}" --skip-confirmation
