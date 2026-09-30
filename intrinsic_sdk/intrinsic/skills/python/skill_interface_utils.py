@@ -65,9 +65,6 @@ def preview_to_execute_request(
 ) -> skill_interface.ExecuteRequest[skill_interface.TParamsType]:
   """Converts a PreviewRequest to an ExecuteRequest."""
   return skill_interface.ExecuteRequest(
-
-      internal_data=request.internal_data,
-
       params=request.params,
   )
 

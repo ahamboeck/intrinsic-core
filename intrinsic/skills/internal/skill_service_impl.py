@@ -50,7 +50,6 @@ from intrinsic.skills.internal import runtime_data as rd
 from intrinsic.skills.internal import skill_repository as skill_repo
 from intrinsic.skills.proto import error_pb2
 from intrinsic.skills.proto import footprint_pb2
-from intrinsic.skills.proto import prediction_pb2  
 from intrinsic.skills.proto import skill_service_pb2
 from intrinsic.skills.proto import skill_service_pb2_grpc
 from intrinsic.skills.proto import skills_pb2
@@ -250,19 +249,6 @@ class SkillProjectorServicer(skill_service_pb2_grpc.ProjectorServicer):
     return skill_service_pb2.GetFootprintResult(footprint=skill_footprint)
 
 
-  def Predict(
-      self,
-      predict_request: skill_service_pb2.PredictRequest,
-      context: grpc.ServicerContext,
-  ) -> skill_service_pb2.PredictResult:
-    return skill_service_pb2.PredictResult(
-        outcomes=[prediction_pb2.Prediction(probability=1.0)],
-        internal_data=predict_request.internal_data,
-    )
-
-
-
-
 class SkillExecutorServicer(skill_service_pb2_grpc.ExecutorServicer):
   """Servicer implementation for the skill Executor service."""
 
@@ -318,7 +304,6 @@ class SkillExecutorServicer(skill_service_pb2_grpc.ExecutorServicer):
 
     try:
       skill_request = skl.ExecuteRequest(
-          request.internal_data,  
           params=_resolve_params(request.parameters, operation.runtime_data),
       )
     except _CannotConstructRequestError as err:
@@ -416,9 +401,6 @@ class SkillExecutorServicer(skill_service_pb2_grpc.ExecutorServicer):
 
     try:
       skill_request = skl.PreviewRequest(
-
-          internal_data=request.internal_data,
-
           params=_resolve_params(request.parameters, operation.runtime_data),
       )
     except _CannotConstructRequestError as err:
@@ -1209,9 +1191,6 @@ def _proto_to_get_footprint_request(
     raise _CannotConstructRequestError(str(err)) from err
 
   return skl.GetFootprintRequest(
-
-      internal_data=proto.internal_data,
-
       params=params,
   )
 

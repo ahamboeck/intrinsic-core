@@ -99,7 +99,6 @@ ExecuteRequest SkillTestFactory::MakeExecuteRequest(
     ::google::protobuf::Message* param_defaults) {
   // clang-format off
   return ExecuteRequest(
-      "",  
       params, param_defaults);
   // clang-format on
 }
@@ -109,7 +108,6 @@ PreviewRequest SkillTestFactory::MakePreviewRequest(
     ::google::protobuf::Message* param_defaults) {
   // clang-format off
   return PreviewRequest(
-      "",  
       params, param_defaults);
   // clang-format on
 }
@@ -119,7 +117,6 @@ GetFootprintRequest SkillTestFactory::MakeGetFootprintRequest(
     ::google::protobuf::Message* param_defaults) {
   // clang-format off
   return GetFootprintRequest(
-      "",  
       params, param_defaults);
   // clang-format on
 }

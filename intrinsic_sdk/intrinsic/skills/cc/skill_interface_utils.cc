@@ -51,9 +51,6 @@ absl::StatusOr<std::unique_ptr<::google::protobuf::Message>> PreviewViaExecute(
 absl::StatusOr<ExecuteRequest> PreviewToExecuteRequest(
     const PreviewRequest& request) {
   return ExecuteRequest(
-
-      std::string(request.internal_data()),
-
       /*params=*/request.params_any(),
       /*param_defaults=*/std::nullopt);
 }

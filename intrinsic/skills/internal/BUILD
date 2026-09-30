@@ -395,7 +395,6 @@ py_library(
         ":skill_repository_py",
         "//intrinsic/assets:id_utils_py",
         "//intrinsic/geometry/proto:geometry_service_py_pb2_grpc",
-        "//intrinsic/skills/proto:prediction_py_pb2",
         "//intrinsic/skills/proto:skill_service_py_pb2",
         "//intrinsic/skills/proto:skill_service_py_pb2_grpc",
         "//intrinsic/util/status:status_exception",

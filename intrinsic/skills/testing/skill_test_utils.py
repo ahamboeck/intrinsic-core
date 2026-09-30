@@ -113,9 +113,6 @@ def make_grpc_server_with_resource_handle(
 
 
 def make_test_execute_request(
-
-    internal_data: Optional[bytes] = None,
-
     params: Optional[execute_request.TParamsType] = None,
 ) -> skill_interface.ExecuteRequest[execute_request.TParamsType]:
   """Makes an ExecuteRequest for testing.
@@ -123,26 +120,13 @@ def make_test_execute_request(
   All arguments are optional; testing defaults are used for any omitted
   argument.
 
-
-
-  Args:
-    internal_data: Internal data bytes, or None for empty bytes.
-    params: The skill parameters proto, or None for Empty().
-
-
-
   Returns:
     The testing ExecuteRequest.
   """
-
-  if internal_data is None:
-    internal_data = bytes()
-
   if params is None:
     params = empty_pb2.Empty()
 
   return skill_interface.ExecuteRequest(
-      internal_data=internal_data,  
       params=params,
   )
 
@@ -236,9 +220,6 @@ def make_test_execute_context(
 
 
 def make_test_preview_request(
-
-    internal_data: Optional[bytes] = None,
-
     params: Optional[preview_request.TParamsType] = None,
 ) -> skill_interface.PreviewRequest[preview_request.TParamsType]:
   """Makes a PreviewRequest for testing.
@@ -257,15 +238,10 @@ def make_test_preview_request(
   Returns:
     The testing PredictRequest.
   """
-
-  if internal_data is None:
-    internal_data = bytes()
-
   if params is None:
     params = empty_pb2.Empty()
 
   return skill_interface.PreviewRequest(
-      internal_data=internal_data,  
       params=params,
   )
 
@@ -358,9 +334,6 @@ def make_test_preview_context(
 
 
 def make_test_get_footprint_request(
-
-    internal_data: Optional[bytes] = None,
-
     params: Optional[get_footprint_request.TParamsType] = None,
 ) -> skill_interface.GetFootprintRequest[get_footprint_request.TParamsType]:
   """Makes a GetFootprintRequest for testing.
@@ -368,26 +341,13 @@ def make_test_get_footprint_request(
   All arguments are optional; testing defaults are used for any omitted
   argument.
 
-
-
-  Args:
-    internal_data: Internal data bytes, or None for empty bytes.
-    params: The skill parameters proto, or None for Empty().
-
-
-
   Returns:
     The testing GetFootprintRequest.
   """
-
-  if internal_data is None:
-    internal_data = bytes()
-
   if params is None:
     params = empty_pb2.Empty()
 
   return skill_interface.GetFootprintRequest(
-      internal_data=internal_data,  
       params=params,
   )
 

@@ -371,7 +371,6 @@ SkillProjectorServiceImpl::ProtoToGetFootprintRequest(
                         skill_repository_.GetSkillRuntimeData(skill_name));
 
   return GetFootprintRequest(
-      request.internal_data(),  
       request.parameters(), runtime_data.GetParameterData().GetDefault());
 }
 
@@ -458,17 +457,6 @@ grpc::Status SkillProjectorServiceImpl::GetFootprint(
   return ::grpc::Status::OK;
 }
 
-
-grpc::Status SkillProjectorServiceImpl::Predict(
-    grpc::ServerContext* /*context*/,
-    const intrinsic_proto::skills::PredictRequest* req,
-    intrinsic_proto::skills::PredictResult* result) {
-  result->set_internal_data(req->internal_data());
-  result->add_outcomes()->set_probability(1.0);
-  return ::grpc::Status::OK;
-}
-
-
 SkillExecutorServiceImpl::SkillExecutorServiceImpl(
     SkillRepository& skill_repository,
 
@@ -520,7 +508,6 @@ grpc::Status SkillExecutorServiceImpl::StartExecute(
                              skill_repository_.GetSkillExecute(skill_name));
 
   auto skill_request = std::make_unique<ExecuteRequest>(
-      request->internal_data(),  
       /*params=*/request->parameters(),
       /*param_defaults=*/
       operation->runtime_data().GetParameterData().GetDefault());
@@ -614,7 +601,6 @@ grpc::Status SkillExecutorServiceImpl::StartPreview(
                              skill_repository_.GetSkillExecute(skill_name));
 
   auto skill_request = std::make_unique<PreviewRequest>(
-      request->internal_data(),  
       /*params=*/request->parameters(),
       /*param_defaults=*/
       operation->runtime_data().GetParameterData().GetDefault());

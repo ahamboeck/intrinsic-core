@@ -897,9 +897,6 @@ ClipsSkillDispatcher::PerformSkillExecute(
       execute_context = skill_instance.GetClient()->StartExecute(
           world_id, behavior_call.skill_execution_data().footprint(),
           behavior_call.parameters(),
-
-          behavior_call.skill_execution_data().internal_data(),
-
           context);
   {
     absl::MutexLock clips_lock(*assert_facade_->GetClipsMutex());
@@ -1213,9 +1210,6 @@ ClipsSkillDispatcher::PreviewSkill(
       skill_instance.GetClient()->Preview(
           world_id, behavior_call_proto.skill_execution_data().footprint(),
           behavior_call_proto.parameters(),
-
-          behavior_call_proto.skill_execution_data().internal_data(),
-
           execute_timeout, context_proto));
 
   // Get the preview result and corresponding prediction.
@@ -1286,11 +1280,6 @@ void ClipsSkillDispatcher::StartSkillProjection(
         std::optional<absl::Duration> project_timeout =
             GetProjectTimeoutOrDefault(behavior_call_proto);
 
-
-        auto behavior_call_proto_internal_data =
-            behavior_call_proto.skill_execution_data().internal_data();
-
-
         skill_instance.GetClient()->InitConcurrentLogging();
         absl::Cleanup cleanup_conclog = [&skill_instance] {
           skill_instance.GetClient()->TearDownConcurrentLogging();
@@ -1298,84 +1287,10 @@ void ClipsSkillDispatcher::StartSkillProjection(
 
         LOG(INFO) << "Calling skill " << behavior_call_proto.skill_id()
                   << " (Projecting)";
-
-        // actual prediction call, this is potentially long-running
-        absl::StatusOr<intrinsic_proto::skills::PredictResult> predict_result =
-            skill_instance.GetClient()->Predict(
-                world_id, behavior_call_proto.parameters(),
-                behavior_call_proto_internal_data, project_timeout,
-                context_proto);
-
-        // A skill that does not implement the Predict RPC answers
-        // UNIMPLEMENTED. That is equivalent to "no prediction" and must not
-        // fail the projection.
-        if (absl::IsUnimplemented(predict_result.status())) {
-          predict_result = intrinsic_proto::skills::PredictResult();
-        }
-
-        {
-          absl::MutexLock clips_lock(*assert_facade_->GetClipsMutex());
-
-          if (!predict_result.ok()) {
-            intrinsic_proto::status::ExtendedStatus skill_es =
-                GetExtendedStatusForSkillResult(
-                    predict_result.status(),
-                    skill_instance.GetInstanceProto().id_version(),
-                    SkillAction::Prediction);
-            clips::ProtoMessageId es_proto_id =
-                proto_manager_->AddGeneratedProto(skill_es);
-
-            // Assert fact to indicate failure.
-            ReportClipsStatus(assert_facade_, action_id, kSkillStatusFailed,
-                              {.message = predict_result.status().ToString(),
-                               .extended_status_proto_id = es_proto_id});
-            return;
-          }
-
-          // Update the internal data from the predict call if outcomes is
-          // not empty. We expect outcomes to be present for the internal
-          // data to be valid.
-          if (!predict_result->outcomes().empty()) {
-            behavior_call_proto_internal_data = predict_result->internal_data();
-            if (absl::Status s = proto_manager_->SetFieldValue(
-                    behavior_call_proto_id,
-                    "skill_execution_data.internal_data",
-                    clips::Value(behavior_call_proto_internal_data));
-                !s.ok()) {
-              intrinsic_proto::status::ExtendedStatus es_proto =
-                  CreateExtendedStatus(
-                      18104,
-                      absl::StrFormat(
-                          "Failed to record internal data for skill "
-                          "'%s' during projection. Error: %s",
-                          behavior_call_proto.skill_id(), s.message()),
-                      {.debug_message = absl::StrFormat(
-                           "Internal action id: %s", action_id)});
-              clips::ProtoMessageId es_proto_id =
-                  proto_manager_->AddGeneratedProto(es_proto);
-              ReportClipsStatus(assert_facade_, action_id, kSkillStatusFailed,
-                                {.message = s.ToString(),
-                                 .extended_status_proto_id = es_proto_id});
-              return;
-            }
-          } else {
-            LOG(INFO) << "StartSkillProjection did not update internal data "
-                         "because predict had no outcome from prediction; We "
-                         "had "
-                      << (predict_result->internal_data().empty() ? "empty"
-                                                                  : "non empty")
-                      << " internal_data.";
-          }
-        }
-
-
         // actual get footprint call, this is potentially long-running
         absl::StatusOr<intrinsic_proto::skills::GetFootprintResult>
             footprint_result = skill_instance.GetClient()->GetFootprint(
                 world_id, behavior_call_proto.parameters(),
-
-                behavior_call_proto_internal_data,
-
                 project_timeout, context_proto);
 
         {
