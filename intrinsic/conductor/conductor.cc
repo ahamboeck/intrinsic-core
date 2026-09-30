@@ -29,6 +29,7 @@
 #include "absl/strings/substitute.h"
 #include "absl/synchronization/notification.h"
 #include "absl/time/time.h"
+#include "intrinsic/assets/proto/v1alpha1/asset_info_internal.pb.h"
 #include "intrinsic/assets/scene_objects/proto/scene_object_manifest.pb.h"
 #include "intrinsic/connect/cc/grpc/channel.h"
 #include "intrinsic/executive/proto/run_metadata.pb.h"
@@ -301,6 +302,7 @@ ConductorImpl::ConductorImpl(ConductorOptions opts)
       asset_deployment_lro_stub_(std::move(opts.asset_deployment_lro_stub)),
       installed_assets_stub_(std::move(opts.installed_assets_stub)),
       installed_assets_lro_stub_(std::move(opts.installed_assets_lro_stub)),
+      asset_info_internal_stub_(std::move(opts.asset_info_internal_stub)),
       pause_sim_(opts.enable_sim_pause),
       ec_op_(nullptr),
       save_scene_monitor_(std::move(opts.save_scene_monitor)) {}
@@ -916,6 +918,12 @@ grpc::Status ConductorImpl::ConfigureSceneObject(
     grpc::ServerContext* context, const ConfigureSceneObjectRequest* request,
     ConfigureSceneObjectResponse* response) {
   const stats::ScopedSpan span("conductor.ConfigureSceneObject", context);
+
+  if (asset_info_internal_stub_ == nullptr) {
+    return grpc::Status(grpc::StatusCode::FAILED_PRECONDITION,
+                        "asset_info_internal service not configured");
+  }
+
   grpc::ClientContext ai_context;
   GetAssetInstanceRequest ai_request;
   ai_request.set_name(request->name());
@@ -925,17 +933,21 @@ grpc::Status ConductorImpl::ConfigureSceneObject(
       &ai_context, ai_request, &ai_response))
       << "unable to get instance config";
 
-  std::vector<GeometricResourceInstanceData> grids;
-  intrinsic_proto::world::ObjectWorldUpdates unused_updates;
-  INTR_ASSIGN_OR_RETURN_GRPC(
-      std::tie(grids, unused_updates),
-      resource_world_->GetResourceReader()->GetGeometricResourceSetData());
+  grpc::ClientContext aii_context;
+  intrinsic_proto::assets::v1alpha1::GetGeometricResourceSetDataRequest
+      geo_request;
+  intrinsic_proto::resources::GeometricResourceSetData geo_response;
+  INTR_RETURN_IF_ERROR_GRPC(
+      asset_info_internal_stub_->GetGeometricResourceSetData(
+          &aii_context, geo_request, &geo_response))
+      << "unable to get geometric resource set data";
 
-  auto grid = absl::c_find_if(
-      grids, [request](const GeometricResourceInstanceData& grid) {
-        return grid.name() == request->name();
-      });
-  if (grid == grids.end()) {
+  auto grid =
+      absl::c_find_if(geo_response.instance_data(),
+                      [request](const GeometricResourceInstanceData& g) {
+                        return g.name() == request->name();
+                      });
+  if (grid == geo_response.instance_data().end()) {
     return ToGrpcStatus(absl::NotFoundError(
         absl::StrCat("Unable to find geometric data for instance named '",
                      request->name(), "'.")));
@@ -1244,6 +1256,18 @@ absl::StatusOr<std::unique_ptr<ConductorImpl>> ConductorImpl::Create(
   auto asset_instances_stub =
       intrinsic_proto::assets::v1::AssetInstances::NewStub(ais_channel);
 
+  std::unique_ptr<
+      intrinsic_proto::assets::v1alpha1::AssetInfoInternal::StubInterface>
+      asset_info_internal_stub;
+  if (!params.asset_info_internal_service_address.empty()) {
+    auto aii_channel =
+        grpc::CreateChannel(params.asset_info_internal_service_address,
+                            grpc::InsecureChannelCredentials());
+    asset_info_internal_stub =
+        intrinsic_proto::assets::v1alpha1::AssetInfoInternal::NewStub(
+            aii_channel);
+  }
+
   // Create KVStore
   std::shared_ptr<intrinsic::KeyValueStore> kv_store;
   if (create_kv_store != nullptr) {
@@ -1327,6 +1351,7 @@ absl::StatusOr<std::unique_ptr<ConductorImpl>> ConductorImpl::Create(
       .asset_deployment_stub = std::move(asset_deployment_stub),
       .asset_deployment_lro_stub = std::move(asset_deployment_lro_stub),
       .installed_assets_stub = std::move(installed_assets_stub),
+      .asset_info_internal_stub = std::move(asset_info_internal_stub),
       .enable_sim_pause = params.enable_sim_pause,
   });
 }

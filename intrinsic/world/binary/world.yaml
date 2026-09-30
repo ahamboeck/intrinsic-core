@@ -60,6 +60,7 @@ spec:
             - --asset_deployment_service=asset-deployment.app-intrinsic-base.svc.cluster.local:8080
             - --asset_instances_service=asset-instances-v1.app-intrinsic-base.svc.cluster.local:8080
             - --runtime_db_service_address=runtime-db.app-intrinsic-base.svc.cluster.local:8080
+            - --asset_info_internal_service_address=asset-info-internal.app-intrinsic-base.svc.cluster.local:8080
             - --conductor_port=8082
             {{ if .Values.feature_options.enable_sim_pause }}
             - --enable_sim_pause

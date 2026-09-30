@@ -28,6 +28,7 @@
 #include "intrinsic/assets/proto/asset_deployment.grpc.pb.h"
 #include "intrinsic/assets/proto/installed_assets.grpc.pb.h"
 #include "intrinsic/assets/proto/v1/asset_instances.grpc.pb.h"
+#include "intrinsic/assets/proto/v1alpha1/asset_info_internal.grpc.pb.h"
 #include "intrinsic/conductor/execution_context.h"
 #include "intrinsic/conductor/proto/conductor.grpc.pb.h"
 #include "intrinsic/conductor/proto/conductor.pb.h"
@@ -55,6 +56,7 @@ struct SrvParams {
   std::string asset_deployment_service_address;
   std::string asset_instances_service_address;
   std::string runtimedb_service_address;
+  std::string asset_info_internal_service_address;
 
   // Whether to enable simulation pause.
   bool enable_sim_pause;
@@ -90,6 +92,9 @@ struct ConductorOptions {
       asset_deployment_lro_stub;
   std::unique_ptr<intrinsic_proto::assets::v1::InstalledAssets::Stub>
       installed_assets_stub;
+  std::unique_ptr<
+      intrinsic_proto::assets::v1alpha1::AssetInfoInternal::StubInterface>
+      asset_info_internal_stub;
 
   bool enable_sim_pause = false;
 };
@@ -212,6 +217,9 @@ class ConductorImpl final
       installed_assets_stub_;
   std::unique_ptr<google::longrunning::Operations::Stub>
       installed_assets_lro_stub_;
+  std::unique_ptr<
+      intrinsic_proto::assets::v1alpha1::AssetInfoInternal::StubInterface>
+      asset_info_internal_stub_;
   [[maybe_unused]] bool pause_sim_;
 
   absl::Mutex ec_op_mu_;

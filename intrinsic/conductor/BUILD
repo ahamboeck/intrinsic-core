@@ -49,6 +49,7 @@ cc_library(
         ":resource_world_wrapper_headers",
         ":save_scene_monitor",
         "//intrinsic/assets/proto:installed_assets_cc_grpc_proto",
+        "//intrinsic/assets/proto/v1alpha1:asset_info_internal_cc_grpc",
         "//intrinsic/conductor/proto:conductor_cc_grpc",
         "//intrinsic/kubernetes/acl/cc:client_context",
         "//intrinsic/longrunning/cc:operation_scheduler",

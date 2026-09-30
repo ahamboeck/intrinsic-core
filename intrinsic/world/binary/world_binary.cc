@@ -93,6 +93,8 @@ ABSL_FLAG(std::string, asset_instances_service, "",
           "The asset instances service address");
 ABSL_FLAG(std::string, runtime_db_service_address, "",
           "The runtime DB service address");
+ABSL_FLAG(std::string, asset_info_internal_service_address, "",
+          "The asset info internal service address");
 ABSL_FLAG(std::string, logger_address, "", "The logger address");
 ABSL_FLAG(int32_t, conductor_port, 8082, "Port to serve conductor gRPC on.");
 ABSL_FLAG(bool, enable_sim_pause, false,
@@ -241,6 +243,8 @@ int main(int argc, char** argv) {
           absl::GetFlag(FLAGS_asset_instances_service),
       .runtimedb_service_address =
           absl::GetFlag(FLAGS_runtime_db_service_address),
+      .asset_info_internal_service_address =
+          absl::GetFlag(FLAGS_asset_info_internal_service_address),
       .enable_sim_pause = absl::GetFlag(FLAGS_enable_sim_pause),
       .world_updater = *world_updater,
       .world_service = *object_world_service};
