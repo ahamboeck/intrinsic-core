@@ -391,6 +391,7 @@ cc_library(
         ":trajectory_parameterizer",
         ":trajectory_segment",
         "//intrinsic/geometry/api:distance_stats",
+        "//intrinsic/stats:scoped_span",
         "//intrinsic/util/status:status_builder",
         "//intrinsic/util/status:status_macros",
         "//intrinsic/world",

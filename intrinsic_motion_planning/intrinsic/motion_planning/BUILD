@@ -21,6 +21,7 @@ cc_library(
     srcs = ["trajectory_execution_utils.cc"],
     hdrs = ["trajectory_execution_utils.h"],
     deps = [
+        "//intrinsic/stats:scoped_span",
         "//intrinsic/util:proto_time",
         "//intrinsic/util/grpc:channel_interface",
         "//intrinsic/util/proto:any",

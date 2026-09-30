@@ -49,6 +49,7 @@ cc_library(
         "//intrinsic/logging/proto:logger_service_cc_grpc",
         "//intrinsic/platform/pubsub",
         "//intrinsic/skills/internal:world_service_utils",
+        "//intrinsic/stats:scoped_span",
         "//intrinsic/util:eigen",
         "//intrinsic/util/grpc",
         "//intrinsic/util/proto:type_url",

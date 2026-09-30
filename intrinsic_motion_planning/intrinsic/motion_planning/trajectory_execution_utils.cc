@@ -43,6 +43,7 @@
 #include "intrinsic/icon/proto/v1/condition_types.pb.h"
 #include "intrinsic/logging/proto/context.pb.h"
 #include "intrinsic/skills/cc/skill_canceller.h"
+#include "intrinsic/stats/scoped_span.h"
 #include "intrinsic/util/grpc/channel_interface.h"
 #include "intrinsic/util/proto/any.h"
 #include "intrinsic/util/proto_time.h"
@@ -102,6 +103,10 @@ absl::Status ExecuteJointTrajectory(
     bool* stopped_on_signal
 ) {
   // TODO: b/534624482 - Fail early if already cancelled.
+  const stats::ScopedSpan span("skills/ExecuteJointTrajectory");
+  span.AddAttribute("joint_trajectory.size",
+                    joint_trajectory_proto.state_size());
+
   const std::string& arm_part = position_part_name;
 
   if (joint_trajectory_proto.state_size() > kMaxTrajectorySampleSize) {

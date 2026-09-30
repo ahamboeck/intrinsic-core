@@ -111,6 +111,7 @@ cc_library(
     hdrs = ["joint_shortcutter.h"],
     deps = [
         ":shortcutter_configs_cc_proto",
+        "//intrinsic/stats:scoped_span",
         "//intrinsic/util/status:status_macros",
         "//intrinsic_motion_planning/intrinsic/motion_planning/path_planning:kinematics_system_proxy",
         "//intrinsic_motion_planning/intrinsic/motion_planning/path_planning:path_planner",
@@ -127,7 +128,7 @@ cc_library(
         "@abseil-cpp//absl/status:statusor",
         "@abseil-cpp//absl/time",
         "@com_google_protobuf//:protobuf",
-    ] + [],
+    ],
     alwayslink = 1,
 )
 
@@ -161,6 +162,7 @@ cc_library(
     deps = [
         ":pipeline",
         ":pipeline_configs_cc_proto",
+        "//intrinsic/stats:scoped_span",
         "//intrinsic/util/status:status_macros",
         "//intrinsic_motion_planning/intrinsic/motion_planning/path_planning:kinematics_system_proxy",
         "//intrinsic_motion_planning/intrinsic/motion_planning/path_planning:path_planner",
@@ -171,7 +173,7 @@ cc_library(
         "@abseil-cpp//absl/status:statusor",
         "@abseil-cpp//absl/types:optional",
         "@com_google_protobuf//:protobuf",
-    ] + [],
+    ],
 )
 
 cc_library(
@@ -207,6 +209,7 @@ cc_library(
         ":rrt_configs_cc_proto",
         ":rrt_connect",
         ":validation",
+        "//intrinsic/stats:scoped_span",
         "//intrinsic/util:eigen",
         "//intrinsic/util/proto:parse_text_proto",
         "//intrinsic/util/status:status_macros",
@@ -230,7 +233,7 @@ cc_library(
         "@abseil-cpp//absl/status:statusor",
         "@abseil-cpp//absl/types:optional",
         "@com_google_protobuf//:protobuf",
-    ] + [],
+    ],
     alwayslink = 1,
 )
 
@@ -299,6 +302,7 @@ cc_library(
     deps = [
         ":linear_cartesian_motion_path_planner_configs_cc_proto",
         ":validation",
+        "//intrinsic/stats:scoped_span",
         "//intrinsic/util:eigen",
         "//intrinsic/util/status:status_macros",
         "//intrinsic_control/intrinsic/icon/control/parts:feature_interfaces",
@@ -332,7 +336,7 @@ cc_library(
         "@com_google_protobuf//:protobuf",
         "@intrinsic_apis//intrinsic/icon/proto:joint_space_cc_proto",
         "@intrinsic_apis//intrinsic/motion_planning/proto/v1:motion_planning_error_cc_proto",
-    ] + [],
+    ],
     alwayslink = 1,
 )
 
@@ -343,6 +347,7 @@ cc_library(
     deps = [
         ":joint_interpolation_configs_cc_proto",
         ":validation",
+        "//intrinsic/stats:scoped_span",
         "//intrinsic/util:eigen",
         "//intrinsic/util/proto:parse_text_proto",
         "//intrinsic/util/status:status_macros",
@@ -361,7 +366,7 @@ cc_library(
         "@abseil-cpp//absl/strings:str_format",
         "@abseil-cpp//absl/time",
         "@com_google_protobuf//:protobuf",
-    ] + [],
+    ],
     alwayslink = 1,
 )
 

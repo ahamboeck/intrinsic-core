@@ -64,6 +64,7 @@
 #include "intrinsic/motion_planning/proto/v1/motion_planning_error.pb.h"
 #include "intrinsic/motion_planning/proto/v1/motion_planning_limits.pb.h"
 #include "intrinsic/motion_planning/proto/v1/motion_specification.pb.h"
+#include "intrinsic/stats/scoped_span.h"
 #include "intrinsic/util/status/status_builder.h"
 #include "intrinsic/util/status/status_macros.h"
 #include "intrinsic/world/collision/util/collision_world_util.h"
@@ -115,6 +116,7 @@ absl::StatusOr<std::unique_ptr<const PointPath>> PlanSegmentPath(
     const intrinsic_proto::motion_planning::v1::MotionSegment& motion_segment,
     const KinematicsSystemProxy& proxy,
     const PlannerConfigurationOptions& planner_options) {
+  const stats::ScopedSpan span("MotionPlanner/PlanSegmentPath");
   // Get the path planning pipeline for this segment
   INTR_ASSIGN_OR_RETURN(
       const intrinsic::proto::PipelinePathPlannerConfig planner_pipeline,
@@ -266,6 +268,7 @@ absl::StatusOr<std::vector<eigenmath::VectorXd>> ComputeIk(
     const eigenmath::VectorXd& seed_configuration,
     const JointLimitsXd& joint_limits, int max_number_samples,
     bool disable_collision_checking, bool prefer_same_branch_ik = true) {
+  const stats::ScopedSpan span("MotionPlanner/ComputeIk");
   absl::string_view kMotionPlanningErrorSuffix = "ComputeIk";
   std::vector<eigenmath::VectorXd> ik_solutions;
   if (!disable_collision_checking && proxy) {
@@ -397,6 +400,7 @@ absl::Status SampleJointTargets(
     const eigenmath::VectorXd& start_configuration,
     std::vector<TrajectorySegment>& trajectory_segments,
     int max_number_samples) {
+  const stats::ScopedSpan span("MotionPlanner/SampleJointTargets");
   if (!proxy) {
     return absl::InternalError(
         "No kinematic proxy was defined. Kinematic proxy required to evaluate "
@@ -528,6 +532,7 @@ absl::StatusOr<std::vector<PathSegment>> PlanPathImpl(
         path_segment_to_validation_proxies_id_map,
     std::vector<ProxyCreateInfo>& proxy_set,
     DistanceCheckStatistics* distance_check_statistics) {
+  const stats::ScopedSpan span("MotionPlanner/PlanPathImpl");
   if (!global_proxy) {
     return absl::InternalError(
         "No kinematic proxy was defined. Kinematic proxy required to evaluate "
@@ -816,6 +821,8 @@ absl::StatusOr<std::vector<PathSegment>> SampleMotionTargetsAndPlanPath(
     std::vector<ProxyCreateInfo>& proxy_set,
     absl::flat_hash_map<std::string, std::vector<int>>&
         path_segment_to_validation_proxies_id_map) {
+  const stats::ScopedSpan span("MotionPlanner/SampleMotionTargetsAndPlanPath");
+
   // Group the motion specs together into trajectory segments and sanity check
   // the input. This is specific to the current capabilities of the underlying
   // trajectory generator. One trajectory segment represents the set of motion
@@ -892,6 +899,8 @@ absl::StatusOr<MotionPlanner::PlanTrajectoryResult> PlanPathInternal(
     std::vector<ProxyCreateInfo>& proxy_set,
     absl::flat_hash_map<std::string, std::vector<int>>&
         path_segment_to_validation_proxies_id_map) {
+  const stats::ScopedSpan span("MotionPlanner/PlanPathInternal");
+
   // Preparation: Extract collision settings from the world that will be used as
   // a default if nothing is specified in the motion specification.
   INTR_ASSIGN_OR_RETURN(
@@ -961,6 +970,7 @@ MotionPlanner::PlanTrajectory(
     const intrinsic_proto::motion_planning::v1::MotionPlannerConfiguration&
         motion_config,
     std::optional<RunTimeMotionPlannerFlags> run_time_flags) const {
+  const stats::ScopedSpan span("MotionPlanner/PlanTrajectory");
   const absl::Time motion_planning_start_time = absl::Now();
   if (motion_specification.motion_segments_size() < 1) {
     return absl::InvalidArgumentError(
@@ -1060,6 +1070,7 @@ absl::StatusOr<MotionPlanner::PlanPathResult> MotionPlanner::PlanPath(
     const intrinsic_proto::motion_planning::v1::MotionPlannerConfiguration&
         motion_config,
     std::optional<RunTimeMotionPlannerFlags> run_time_flags) const {
+  const stats::ScopedSpan span("MotionPlanner/PlanPath");
   if (motion_specification.motion_segments_size() < 1) {
     return absl::InvalidArgumentError(
         "Motion Specification does not contain any motion segments. Require at "
