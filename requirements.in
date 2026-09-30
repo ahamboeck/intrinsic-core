@@ -131,7 +131,7 @@ natsort==7.1.1
 nbconvert==7.16.6
 nbformat==5.10.4
 nlopt==2.7.1
-notebook==7.4.3
+notebook==7.6.3
 onnx==1.18.0
 OpenEXR==3.3.4
 OpenImageIO==3.0.6.1
