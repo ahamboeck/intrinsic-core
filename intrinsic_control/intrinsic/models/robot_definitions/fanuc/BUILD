@@ -24,7 +24,7 @@ package(
 filegroup(
     name = "plugins",
     srcs = [
-        "simulation_plugins.xacro",
+        "timeslicer_plugins.xacro",
     ],
 )
 
