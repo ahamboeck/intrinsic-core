@@ -671,10 +671,10 @@ oci.pull(
 )
 oci.pull(
     name = "tensorflow_serving",
-    digest = "sha256:67153005c5c5dea9cde7c4dddd69f96728412699e94a4d0e9893666084e1e944",
+    digest = "sha256:3930bdf5b6f1cac4c2e2d6920da491982b8c5f68a32d2688b558c6ba97bde4cc",
     image = "us-central1-docker.pkg.dev/intrinsic-mirror/intrinsic-mirror-dockerhub/tensorflow/serving",
     platforms = ["linux/amd64"],
-    tag = "2.20.0-gpu",  # tag needs to be specified for renovatebot to sync the digest
+    tag = "2.21.0-gpu",  # tag needs to be specified for renovatebot to sync the digest
 )
 oci.pull(
     name = "terraform_base",
