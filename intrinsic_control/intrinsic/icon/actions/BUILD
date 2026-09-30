@@ -27,6 +27,7 @@ cc_library(
     hdrs = ["action_utils.h"],
     deps = [
         "//intrinsic/util/proto:descriptors",
+        "//intrinsic/util/status:status_macros",
         "//intrinsic_control/intrinsic/icon/release:source_location",
         "@abseil-cpp//absl/container:flat_hash_set",
         "@abseil-cpp//absl/status",
