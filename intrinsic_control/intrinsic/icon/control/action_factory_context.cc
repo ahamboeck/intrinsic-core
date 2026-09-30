@@ -101,8 +101,7 @@ ActionFactoryContext::GetOptionalSlotInfo(absl::string_view slot_name) {
         "Action type '", signature_.action_type_name(),
         "' does not declare slot '", slot_name, "' in its signature."));
   }
-  if (!slot_info->second.is_optional() &&
-      slot_info->second.required_feature_interfaces_size() > 0) {
+  if (!slot_info->second.is_optional()) {
     return absl::InvalidArgumentError(absl::StrCat(
         "Slot '", slot_name, "' is not an optional slot for action type '",
         signature_.action_type_name(), "'. Use GetSlotInfo() instead!"));

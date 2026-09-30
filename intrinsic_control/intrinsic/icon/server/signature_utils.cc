@@ -108,8 +108,7 @@ absl::Status ActionCompatibleWithSlotPartMap(
        action_signature.part_slot_infos()) {
     auto slot_to_part_mapping = slot_part_map.find(slot_name);
     if (slot_to_part_mapping == slot_part_map.end()) {
-      if (!slot_info.is_optional() &&
-          !slot_info.required_feature_interfaces().empty()) {
+      if (!slot_info.is_optional()) {
         return absl::InvalidArgumentError(absl::StrCat(
             "Required slot '", slot_name, "' is missing from SlotPartMap."));
       }

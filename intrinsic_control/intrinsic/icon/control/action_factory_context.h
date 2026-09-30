@@ -94,7 +94,8 @@ class ActionFactoryContext {
 
   // Returns a SlotInfo object for the optional slot `slot_name`, or nullopt if
   // the slot is not available. An optional slot is one whose `is_optional`
-  // field in the action's signature is true.
+  // field in the action's signature `PartSlotInfo` is true (registered via
+  // `AddOptionalPartSlot`).
   //
   // The SlotInfo object contains
   // * Static configuration data for the slot, which a factory can use for
