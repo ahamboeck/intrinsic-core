@@ -125,7 +125,6 @@ mcap-protobuf-support==0.5.3
 mcp==1.27.2
 mmh3==5.1.0
 ml-collections==1.1.0
-mlflow==3.13.0
 mujoco==3.2.7
 natsort==7.1.1
 nbconvert==7.16.6
@@ -151,7 +150,6 @@ plotly==6.2.0
 portpicker==1.6.0
 prompt-toolkit==3.0.52
 psutil==7.0.0
-psycopg2-binary==2.9.10
 pyarrow==19.0.1
 pycocotools==2.0.10
 pydantic==2.12.5
