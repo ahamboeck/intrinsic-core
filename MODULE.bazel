@@ -928,21 +928,11 @@ single_version_override(
 )
 
 # ffmpeg@7.1.1.bcr.beta.7 depends on libxml2@2.15.1.bcr.1, which is incompatible with
-# insrc. We must force 2.14.4.bcr.1 until we have fixed this incompatibility.
+# insrc (because of Aravis, see reference to b/441702501 above).
+# We must force 2.14.4.bcr.1 until we have fixed this incompatibility.
 single_version_override(
     module_name = "libxml2",
     version = "2.14.4.bcr.1",
-)
-
-# The upstream maintainer of libvpx didn't want to add includes = ["."] to their BUILD file.
-# They arrived at a solution that worked for the BCR CI but does not appear to work for us.
-# See: https://github.com/bazelbuild/bazel-central-registry/pull/9883   Attempt #1
-#      https://github.com/bazelbuild/bazel-central-registry/pull/10000  Attempt #2
-#      https://github.com/bazelbuild/bazel-central-registry/pull/10005  Attempt #3 (problem)
-single_version_override(
-    module_name = "libvpx",
-    patch_strip = 0,
-    patches = ["//third_party/libvpx:includes.patch"],
 )
 
 
