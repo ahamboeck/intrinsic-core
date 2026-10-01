@@ -64,6 +64,19 @@
 
 )
 
+(deffunction operation-events-add-task-node-state-change-event (?operation-name
+               ?tree-id ?node-id ?proto-state)
+
+  (bind ?event-proto
+    (pb-create "intrinsic_proto.executive.OperationEvent"))
+  (set-node-identifier-proto ?event-proto "task_node_state.node_identifier"
+                             ?tree-id ?node-id)
+
+  (pb-set-field ?event-proto "task_node_state.state" ?proto-state)
+  (operation-events-add-event ?operation-name ?event-proto)
+
+)
+
 (deffunction operation-events-add-counter-change-event (?operation-name
                ?tree-id ?node-id ?counter)
 

@@ -145,6 +145,56 @@
   )
 )
 
+; Maps a plan-action state to a BehaviorTree.TaskNode.State proto value.
+;
+; Args:
+;   ?state: plan-action state symbol
+; Returns:
+;   The TaskNode.State enum value name as symbol
+(deffunction task-node-proto-state-from-plan-action-state (?state)
+  (switch ?state
+    (case FOOTPRINT-CHECKING then (return CHECKING_FOOTPRINT))
+    (case FOOTPRINT-CONFLICT-WAITING then (return FOOTPRINT_CONFLICT_WAITING))
+    (case CANCELLATION-REQUESTED then (return CANCELING))
+    (case CANCELLATION-PENDING then (return CANCELING))
+    (case EXECUTION-SUCCEEDED then (return RUNNING))
+    (case EXECUTION-FAILED then (return RUNNING))
+  )
+  (return (sym-cat (str-replace-all ?state "-" "_")))
+)
+
+; Maps a behavior-call-instance state to a BehaviorTree.TaskNode.State proto
+; value.
+;
+; Args:
+;   ?state: behavior-call-instance state symbol
+; Returns:
+;   The TaskNode.State enum value name as symbol
+(deffunction task-node-proto-state-from-behavior-call-instance-state (?state)
+  (switch ?state
+    (case CANCELLATION-REQUESTED then (return CANCELING))
+    ; TODO(timdn): update with suspend refactor
+    (case SUSPENDING then (return RUNNING))
+    (case SUSPENDED then (return RUNNING))
+  )
+  (return ?state)
+)
+
+; Maps a code-execution-instance state to a BehaviorTree.TaskNode.State proto
+; value.
+;
+; Args:
+;   ?state: code-execution-instance state symbol
+; Returns:
+;   The TaskNode.State enum value name as symbol
+(deffunction task-node-proto-state-from-code-execution-instance-state (?state)
+  (switch ?state
+    (case CANCELATION-REQUESTED then (return CANCELING))
+    (case CANCELATION-PENDING then (return CANCELING))
+  )
+  (return ?state)
+)
+
 ; ----------------------------------- RULES -----------------------------------
 
 (defrule behavior-tree-state-proto-update-tree
@@ -229,48 +279,50 @@
 (defrule behavior-tree-state-proto-update-task-node-action
   (declare (salience ?*SALIENCE-HIGHER*))
   (behavior-tree (id ?tree-id) (operation-name ?op))
-  (behavior-tree-node (tree-id ?tree-id) (type TASK)
+  (behavior-tree-node (id ?node-id) (tree-id ?tree-id) (type TASK)
                       (task-action-uid ?task-action-uid)
                       (run-metadata-proto-path ?run-metadata-proto-path&~""))
   ?action <- (plan-action (uid ?task-action-uid) (state ?state)
                           (run-metadata-proto-state ?proto-state&~?state))
  =>
-  (bind ?path (proto-path-join ?run-metadata-proto-path "task.state"))
-  (bind ?task-state (sym-cat (str-replace-all ?state "-" "_")))
-  ; These states need to be mapped to proto-specific values
-  (switch ?state
-    (case FOOTPRINT-CHECKING then (bind ?task-state CHECKING_FOOTPRINT))
-    (case FOOTPRINT-CONFLICT-WAITING then (bind ?task-state FOOTPRINT_CONFLICT_WAITING))
-    (case CANCELLATION-REQUESTED then (bind ?task-state CANCELING))
-    (case CANCELLATION-PENDING then (bind ?task-state CANCELING))
-    (case EXECUTION-SUCCEEDED then (bind ?task-state RUNNING))
-    (case EXECUTION-FAILED then (bind ?task-state RUNNING))
-  )
-  (run-metadata-proto-update-field ?path ?task-state ?op)
   (modify ?action (run-metadata-proto-state ?state))
+  ; Several plan-action states map to the same proto state. Only update the run
+  ; metadata and publish an event if the proto-visible state changes.
+  (bind ?path (proto-path-join ?run-metadata-proto-path "task.state"))
+  (bind ?task-state (task-node-proto-state-from-plan-action-state ?state))
+  (bind ?previous-task-state
+    (task-node-proto-state-from-plan-action-state ?proto-state))
+  (if (neq ?task-state ?previous-task-state) then
+    (run-metadata-proto-update-field ?path ?task-state ?op)
+    (operation-events-add-task-node-state-change-event
+      ?op ?tree-id ?node-id ?task-state)
+  )
 )
 
 (defrule behavior-tree-state-proto-update-task-node-behavior-instance
   (declare (salience ?*SALIENCE-HIGHER*))
   (behavior-tree (id ?tree-id) (operation-name ?op))
-  (behavior-tree-node (tree-id ?tree-id) (type TASK)
+  (behavior-tree-node (id ?node-id) (tree-id ?tree-id) (type TASK)
                       (task-type CALL-BEHAVIOR)
                       (behavior-call-instance-uid ?bci-uid)
                       (run-metadata-proto-path ?run-metadata-proto-path&~""))
   ?bci <- (behavior-call-instance (uid ?bci-uid) (state ?state)
                                   (run-metadata-proto-state ?proto-state&~?state))
  =>
-  (bind ?path (proto-path-join ?run-metadata-proto-path "task.state"))
-  (bind ?task-state ?state)
-  ; These states need to be mapped to proto-specific values
-  (switch ?state
-    (case CANCELLATION-REQUESTED then (bind ?task-state CANCELING))
-    ; TODO(timdn): update with suspend refactor
-    (case SUSPENDING then (bind ?task-state RUNNING))
-    (case SUSPENDED then (bind ?task-state RUNNING))
-  )
-  (run-metadata-proto-update-field ?path ?task-state ?op)
   (modify ?bci (run-metadata-proto-state ?state))
+  ; Several behavior-call-instance states map to the same proto state. Only
+  ; update the run metadata and publish an event if the proto-visible state
+  ; changes.
+  (bind ?path (proto-path-join ?run-metadata-proto-path "task.state"))
+  (bind ?task-state
+    (task-node-proto-state-from-behavior-call-instance-state ?state))
+  (bind ?previous-task-state
+    (task-node-proto-state-from-behavior-call-instance-state ?proto-state))
+  (if (neq ?task-state ?previous-task-state) then
+    (run-metadata-proto-update-field ?path ?task-state ?op)
+    (operation-events-add-task-node-state-change-event
+      ?op ?tree-id ?node-id ?task-state)
+  )
 )
 
 (defrule behavior-tree-state-proto-update-task-node-code-execution-instance
@@ -284,15 +336,21 @@
                                    (state ?state)
                                    (run-metadata-proto-state ?proto-state&~?state))
  =>
-  (bind ?path (proto-path-join ?run-metadata-proto-path "task.state"))
-  (bind ?task-state ?state)
-  ; These states need to be mapped to proto-specific values
-  (switch ?state
-    (case CANCELATION-REQUESTED then (bind ?task-state CANCELING))
-    (case CANCELATION-PENDING then (bind ?task-state CANCELING))
-  )
-  (run-metadata-proto-update-field ?path ?task-state ?op)
   (modify ?cei (run-metadata-proto-state ?state))
+  ; Several code-execution-instance states map to the same proto state. Only
+  ; update the run metadata and publish an event if the proto-visible state
+  ; changes.
+  (bind ?path (proto-path-join ?run-metadata-proto-path "task.state"))
+  (bind ?task-state
+    (task-node-proto-state-from-code-execution-instance-state ?state))
+  (bind ?previous-task-state
+    (task-node-proto-state-from-code-execution-instance-state ?proto-state))
+  (if (neq ?task-state ?previous-task-state) then
+    (run-metadata-proto-update-field ?path ?task-state ?op)
+    (operation-events-add-task-node-state-change-event
+      ?op ?tree-id ?node-id ?task-state)
+  )
+
 )
 
 
