@@ -32,7 +32,6 @@ proto_library(
 cc_proto_library(
     name = "application_service_cc_proto",
     visibility = [
-        "//intrinsic/perception:__subpackages__",
         "//intrinsic/simulation/service:__subpackages__",
         "//intrinsic/storage/hot_shared_state:__subpackages__",
     ],
@@ -44,7 +43,6 @@ cc_grpc_library(
     srcs = [":application_service_proto"],
     grpc_only = True,
     visibility = [
-        "//intrinsic/perception:__subpackages__",
         "//intrinsic/simulation/service:__subpackages__",
         "//intrinsic/storage/hot_shared_state:__subpackages__",
     ],

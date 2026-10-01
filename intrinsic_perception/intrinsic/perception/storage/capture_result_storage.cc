@@ -23,7 +23,6 @@
 #include "absl/strings/string_view.h"
 #include "absl/time/time.h"
 #include "intrinsic/perception/cameras/capture_result.h"
-#include "intrinsic/perception/proto/conversion/capture_result.h"
 #include "intrinsic/perception/proto/v1/capture_result.pb.h"
 #include "intrinsic/perception/proto_conversion/v1/capture_result.h"
 #include "intrinsic/platform/pubsub/kvstore.h"
@@ -57,17 +56,11 @@ absl::StatusOr<perception::CaptureResult> GetCaptureResult(
   const absl::Time deadline = ToDeadline(timeout);
   INTR_ASSIGN_OR_RETURN(std::shared_ptr<KeyValueStore> kvstore,
                         kvstore_factory(capture_result_location.store()));
-  if (auto capture_result_proto =
-          kvstore->Get<intrinsic_proto::perception::v1::CaptureResult>(
-              capture_result_location.key(), ToTimeout(deadline));
-      capture_result_proto.ok()) {
-    return FromProto(*capture_result_proto);
-  }
   INTR_ASSIGN_OR_RETURN(
       auto capture_result_proto,
-      kvstore->Get<intrinsic_proto::perception::CaptureResult>(
+      kvstore->Get<intrinsic_proto::perception::v1::CaptureResult>(
           capture_result_location.key(), ToTimeout(deadline)));
-  return FromProto(capture_result_proto);
+  return FromProto(std::move(capture_result_proto));
 }
 
 }  // namespace intrinsic::perception

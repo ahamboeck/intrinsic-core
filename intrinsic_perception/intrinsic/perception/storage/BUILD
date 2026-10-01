@@ -21,7 +21,6 @@ cc_library(
     srcs = ["capture_result_storage.cc"],
     hdrs = ["capture_result_storage.h"],
     deps = [
-        "//intrinsic/perception/proto/conversion:capture_result",
         "//intrinsic/util/status:status_macros",
         "//intrinsic_perception/intrinsic/perception/cameras:capture_result",
         "//intrinsic_perception/intrinsic/perception/proto_conversion/v1:capture_result",
