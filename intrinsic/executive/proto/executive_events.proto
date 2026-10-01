@@ -48,6 +48,8 @@ message ConditionStateChangeEvent {
 }
 
 message BreakpointChangeEvent {
+  // The breakpoint that changed. If breakpoint.type is TYPE_UNSPECIFIED, the
+  // breakpoint was removed/cleared from the node.
   BehaviorTree.Breakpoint breakpoint = 1;
 }
 message NodeExecutionSettingsChangeEvent {

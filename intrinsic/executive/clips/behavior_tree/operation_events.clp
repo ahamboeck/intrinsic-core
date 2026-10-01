@@ -100,6 +100,20 @@
 
 )
 
+(deffunction operation-events-add-breakpoint-change-event (?operation-name
+               ?tree-id ?node-id ?breakpoint-type)
+
+  (bind ?event-proto
+    (pb-create "intrinsic_proto.executive.OperationEvent"))
+  (pb-set-field ?event-proto "breakpoint.breakpoint.tree_id" ?tree-id)
+  (pb-set-field ?event-proto "breakpoint.breakpoint.node_id" ?node-id)
+  (if (neq ?breakpoint-type NONE) then
+    (pb-set-field ?event-proto "breakpoint.breakpoint.type" ?breakpoint-type)
+  )
+  (operation-events-add-event ?operation-name ?event-proto)
+
+)
+
 
 
 ; Adds an event for ?operation-name

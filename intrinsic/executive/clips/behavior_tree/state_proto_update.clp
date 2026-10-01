@@ -413,6 +413,7 @@
   (declare (salience ?*SALIENCE-HIGHER*))
   (behavior-tree (id ?tree-id) (operation-name ?op))
   ?node <- (behavior-tree-node (tree-id ?tree-id)
+                               (id ?node-id)
                                (breakpoint-type ?type)
                                (run-metadata-proto-breakpoint-type ?proto-type&~?type)
                                (run-metadata-proto-path ?run-metadata-proto-path&~""))
@@ -426,6 +427,7 @@
       (run-metadata-proto-update-field ?path ?type ?op)
   )
   (modify ?node (run-metadata-proto-breakpoint-type ?type))
+  (operation-events-add-breakpoint-change-event ?op ?tree-id ?node-id ?type)
 )
 
 (defrule behavior-tree-state-proto-update-execution-settings
