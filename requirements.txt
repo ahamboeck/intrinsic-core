@@ -6385,9 +6385,9 @@ retry==0.9.2 \
     --hash=sha256:ccddf89761fa2c726ab29391837d4327f819ea14d244c232a1d24c67a2f98606 \
     --hash=sha256:f8bfa8b99b69c4506d6f5bd3b0aabf77f98cdb17f3c9fc3f5ca820033336fba4
     # via l2p
-retrying==1.4.0 \
-    --hash=sha256:6509d829c70271937605bce361c8f76e91f9123d355d14df7dc6972b1518064a \
-    --hash=sha256:efa99c78bf4fbdbe6f0cba4101470fbc684b93d30ca45ffa1288443a9805172f
+retrying==1.4.2 \
+    --hash=sha256:bbc004aeb542a74f3569aeddf42a2516efefcdaff90df0eb38fbfbf19f179f59 \
+    --hash=sha256:d102e75d53d8d30b88562d45361d6c6c934da06fab31bd81c0420acb97a8ba39
     # via
     #   -r requirements.in
     #   dash
