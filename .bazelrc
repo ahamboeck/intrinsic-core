@@ -295,7 +295,6 @@ common:dynamic --strategy=CppLink=dynamic
 common:dynamic --strategy=CudaCompile=dynamic
 common:dynamic --strategy=Databundle=dynamic
 common:dynamic --strategy=FileWrite=dynamic
-common:dynamic --strategy=Genrule=dynamic
 common:dynamic --strategy=GoCompilePkg=dynamic
 common:dynamic --strategy=GoCompilePkgExternal=dynamic
 common:dynamic --strategy=GoLink=dynamic
