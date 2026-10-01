@@ -738,6 +738,7 @@ proto_library(
 proto_library(
     name = "move_gripper_joints_proto",
     srcs = ["move_gripper_joints.proto"],
+    visibility = ["//visibility:public"],
     deps = [
         "@intrinsic_apis//intrinsic/assets/proto:field_metadata_proto",
         "@intrinsic_apis//intrinsic/assets/proto/v1:resolved_dependency_proto",
