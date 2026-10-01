@@ -161,6 +161,7 @@
   (run-metadata-proto-update-field ?path ?state ?op)
 
   (modify ?tree (run-metadata-proto-state ?state))
+  (operation-events-add-tree-state-change-event ?op ?tree-id ?state)
 )
 
 (defrule behavior-tree-state-proto-update-node
