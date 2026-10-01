@@ -564,6 +564,7 @@
  =>
   (run-metadata-proto-update-field "operation_state" ?state ?operation-name)
   (modify ?op (run-metadata-proto-state ?state))
+  (operation-events-add-operation-state-change-event ?operation-name ?state)
 
   (if (<> ?operation-proto 0) then
     (switch ?state

@@ -90,6 +90,16 @@
 
 )
 
+(deffunction operation-events-add-operation-state-change-event (?operation-name
+               ?proto-state)
+
+  (bind ?event-proto
+    (pb-create "intrinsic_proto.executive.OperationEvent"))
+  (pb-set-field ?event-proto "operation_state.operation_state" ?proto-state)
+  (operation-events-add-event ?operation-name ?event-proto)
+
+)
+
 
 
 ; Adds an event for ?operation-name
