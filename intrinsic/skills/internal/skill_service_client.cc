@@ -687,7 +687,7 @@ absl::Status SkillServiceClient::StartPreview(
 
   ::grpc::ClientContext preview_context;
   intrinsic::ConfigureClientContext(&preview_context);
-  // Same timeout that predict/get footprint have.
+  // Same timeout that get footprint has.
   preview_context.set_deadline(
       absl::ToChronoTime(absl::Now() + skills::kClientDefaultTimeout));
   google::longrunning::Operation operation;
