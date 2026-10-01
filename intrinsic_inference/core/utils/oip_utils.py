@@ -14,12 +14,25 @@
 
 """Utilities for creating and unpacking open inference protocol messages."""
 
+import struct
 from typing import Sequence
 
 import numpy as np
 from specification.protocol import open_inference_grpc_pb2
 
 from intrinsic_inference.core.utils import oip_mappings
+
+
+def convert_bytes_to_str(buffer: bytes) -> str:
+  """Converts an encoded OIP bytes buffer to a UTF-8 string."""
+  buffer_len = struct.unpack("<I", buffer[:4])[0]
+  return buffer[4 : 4 + buffer_len].decode("utf-8")
+
+
+def convert_str_to_bytes(tensor_str: str) -> bytes:
+  """Converts a UTF-8 string to an encoded OIP bytes buffer."""
+  tensor_encoded = tensor_str.encode("utf-8")
+  return struct.pack("<I", len(tensor_encoded)) + tensor_encoded
 
 
 def get_index_of_tensor(
@@ -34,6 +47,27 @@ def get_index_of_tensor(
     if tensor.name == tensor_name:
       return idx
   return -1
+
+
+def extract_str_tensor(
+    tensor_name: str,
+    request_or_response: (
+        open_inference_grpc_pb2.ModelInferRequest
+        | open_inference_grpc_pb2.ModelInferResponse
+    ),
+) -> str | None:
+  """Extracts a string tensor by name from an OIP request or response, or None if not found."""
+  if isinstance(request_or_response, open_inference_grpc_pb2.ModelInferRequest):
+    tensors = request_or_response.inputs
+    raw_contents = request_or_response.raw_input_contents
+  else:
+    tensors = request_or_response.outputs
+    raw_contents = request_or_response.raw_output_contents
+
+  idx = get_index_of_tensor(tensor_name, tensors)
+  if idx == -1:
+    return None
+  return convert_bytes_to_str(raw_contents[idx])
 
 
 def extract_np_tensor_at_index(
