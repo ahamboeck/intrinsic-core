@@ -517,10 +517,6 @@ func (s *DeployService) deployApplication(
 	ctx, span := trace.StartSpan(ctx, "DeployService.deployApplication")
 	defer span.End()
 
-	if cat := app.GetMetadata().GetCategory(); cat != commonpb.Metadata_INSTANCE && cat != commonpb.Metadata_BRANCH {
-		log.ErrorContextf(ctx, "invalid app category of %v", cat)
-		return nil, status.Errorf(codes.Internal, "request to deploy an application of category %q, want INSTANCE or BRANCH", cat)
-	}
 	if app.GetMetadata().GetSolutionDeploymentId() == "" {
 		log.ErrorContext(ctx, "missing solution deployment ID")
 		return nil, status.Error(codes.Internal, "request to deploy an application without a solution deployment ID")
