@@ -489,6 +489,8 @@ func (s *DeployService) DeployApplication(ctx context.Context, req *deploypb.Dep
 		req.GetApplication().Metadata = &commonpb.Metadata{}
 	}
 	req.GetApplication().Metadata.SolutionDeploymentId = newSolutionDeploymentID()
+	// Explicitly clear any user provided input for category.
+	req.GetApplication().Metadata.Category = commonpb.Metadata_CATEGORY_UNDEFINED
 
 	if _, err := s.deployApplication(ctx, req.GetApplication(), nil, nil, deployOpts{validate: validateDependencies}); err != nil {
 		log.ErrorContextf(ctx, "deployApplication failed: %v", err)
@@ -977,7 +979,6 @@ func (s *DeployService) scheduleVersionedSolution(ctx context.Context, solutionI
 		app := applicationview.WithMetadataFrom(ms.GetApplication(), &apb.Application{
 			Metadata: &commonpb.Metadata{
 				Name:        solutionID,
-				Category:    commonpb.Metadata_BRANCH,
 				DisplayName: branch.GetDisplayName(),
 			},
 			OperationMode: operationMode,
@@ -1103,7 +1104,6 @@ func (s *DeployService) UpdateSolutionDeployment(ctx context.Context, req *solut
 			app.Metadata.LastUpdatedBy = email
 		}
 		if solutionID := req.GetSolutionDeployment().GetSolutionId(); solutionID != "" {
-			app.Metadata.Category = commonpb.Metadata_BRANCH
 			app.Metadata.Name = solutionID
 		}
 		app.Metadata.SolutionDeploymentId = solutionDeploymentID
@@ -1206,9 +1206,7 @@ func asApplication(sol *solutionpb.Solution) (*apb.Application, error) {
 	}
 
 	return &apb.Application{
-		Metadata: &commonpb.Metadata{
-			Category: commonpb.Metadata_INSTANCE,
-		},
+		Metadata:           &commonpb.Metadata{},
 		Process:            &processpb.Process{},
 		Assets:             assets,
 		Instances:          instances,
