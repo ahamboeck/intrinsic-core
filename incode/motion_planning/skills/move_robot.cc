@@ -661,17 +661,14 @@ MoveRobot::ComputePlan(
   }
 
   // TODO(kmuelling): Ideally we should plan using the last commanded position
-  // here. However, this is not possible because we cannot get the last
-  // commanded position from ICON in Predict. The world and therefore this
-  // function call only has access to the sensed position which is stored in the
-  // robotics object. If the last commanded position is close to the application
-  // limits, planning/execution might fail because the sensed position is
-  // outside the joint limits. As a workaround, we plan with the sensed position
-  // projected onto the application limits in case of small limits violations.
+  // here. However, this is not possible when called through GetFootprint
+  // because we cannot get the last commanded position from ICON there.
   //
-  // This is a temporary solution until we can get the last commanded position
-  // from ICON in Predict or we remove predict. See b/383717503 for more
-  // details.
+  // As a consequence, we access the sensed position stored in the
+  // `robot_object`. If the last commanded position is close to the application
+  // limits of the robot, the sensed position might violate these limits.
+  // As a workaround, we plan with the sensed position projected onto
+  // the application limits in case of small limits violations.
   //
   // The tolerated limit violation should depend on the robot. As a first
   // approximation, we use the same tolerance for all robots.
