@@ -1365,10 +1365,10 @@ absl::Status CalibrationServiceImpl::CalibrateCaptureToCapture(
 absl::StatusOr<CalibrationServiceImpl::ProvidedCaptureDetection>
 CalibrationServiceImpl::PatternDetectionFromProvidedCapture(
     const intrinsic_proto::perception::v1::CaptureData& capture_data,
-    absl::string_view capture_set, absl::string_view camera_name,
+    absl::string_view capture_name, absl::string_view camera_name,
     grpc::ServerContext* context) {
   LOG(INFO) << "Reading the capture result of camera " << camera_name << " in "
-            << capture_set << " from key-value store "
+            << capture_name << " from key-value store "
             << capture_data.capture_result_location().store() << " with key "
             << capture_data.capture_result_location().key();
   INTR_ASSIGN_OR_RETURN(
@@ -1376,17 +1376,17 @@ CalibrationServiceImpl::PatternDetectionFromProvidedCapture(
       GetCaptureResult(capture_data.capture_result_location(), kvstore_factory_,
                        kDefaultImageGrabbingTimeout),
       _ << "Failed to read the capture result of camera " << camera_name
-        << " in " << capture_set);
+        << " in " << capture_name);
   if (capture_result.sensor_images.empty()) {
     return absl::InvalidArgumentError(
         absl::StrCat("The capture result of camera ", camera_name, " in ",
-                     capture_set, " does not contain any sensor images."));
+                     capture_name, " does not contain any sensor images."));
   }
   INTR_ASSIGN_OR_RETURN(
       const SensorImage* absl_nonnull sensor_image,
       (GetFirstSensorImageOfType<Rgb8u, Gray8u, Gray32f>(capture_result)),
       _ << "The capture result of camera " << camera_name << " in "
-        << capture_set << " contains no supported image");
+        << capture_name << " contains no supported image");
 
   ProvidedCaptureDetection detection{.camera_params =
                                          sensor_image->camera_params()};
@@ -1400,7 +1400,7 @@ CalibrationServiceImpl::PatternDetectionFromProvidedCapture(
       detection_status != intrinsic_proto::perception::v1::CaptureDataResponse::
                               CAPTURE_DATA_STATUS_NO_ERRORS) {
     LOG(WARNING) << "Unusable pattern detection in the image of camera "
-                 << camera_name << " in " << capture_set << ": "
+                 << camera_name << " in " << capture_name << ": "
                  << intrinsic_proto::perception::v1::CaptureDataResponse::
                         CaptureDataStatus_Name(detection_status);
     return detection;
@@ -1428,7 +1428,7 @@ CalibrationServiceImpl::CalibrationDataFromProvidedCaptures(
         "validating externally provided captures.");
   }
 
-  // Camera captures are matched to cameras by position, so every capture set
+  // Camera captures are matched to cameras by position, so every capture
   // needs one capture result per camera, in `Initialize` order.
   std::vector<absl::string_view> camera_names;
   camera_names.reserve(camera_info_.size());
@@ -1441,11 +1441,10 @@ CalibrationServiceImpl::CalibrationDataFromProvidedCaptures(
         captures[capture_index];
     if (capture.capture_data_size() != camera_info_.size()) {
       return absl::InvalidArgumentError(absl::StrCat(
-          "Capture set ", capture_index, " contains ",
-          capture.capture_data_size(), " camera captures, but ",
-          camera_info_.size(),
+          "Capture ", capture_index, " contains ", capture.capture_data_size(),
+          " `capture_data` entries, but ", camera_info_.size(),
           camera_info_.size() == 1 ? " camera was" : " cameras were",
-          " initialized. Every capture set needs exactly one camera capture "
+          " initialized. Every capture needs exactly one `capture_data` entry "
           "per camera, in this order: ",
           absl::StrJoin(camera_names, ", "), "."));
     }
@@ -1459,10 +1458,10 @@ CalibrationServiceImpl::CalibrationDataFromProvidedCaptures(
               .key()
               .empty()) {
         return absl::InvalidArgumentError(absl::StrCat(
-            "Capture set ", capture_index, " has no capture result for camera ",
+            "Capture ", capture_index, " has no capture result for camera ",
             camera_names[camera_index], " (position ", camera_index,
-            "). Every camera needs an image in every capture set; use a "
-            "separate run for the pattern poses which a camera cannot see."));
+            "). Every camera needs an image in every capture; use a separate "
+            "run for the pattern poses which a camera cannot see."));
       }
     }
   }
@@ -1479,10 +1478,10 @@ CalibrationServiceImpl::CalibrationDataFromProvidedCaptures(
     const intrinsic_proto::perception::v1::CaptureDataList& capture =
         captures[capture_index];
 
-    const std::string capture_set = absl::StrCat("capture set ", capture_index);
+    const std::string capture_name = absl::StrCat("capture ", capture_index);
 
     CalibrationDataPoint calibration_data_point;
-    calibration_data_point.capture_id = capture_set;
+    calibration_data_point.capture_id = capture_name;
     // Cameras without a usable detection keep an empty one, so that there is
     // one detection per camera.
     calibration_data_point.pattern_detections.assign(
@@ -1498,7 +1497,7 @@ CalibrationServiceImpl::CalibrationDataFromProvidedCaptures(
 
       INTR_ASSIGN_OR_RETURN(
           ProvidedCaptureDetection capture_detection,
-          PatternDetectionFromProvidedCapture(camera_capture, capture_set,
+          PatternDetectionFromProvidedCapture(camera_capture, capture_name,
                                               camera_name, context));
 
       if (!camera_params_by_index[camera_index].has_value()) {
@@ -1783,6 +1782,9 @@ absl::Status CalibrationServiceImpl::ValidateCameraToCamera(
         multi_camera_validation_result->add_stereo_validation_results();
     result->set_rms_error_2d(rmse);
     result->set_max_error_2d(max_error2d);
+    result->set_reference_camera_name(
+        camera_info_[kDefaultReferenceCameraId].camera_resource_handle.name());
+    result->set_camera_name(camera_info_[i].camera_resource_handle.name());
   }
 
   return absl::OkStatus();

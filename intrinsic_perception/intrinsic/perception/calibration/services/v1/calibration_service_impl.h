@@ -228,9 +228,9 @@ class CalibrationServiceImpl final
   };
   absl::StatusOr<ProvidedCaptureDetection> PatternDetectionFromProvidedCapture(
       const intrinsic_proto::perception::v1::CaptureData& capture_data,
-      absl::string_view capture_set, absl::string_view camera_name,
+      absl::string_view capture_name, absl::string_view camera_name,
       grpc::ServerContext* context) ABSL_EXCLUSIVE_LOCKS_REQUIRED(mutex_);
-  // Converts provided capture sets into calibration data points, one per set.
+  // Converts provided captures into calibration data points, one per capture.
   absl::StatusOr<std::vector<CalibrationDataPoint>>
   CalibrationDataFromProvidedCaptures(
       const google::protobuf::RepeatedPtrField<
