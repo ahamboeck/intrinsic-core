@@ -450,6 +450,16 @@ message SaveRequest {
 
   // The deployment data to save.
   DeploymentData deployment_data = 2;
+
+  // Lock token held by the cluster (corresponding to the solution deployment
+  // ID). If the branch is locked to another cluster, or if an invalid or
+  // missing token is presented for a locked branch, the request will be
+  // rejected with a FAILED_PRECONDITION error.
+  //
+  // A cluster gets locked automatically when a solution gets deployed in the
+  // cloud. If the cluster is not locked, saving will succeed without providing
+  // a lock token.
+  string lock_token = 3;
 }
 
 message SaveResponse {
