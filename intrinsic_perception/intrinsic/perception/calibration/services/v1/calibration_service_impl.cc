@@ -709,12 +709,13 @@ grpc::Status CalibrationServiceImpl::CaptureData(
     *capture_request.mutable_post_processing_by_sensor_id() =
         ToProto(post_processing_by_sensor_id, {});
     INTR_ASSIGN_OR_RETURN_GRPC(
-        const intrinsic_proto::perception::v1::CaptureResponse capture_response,
+        intrinsic_proto::perception::v1::CaptureResponse capture_response,
         grpc_camera_.Call(&GrpcCamera::Stub::Capture, capture_request,
                           camera_info_[i].connection_params));
 
-    INTR_ASSIGN_OR_RETURN_GRPC(const CaptureResult capture_result,
-                               FromProto(capture_response.capture_result()));
+    INTR_ASSIGN_OR_RETURN_GRPC(
+        const CaptureResult capture_result,
+        FromProto(std::move(*capture_response.mutable_capture_result())));
     if (capture_result.sensor_images.empty()) {
       return grpc::Status(grpc::StatusCode::INTERNAL,
                           "No sensor images returned from Capture.");
