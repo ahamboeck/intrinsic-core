@@ -324,7 +324,7 @@ cc_library(
     deps = [
         ":camera_identifier",
         ":image_source_lister",
-        "//intrinsic_perception/intrinsic/perception/cameras/aravis:aravis_wrapper",
+        "//intrinsic_perception/intrinsic/perception/cameras/aravis:aravis_utils",
         "@abseil-cpp//absl/log",
         "@abseil-cpp//absl/status:statusor",
     ],

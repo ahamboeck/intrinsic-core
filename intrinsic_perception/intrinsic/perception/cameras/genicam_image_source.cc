@@ -84,8 +84,7 @@
 #include "intrinsic/util/time/deadline_timeout.h"
 #include "intrinsic/util/version.h"
 
-namespace intrinsic {
-namespace perception {
+namespace intrinsic::perception {
 namespace {
 
 constexpr char kOff[] = "Off";
@@ -94,7 +93,8 @@ constexpr char kContinuous[] = "Continuous";
 inline constexpr auto kAutoNames = std::array<const absl::string_view, 3>(
     {genicam::kExposureAuto, genicam::kGainAuto, genicam::kBalanceWhiteAuto});
 
-constexpr int kNumErrorRetries = 10;
+constexpr int kNumErrorRetries = 4;
+constexpr absl::Duration kErrorRetryDelay = absl::Milliseconds(500);
 constexpr char kIntensity[] = "Intensity";
 constexpr char kPhotoneoColorCamera[] = "ColorCamera";
 constexpr char kRange[] = "Range";
@@ -579,9 +579,21 @@ absl::Status GenicamImageSource::RetryOnPermissionDeniedOrTimeoutOrBusy(
     status = fn();
     switch (status.code()) {
       case absl::StatusCode::kPermissionDenied: {
-        LOG(WARNING) << "Permission denied, trying again after camera "
-                        "rediscovery. Status: "
-                     << status;
+        LOG(WARNING) << "Permission denied, trying again after "
+                     << kErrorRetryDelay << ". Status: " << status;
+        absl::SleepFor(kErrorRetryDelay);
+        // For GigE Vision devices, try re-acquiring the control channel in
+        // place before falling back to full camera recreation (which
+        // re-downloads and re-parses the camera's GenICam XML).
+        if (camera_ != nullptr && arv_camera_is_gv_device(camera_.get())) {
+          GError* error = nullptr;
+          const bool took_control = arv_gv_device_take_control(
+              ARV_GV_DEVICE(arv_camera_get_device(camera_.get())), &error);
+          if (ValidateAndNullArvError(error).ok() && took_control) {
+            break;
+          }
+        }
+        LOG(WARNING) << "Rediscovering camera " << device_id_ << ".";
         camera_.reset();
         INTR_ASSIGN_OR_RETURN(camera_, DiscoverCamera(device_id_));
         break;
@@ -590,10 +602,9 @@ absl::Status GenicamImageSource::RetryOnPermissionDeniedOrTimeoutOrBusy(
       // while capturing for a long time.
       case absl::StatusCode::kDeadlineExceeded:
       case absl::StatusCode::kUnavailable: {
-        LOG(WARNING)
-            << "Device timeout or busy, trying again after 500ms. Status: "
-            << status;
-        absl::SleepFor(absl::Milliseconds(500));
+        LOG(WARNING) << "Device timeout or busy, trying again after "
+                     << kErrorRetryDelay << ". Status: " << status;
+        absl::SleepFor(kErrorRetryDelay);
         break;
       }
       default: {
@@ -2013,5 +2024,4 @@ REGISTER_IMAGE_SOURCE(GenicamImageSource, "genicam",
 REGISTER_IMAGE_SOURCE(FakeGenicamImageSource, "fake_genicam",
                       GenicamImageSource::CreateFake);
 
-}  // namespace perception
-}  // namespace intrinsic
+}  // namespace intrinsic::perception

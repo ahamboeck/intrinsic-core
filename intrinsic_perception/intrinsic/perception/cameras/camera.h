@@ -220,9 +220,10 @@ class CameraManager {
   explicit CameraManager(const ActiveCameraConfig& active_camera);
 
   absl::StatusOr<std::shared_ptr<ConcurrentCamera>> Get(
-      const CameraIdentifier& identifier) ABSL_LOCKS_EXCLUDED(mutex_);
+      const CameraIdentifier& identifier)
+      ABSL_LOCKS_EXCLUDED(creation_mutex_, mutex_);
   absl::StatusOr<std::shared_ptr<ConcurrentCamera>> GetActiveCamera()
-      ABSL_LOCKS_EXCLUDED(mutex_);
+      ABSL_LOCKS_EXCLUDED(creation_mutex_, mutex_);
   absl::StatusOr<ActiveCameraConfig> GetActiveCameraConfig() const
       ABSL_LOCKS_EXCLUDED(mutex_);
 
@@ -230,6 +231,7 @@ class CameraManager {
       ABSL_LOCKS_EXCLUDED(mutex_);
 
  private:
+  mutable absl::Mutex creation_mutex_ ABSL_ACQUIRED_BEFORE(mutex_);
   mutable absl::Mutex mutex_;
   std::optional<ActiveCameraConfig> active_camera_config_
       ABSL_GUARDED_BY(mutex_);
