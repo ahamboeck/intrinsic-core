@@ -16,24 +16,26 @@
 #include <cfenv>  // NOLINT(build/c++11)
 #include <cstdint>
 #include <future>  // NOLINT(build/c++11)
+#include <memory>
 #include <string>
+#include <utility>
+#include <vector>
 
 #include "absl/base/casts.h"
 #include "absl/base/log_severity.h"
 #include "absl/flags/flag.h"
 #include "absl/functional/any_invocable.h"
+#include "absl/log/check.h"
 #include "absl/log/log.h"
 #include "absl/status/status.h"
 #include "absl/status/statusor.h"
 #include "absl/strings/str_cat.h"
 #include "absl/strings/string_view.h"
 #include "absl/synchronization/notification.h"
+#include "absl/time/clock.h"
 #include "absl/time/time.h"
-#include "grpc/grpc.h"
-#include "grpcpp/security/server_credentials.h"
-#include "grpcpp/server_builder.h"
+#include "grpcpp/server.h"
 #include "grpcpp/server_context.h"
-#include "grpcpp/support/channel_arguments.h"
 #include "intrinsic/conductor/conductor.h"
 #include "intrinsic/connect/cc/grpc/channel.h"
 #include "intrinsic/geometry/storage/cas_client.h"
@@ -41,6 +43,7 @@
 #include "intrinsic/geometry/storage/geo_cache.h"
 #include "intrinsic/geometry/storage/geometry_library.h"
 #include "intrinsic/icon/equipment/channel_factory.h"
+#include "intrinsic/icon/release/grpc_time_support.h"
 #include "intrinsic/icon/release/portable/init_intrinsic.h"
 #include "intrinsic/logging/data_logger_client.h"
 #include "intrinsic/resources/client/resource_registry_client.h"
@@ -115,6 +118,22 @@ std::future<T*> PointerFromSharedFuture(
 constexpr absl::string_view kBeliefWorldId = "world";
 constexpr absl::string_view kSimWorldId = "sim_world";
 
+// Creates a gRPC server that serves `services` on `address` and starts
+// accepting requests. Dies if the server cannot be started.
+//
+// All servers of this binary share the same configuration, in particular an
+// unlimited maximum receive message size: the gRPC default of 4MB is too small
+// for geometry meshes.
+std::unique_ptr<grpc::Server> CreateAndStartServerOrDie(
+    absl::string_view address, const std::vector<grpc::Service*>& services) {
+  absl::StatusOr<std::unique_ptr<grpc::Server>> server =
+      intrinsic::CreateServer(
+          address, services,
+          intrinsic::CreateServerOptions{.max_receive_message_size = -1});
+  QCHECK_OK(server.status()) << "Cannot create gRPC server on " << address;
+  return *std::move(server);
+}
+
 }  // namespace
 
 int main(int argc, char** argv) {
@@ -122,8 +141,14 @@ int main(int argc, char** argv) {
   std::fesetround(FE_TOWARDZERO);
   intrinsic::OpenCensusPlugin open_census;
 
-  const std::string server_address =
-      absl::StrCat("[::]:", absl::GetFlag(FLAGS_port));
+  const int32_t world_port = absl::GetFlag(FLAGS_port);
+  // Address the world services listen on.
+  const std::string world_server_address = absl::StrCat("[::]:", world_port);
+  // Address that clients inside this process (the conductor) use to dial the
+  // world services. Clients connect over the loopback interface instead of the
+  // wildcard listening address.
+  const std::string world_client_address =
+      absl::StrCat("localhost:", world_port);
 
   ASSIGN_OR_DIE(
       std::shared_ptr<intrinsic_proto::content_addressable_storage::v1::
@@ -220,21 +245,33 @@ int main(int argc, char** argv) {
 
   ASSIGN_OR_DIE(std::unique_ptr<intrinsic::WorldUpdater> world_updater,
                 intrinsic::WorldUpdater::Create(std::move(options)));
-  // Set the authentication mechanism.
-  // NOTE(pushkarj): Loas2ServerCredentials is not available for config=gce,
-  // which is how all our apps are invoked from within the cluster.
-  std::shared_ptr<grpc::ServerCredentials> creds =
-      grpc::InsecureServerCredentials();  // NOLINT
 
-  grpc::ServerBuilder builder;
-  // Listen on the given address.
-  builder.AddListeningPort(server_address, creds);
-  builder.AddChannelArgument(GRPC_ARG_ALLOW_REUSEPORT, 0);
+  // Finishes the service initialization before the server starts accepting
+  // requests so that no request can observe a partially initialized service.
+  object_world_service->Init(absl::GetFlag(FLAGS_disable_asset_frame_edits));
 
+  // Serves the low- and high-level world services for access to the same
+  // underlying worlds. The server starts serving in the background, main()
+  // blocks on the conductor server below.
+  std::unique_ptr<grpc::Server> world_server = CreateAndStartServerOrDie(
+      world_server_address,
+      {world_service.get(),
+       absl::implicit_cast<
+           intrinsic_proto::world::ObjectWorldService::Service*>(
+           object_world_service.get()),
+       absl::implicit_cast<
+           intrinsic_proto::world::WorldCompatibilityService::Service*>(
+           object_world_service.get()),
+       world_updater.get()});
+
+  LOG(INFO) << "World Server listening on " << world_server_address;
+
+  // The conductor is created after the world server is serving because it
+  // connects to the world services as a gRPC client.
   const SrvParams conductor_params{
       .hss_service_address = absl::GetFlag(FLAGS_hss_service_address),
       .sim_service_address = absl::GetFlag(FLAGS_sim_service_address),
-      .object_world_service_address = server_address,
+      .object_world_service_address = world_client_address,
       .workcell_cluster_service_address =
           absl::GetFlag(FLAGS_workcell_cluster_service),
       .asset_deployment_service_address =
@@ -249,39 +286,19 @@ int main(int argc, char** argv) {
       .world_updater = *world_updater,
       .world_service = *object_world_service};
 
-  // Register both world services for low- and high-level access to the same
-  // underlying worlds.
-  builder.RegisterService(world_service.get());
-  builder.RegisterService(
-      absl::implicit_cast<intrinsic_proto::world::ObjectWorldService::Service*>(
-          object_world_service.get()));
-  builder.RegisterService(
-      absl::implicit_cast<
-          intrinsic_proto::world::WorldCompatibilityService::Service*>(
-          object_world_service.get()));
-  builder.RegisterService(world_updater.get());
-
   LOG(INFO) << "Creating C++ Conductor service...";
-  std::unique_ptr<ConductorImpl> conductor;
-  ASSIGN_OR_DIE(conductor, ConductorImpl::Create(conductor_params));
-  builder.AddListeningPort(
-      absl::StrCat("[::]:", absl::GetFlag(FLAGS_conductor_port)), creds);
-  builder.RegisterService(conductor.get());
+  ASSIGN_OR_DIE(std::unique_ptr<ConductorImpl> conductor,
+                ConductorImpl::Create(conductor_params));
 
-  // Set the max message receive size to unlimited.
-  // The default GRPC_DEFAULT_MAX_RECV_MESSAGE_LENGTH is 4MB, too small for
-  // geometry meshes.
-  builder.SetMaxReceiveMessageSize(-1);
+  // The conductor is served on a separate server so that worlds can be
+  // re-created using execution context. Additionally, its RPCs cannot be
+  // starved by long-running world RPCs sharing the same completion queues.
+  const std::string conductor_address =
+      absl::StrCat("[::]:", absl::GetFlag(FLAGS_conductor_port));
+  std::unique_ptr<grpc::Server> conductor_server =
+      CreateAndStartServerOrDie(conductor_address, {conductor.get()});
 
-  // Set up the server to start accepting requests.
-  std::unique_ptr<grpc::Server> server(builder.BuildAndStart());
-  if (server == nullptr) {
-    LOG(QFATAL) << "Cannot create World Server server " << server_address;
-  }
-
-  object_world_service->Init(absl::GetFlag(FLAGS_disable_asset_frame_edits));
-
-  LOG(INFO) << "World Server listening on " << server_address;
+  LOG(INFO) << "Conductor listening on " << conductor_address;
 
   intrinsic::WorldTfPublisher::Options world_tf_options{
       .world_id = std::string(intrinsic::kBeliefWorldId),
@@ -308,14 +325,27 @@ int main(int argc, char** argv) {
                     sim_world_tf_options));
   INTR_LOG_IF_ERROR(absl::LogSeverity::kError, sim_tf_publisher->Start());
 
-  // Registers signal handler and waits till shutdown.
-  absl::Notification registered;
-  intrinsic::ShutdownParams shutdown_params;
-  shutdown_params.health_grace_duration = absl::ZeroDuration();
-  shutdown_params.shutdown_timeout = absl::GetFlag(FLAGS_shutdown_grace_period);
-  INTR_LOG_IF_ERROR(absl::LogSeverity::kError,
-                    intrinsic::RegisterSignalHandlerAndWait(
-                        server.get(), shutdown_params, registered));
+  // Registers the process-wide SIGTERM handler and blocks until shutdown.
+  //
+  // `RegisterSignalHandlerAndWait()` installs a single, process-wide SIGTERM
+  // handler, so it must be called exactly once even though this binary serves
+  // two servers. It is called for the conductor server, which is drained first
+  // on SIGTERM: in-flight conductor RPCs can still reach the world services
+  // because the world server keeps serving until the call below returns.
+  const intrinsic::ShutdownParams shutdown_params{
+      .health_grace_duration = absl::ZeroDuration(),
+      .shutdown_timeout = absl::GetFlag(FLAGS_shutdown_grace_period),
+  };
+  absl::Notification handlers_registered;
+  // Dies instead of returning early: without a SIGTERM handler the process
+  // would exit immediately and skip the graceful shutdown below.
+  QCHECK_OK(intrinsic::RegisterSignalHandlerAndWait(
+      conductor_server.get(), shutdown_params, handlers_registered));
+
+  // The conductor server is shut down, so the world server is drained next.
+  LOG(INFO) << "Conductor server stopped, shutting down the World Server.";
+  world_server->Shutdown(absl::Now() + shutdown_params.shutdown_timeout);
+  world_server->Wait();
 
   // World storage should flush the worlds to disk in the destructor.
   LOG(INFO) << "Goodbye world!";
