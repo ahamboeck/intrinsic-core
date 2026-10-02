@@ -29,9 +29,6 @@ package(default_visibility = [
 proto_library(
     name = "capture_images_proto",
     srcs = ["capture_images.proto"],
-    visibility = [
-        "//visibility:public",
-    ],
     deps = [
         "@com_google_protobuf//:duration_proto",
         "@intrinsic_apis//intrinsic/assets/proto:field_metadata_proto",
@@ -46,17 +43,11 @@ proto_library(
 
 cc_proto_library(
     name = "capture_images_cc_proto",
-    visibility = [
-        "//visibility:public",
-    ],
     deps = [":capture_images_proto"],
 )
 
 py_proto_library(
     name = "capture_images_py_pb2",
-    visibility = [
-        "//visibility:public",
-    ],
     deps = [":capture_images_proto"],
 )
 
@@ -114,18 +105,12 @@ cc_library(
 skill_manifest(
     name = "capture_images_manifest",
     src = "capture_images_manifest.textproto",
-    visibility = [
-        "//visibility:public",
-    ],
     deps = [":capture_images_proto"],
 )
 
 cc_skill(
     name = "capture_images_skill",
     manifest = ":capture_images_manifest",
-    visibility = [
-        "//visibility:public",
-    ],
     deps = [
         ":capture_images",
         ":capture_images_cc_proto",
