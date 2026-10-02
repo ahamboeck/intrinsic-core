@@ -40,6 +40,12 @@ container_image(
 
 go_binary(
     name = "workcell_cluster_service",
+    embed = [":workcell_cluster_service_lib"],
+    importpath = "intrinsic/kubernetes/workcell_spec/workcell_cluster_service",
+)
+
+go_library(
+    name = "workcell_cluster_service_lib",
     srcs = ["workcell_cluster_service.go"] + [],
     importpath = "intrinsic/kubernetes/workcell_spec/workcell_cluster_service",
     deps = [

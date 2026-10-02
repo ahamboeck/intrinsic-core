@@ -141,14 +141,10 @@ var (
 	numSkillPods                = flag.Int("num_skill_pods", 0, "The number of pods to distribute skills across. Must be > 0.")
 )
 
-var onSolutionUpdateFactory = func(rtrClient resourcetyperuntime.Client) (func(context.Context, *apb.Application, []*rtrpb.ResourceTypeRuntime) error, func()) {
+var onSolutionUpdateFactory = func(ctx context.Context, rtrClient resourcetyperuntime.Client, crcClient versioned.Interface) (func(context.Context, *apb.Application, []*rtrpb.ResourceTypeRuntime) error, func()) {
 	return func(context.Context, *apb.Application, []*rtrpb.ResourceTypeRuntime) error {
 		return nil
 	}, func() {}
-}
-
-var startOptionalClusterMonitoring = func(ctx context.Context, factory informers.SharedInformerFactory, crcClient versioned.Interface) func() {
-	return func() {}
 }
 
 var getClusterInfo = func(ctx context.Context, crcClient versioned.Interface) transfersvc.ClusterInfo {
@@ -424,7 +420,7 @@ func main() {
 	resourceTypeRuntimeClient := resourcetyperuntime.CreateCachedClient(runtimeDBClient)
 	skillRuntimeClient := skillruntime.CreateClient(runtimeDBClient)
 
-	onSolutionUpdate, stopOnSolutionUpdate := onSolutionUpdateFactory(resourceTypeRuntimeClient)
+	onSolutionUpdate, stopOnSolutionUpdate := onSolutionUpdateFactory(ctx, resourceTypeRuntimeClient, crcClient)
 	defer stopOnSolutionUpdate()
 
 	clusterParams := render.ClusterParams{
@@ -531,9 +527,6 @@ func main() {
 	log.InfoContextf(ctx, "Starting SystemServiceState service at %d", *transferServicePort)
 
 	factory := informers.NewSharedInformerFactory(coreClient, 10*time.Minute)
-
-	stopOptionalClusterMonitoring := startOptionalClusterMonitoring(ctx, factory, crcClient)
-	defer stopOptionalClusterMonitoring()
 
 	systemServiceState, err := systemservicestate.New(ctx, &systemservicestate.Options{
 		K8sClient: coreClient,
