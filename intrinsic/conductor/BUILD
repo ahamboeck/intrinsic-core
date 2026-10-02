@@ -174,6 +174,7 @@ cc_library(
         "@abseil-cpp//absl/status",
         "@abseil-cpp//absl/status:statusor",
         "@abseil-cpp//absl/strings",
+        "@abseil-cpp//absl/time",
         "@intrinsic_apis//intrinsic/config/proto:operation_mode_cc_proto",
         "@intrinsic_apis//intrinsic/util/status:extended_status_cc_proto",
     ],
