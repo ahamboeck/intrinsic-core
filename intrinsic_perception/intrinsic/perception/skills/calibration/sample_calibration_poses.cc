@@ -72,8 +72,7 @@
 #include "intrinsic/world/proto/collision_settings.pb.h"
 #include "intrinsic/world/util/object_reference_utils.h"
 
-namespace intrinsic {
-namespace skills {
+namespace intrinsic::skills {
 
 std::unique_ptr<SkillInterface> SampleCalibrationPoses::CreateSkill() {
   return std::make_unique<SampleCalibrationPoses>(
@@ -320,7 +319,7 @@ absl::StatusOr<std::vector<PoseWithJointConfiguration>> SampleRandomWaypoints(
     intrinsic_proto::perception::v1::CameraSetup calibration_type,
     const world::KinematicObject& robot,
     const world::WorldObject& calibration_object,
-    const world::Frame& camera_frame, const world::Frame& flange,
+    const world::WorldObject& camera, const world::Frame& flange,
     const int num_samples, const eigenmath::Vector3d& sample_box_halfsize,
     const double rotation_randomization_angle_degrees,
     const double rotation_randomization_roll_angle_degrees,
@@ -335,7 +334,7 @@ absl::StatusOr<std::vector<PoseWithJointConfiguration>> SampleRandomWaypoints(
       intrinsic_proto::perception::v1::CAMERA_SETUP_STATIONARY) {
     // Camera is the center.
     INTR_ASSIGN_OR_RETURN(base_t_stationary_object,
-                          world.GetTransform(robot, camera_frame));
+                          world.GetTransform(robot, camera));
     INTR_ASSIGN_OR_RETURN(flange_t_attached_object,
                           world.GetTransform(flange, calibration_object));
   } else {
@@ -343,7 +342,7 @@ absl::StatusOr<std::vector<PoseWithJointConfiguration>> SampleRandomWaypoints(
     INTR_ASSIGN_OR_RETURN(base_t_stationary_object,
                           world.GetTransform(robot, calibration_object));
     INTR_ASSIGN_OR_RETURN(flange_t_attached_object,
-                          world.GetTransform(flange, camera_frame));
+                          world.GetTransform(flange, camera));
   }
 
   const int num_poses_to_try =
@@ -533,9 +532,8 @@ SampleCalibrationPoses::ExecuteWithRandomEngine(const ExecuteRequest& request,
         sampling_strategy_params.max_angle_degrees());
   } else if (params.has_randomized_box_params()) {
     INTR_ASSIGN_OR_RETURN(
-        const world::Frame camera_frame,
-        world.GetFrame(WorldObjectName(params.camera().object().name()),
-                       SensorFrameName()));
+        const world::WorldObject camera,
+        world.GetObject(WorldObjectName(params.camera().object().name())));
     const ::intrinsic_proto::skills::RandomizedBoxParams&
         sampling_strategy_params = params.randomized_box_params();
     const eigenmath::VectorXd sample_box_halfsize = RepeatedDoubleToVectorXd(
@@ -544,7 +542,7 @@ SampleCalibrationPoses::ExecuteWithRandomEngine(const ExecuteRequest& request,
         sampled_waypoints,
         SampleRandomWaypoints(
             base_t_flange_initial, world, arm_part_info.object,
-            params.calibration_type(), robot, calibration_object, camera_frame,
+            params.calibration_type(), robot, calibration_object, camera,
             flange, sampling_strategy_params.num_samples(), sample_box_halfsize,
             sampling_strategy_params.rotation_randomization_angle_degrees(),
             sampling_strategy_params
@@ -614,5 +612,4 @@ SampleCalibrationPoses::GetFootprint(const GetFootprintRequest& request,
   return result;
 }
 
-}  // namespace skills
-}  // namespace intrinsic
+}  // namespace intrinsic::skills

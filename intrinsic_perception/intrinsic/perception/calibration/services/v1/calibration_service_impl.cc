@@ -253,7 +253,6 @@ absl::StatusOr<StereoCalibrationResult> ComputeStereoCalibrationResult(
 
 struct WorldUpdateParameters {
   world::WorldObject camera;
-  world::Frame camera_frame;
   world::KinematicObject robot;
   world::Frame flange;
   std::optional<world::WorldObject> calibration_object;
@@ -271,7 +270,7 @@ absl::Status UpdateCameraPoseInWorld(
     const Pose3d flange_t_camera = *FromProto(
         calibration_result.moving_camera_result_poses().flange_t_camera());
     INTR_RETURN_IF_ERROR(world.UpdateTransform(
-        world_update_params.flange, world_update_params.camera_frame,
+        world_update_params.flange, world_update_params.camera,
         /*node_to_update=*/world_update_params.camera, flange_t_camera));
   } else if (calibration_result.has_stationary_camera_result_poses()) {
     // For stationary camera, the result gives base_t_camera. We need to update
@@ -279,7 +278,7 @@ absl::Status UpdateCameraPoseInWorld(
     Pose3d base_t_camera = *FromProto(
         calibration_result.stationary_camera_result_poses().base_t_camera());
     INTR_RETURN_IF_ERROR(world.UpdateTransform(
-        world_update_params.robot, world_update_params.camera_frame,
+        world_update_params.robot, world_update_params.camera,
         /*node_to_update=*/world_update_params.camera, base_t_camera));
   } else {
     return absl::InvalidArgumentError(
@@ -299,13 +298,9 @@ absl::Status UpdateCameraPoseInWorld(
         "Camera-to-camera calibration result pose missing.");
   }
   Pose3d cam_t_cam0 = *FromProto(calibration_result.cam_t_cam0());
-  INTR_ASSIGN_OR_RETURN(const auto camera_frame,
-                        camera.GetFrame(SensorFrameName()));
-  INTR_ASSIGN_OR_RETURN(const auto reference_camera_frame,
-                        reference_camera.GetFrame(SensorFrameName()));
-  INTR_RETURN_IF_ERROR(
-      world.UpdateTransform(camera_frame, reference_camera_frame,
-                            /*node_to_update=*/camera, cam_t_cam0));
+  INTR_RETURN_IF_ERROR(world.UpdateTransform(camera, reference_camera,
+                                             /*node_to_update=*/camera,
+                                             cam_t_cam0));
   return absl::OkStatus();
 }
 
@@ -729,6 +724,8 @@ grpc::Status CalibrationServiceImpl::CaptureData(
         (GetFirstSensorImageOfType<Rgb8u, Gray8u, Gray32f>(capture_result)));
     calibration_data_point.camera_params_from_capture.push_back(
         sensor_image->camera_params());
+    calibration_data_point.camera_ts_sensor_from_capture.push_back(
+        sensor_image->camera_t_sensor());
 
     // Log the raw (unannotated) image. The corresponding annotated image is
     // logged by the pattern detector. Logging failures are not fatal for the
@@ -1038,14 +1035,26 @@ CalibrationServiceImpl::GetCameraParamsFromCachedResultsOrData(
   return camera_params;
 }
 
+std::vector<Pose3d> CalibrationServiceImpl::GetCameraTsSensor(
+    const CalibrationDataPoint& data_point) const {
+  std::vector<Pose3d> camera_ts_sensor;
+  camera_ts_sensor.reserve(camera_info_.size());
+  for (int i = 0; i < camera_info_.size(); ++i) {
+    if (i < data_point.camera_ts_sensor_from_capture.size() &&
+        data_point.camera_ts_sensor_from_capture[i].has_value()) {
+      camera_ts_sensor.push_back(*data_point.camera_ts_sensor_from_capture[i]);
+    } else {
+      camera_ts_sensor.push_back(Pose3d());
+    }
+  }
+  return camera_ts_sensor;
+}
+
 absl::StatusOr<std::vector<
     intrinsic_proto::perception::v1::CameraToRobotCalibrationRequest>>
 CalibrationServiceImpl::CreateCameraToRobotCalibrationRequests(
     intrinsic_proto::perception::v1::CameraSetup type,
     absl::Span<const CalibrationDataPoint> calibration_data) {
-  std::vector<Pose3d> camera_t_sensors;
-  camera_t_sensors.reserve(camera_info_.size());
-
   if (!robot_object_.has_value() || !robot_flange_.has_value()) {
     return absl::FailedPreconditionError(
         "No arm part was specified on calibration service initialization. "
@@ -1060,37 +1069,14 @@ CalibrationServiceImpl::CreateCameraToRobotCalibrationRequests(
   INTR_ASSIGN_OR_RETURN(
       const auto camera_params,
       GetCameraParamsFromCachedResultsOrData(calibration_data.back()));
+  const std::vector<Pose3d> camera_ts_sensor =
+      GetCameraTsSensor(calibration_data.back());
 
   for (int i = 0; i < camera_info_.size(); ++i) {
     intrinsic_proto::perception::v1::CameraToRobotCalibrationRequest
         camera_to_robot_calibration_request;
     camera_to_robot_calibration_request.set_type(type);
     requests.push_back(camera_to_robot_calibration_request);
-
-    // Extract possible sensor pose offset from default sensor config.
-    const int64_t default_sensor_id = camera_info_[i].default_sensor_id;
-    intrinsic_proto::perception::v1::SensorConfig default_sensor_config;
-    default_sensor_config.set_id(default_sensor_id);
-
-    if (i < camera_params.size()) {
-      *default_sensor_config.mutable_camera_params() =
-          intrinsic_proto::perception::v1::ToProto(camera_params[i]);
-    }
-
-    if (!default_sensor_config.has_camera_params()) {
-      return absl::FailedPreconditionError(
-          absl::StrCat("Default sensor config for ",
-                       camera_info_[i].camera_resource_handle.name(),
-                       " does not have camera params."));
-    }
-
-    if (default_sensor_config.has_camera_t_sensor()) {
-      INTR_ASSIGN_OR_RETURN(const Pose3d camera_t_sensor,
-                            FromProto(default_sensor_config.camera_t_sensor()));
-      camera_t_sensors.push_back(camera_t_sensor);
-    } else {
-      camera_t_sensors.push_back(Pose3d());
-    }
   }
 
   for (const auto& data : calibration_data) {
@@ -1128,7 +1114,7 @@ CalibrationServiceImpl::CreateCameraToRobotCalibrationRequests(
                                              eigenmath::Vector3d(1, 0, 0));
         const Pose3d corner_t_center(eigenmath::Quaterniond(rotate_x), move);
         const Pose3d sensor_t_object = pose * corner_t_center;
-        const Pose3d camera_t_object = camera_t_sensors[i] * sensor_t_object;
+        const Pose3d camera_t_object = camera_ts_sensor[i] * sensor_t_object;
         auto* pose_pair = requests[i].add_input_pose_pairs();
         *pose_pair->mutable_camera_t_object() = ToProto(camera_t_object);
         *pose_pair->mutable_base_t_flange() = *data.base_t_flange;
@@ -1164,12 +1150,9 @@ absl::Status CalibrationServiceImpl::CalibrateCameraToRobot(
     INTR_ASSIGN_OR_RETURN(
         const world::WorldObject camera,
         object_world_client.GetObject(camera_info_[i].camera_resource_handle));
-    INTR_ASSIGN_OR_RETURN(const world::Frame camera_frame,
-                          camera.GetFrame(SensorFrameName()));
 
     struct WorldUpdateParameters world_update_params{
         .camera = camera,
-        .camera_frame = camera_frame,
         .robot = robot_object_.value(),
         .flange = robot_flange_.value(),
         .calibration_object = calibration_object_,
@@ -1201,6 +1184,8 @@ absl::Status CalibrationServiceImpl::CalibrateCameraToCamera(
   INTR_ASSIGN_OR_RETURN(
       const auto camera_params,
       GetCameraParamsFromCachedResultsOrData(calibration_data[0]));
+  const std::vector<Pose3d> camera_ts_sensor =
+      GetCameraTsSensor(calibration_data[0]);
 
   // Pre-flight check: ensure every capture has pattern_detections.size() ==
   // camera_info_.size().
@@ -1258,11 +1243,14 @@ absl::Status CalibrationServiceImpl::CalibrateCameraToCamera(
             camera_i_pattern_detections, camera_params[i], i,
             kMinimumCameraDetectionsForCameraToCameraCalibration));
 
+    const Pose3d cam_i_t_cam0 =
+        camera_ts_sensor[i] * camera_to_camera_calibration_result.cam1_t_cam0 *
+        camera_ts_sensor[kDefaultReferenceCameraId].inverse();
+
     intrinsic_proto::perception::v1::StereoCalibrationResult*
         stereo_calibration_result =
             multi_camera_calibration_result->add_stereo_calibration_results();
-    *stereo_calibration_result->mutable_cam_t_cam0() =
-        ToProto(camera_to_camera_calibration_result.cam1_t_cam0);
+    *stereo_calibration_result->mutable_cam_t_cam0() = ToProto(cam_i_t_cam0);
     stereo_calibration_result->set_error2d(
         camera_to_camera_calibration_result.reprojection_error);
 
@@ -1295,6 +1283,11 @@ absl::Status CalibrationServiceImpl::CalibrateCaptureToCapture(
                             calibration_data[kDefaultReferenceCaptureId]));
   const CameraParams& reference_camera_params =
       ref_camera_params[kDefaultReferenceCameraId];
+
+  const std::vector<Pose3d> ref_camera_ts_sensor =
+      GetCameraTsSensor(calibration_data[kDefaultReferenceCaptureId]);
+  const Pose3d& reference_camera_t_sensor =
+      ref_camera_ts_sensor[kDefaultReferenceCameraId];
 
   std::vector<intrinsic_proto::perception::v1::PatternDetection>
       reference_pattern_detection{
@@ -1341,20 +1334,27 @@ absl::Status CalibrationServiceImpl::CalibrateCaptureToCapture(
                             GetCameraParamsFromCachedResultsOrData(
                                 calibration_data[capture_index]));
       const CameraParams& camera_params = capture_camera_params[camera_index];
+      const std::vector<Pose3d> capture_camera_ts_sensor =
+          GetCameraTsSensor(calibration_data[capture_index]);
+      const Pose3d& camera_t_sensor = capture_camera_ts_sensor[camera_index];
 
       INTR_ASSIGN_OR_RETURN(
           const StereoCalibrationResult&
-              capture_i_to_capture_0_calibration_result,
+              capture_i_to_capture0_calibration_result,
           ComputeStereoCalibrationResult(
               reference_pattern_detection, reference_camera_params,
               camera_i_pattern_detection, camera_params,
               camera_index * calibration_data.size() + capture_index,
               kMinimumCameraDetectionsForCaptureToCaptureCalibration));
 
+      const Pose3d capture_i_t_capture0 =
+          camera_t_sensor *
+          capture_i_to_capture0_calibration_result.cam1_t_cam0 *
+          reference_camera_t_sensor.inverse();
       *single_capture_calibration_result->mutable_capture_t_capture0() =
-          ToProto(capture_i_to_capture_0_calibration_result.cam1_t_cam0);
+          ToProto(capture_i_t_capture0);
       single_capture_calibration_result->set_error2d(
-          capture_i_to_capture_0_calibration_result.reprojection_error);
+          capture_i_to_capture0_calibration_result.reprojection_error);
     }
   }
 
@@ -1648,20 +1648,18 @@ absl::Status CalibrationServiceImpl::ValidateCameraToRobot(
     INTR_ASSIGN_OR_RETURN(
         const world::WorldObject camera,
         object_world_client.GetObject(camera_info_[i].camera_resource_handle));
-    INTR_ASSIGN_OR_RETURN(const world::Frame camera_frame,
-                          camera.GetFrame(SensorFrameName()));
 
     intrinsic_proto::Pose result_pose;
     if (requests[i].type() ==
         intrinsic_proto::perception::v1::CAMERA_SETUP_MOVING) {
-      INTR_ASSIGN_OR_RETURN(const Pose3d flange_t_camera,
-                            object_world_client.GetTransform(
-                                robot_flange_.value(), camera_frame));
+      INTR_ASSIGN_OR_RETURN(
+          const Pose3d flange_t_camera,
+          object_world_client.GetTransform(robot_flange_.value(), camera));
       result_pose = ToProto(flange_t_camera);
     } else {
-      INTR_ASSIGN_OR_RETURN(const Pose3d base_t_camera,
-                            object_world_client.GetTransform(
-                                robot_object_.value(), camera_frame));
+      INTR_ASSIGN_OR_RETURN(
+          const Pose3d base_t_camera,
+          object_world_client.GetTransform(robot_object_.value(), camera));
       result_pose = ToProto(base_t_camera);
     }
 
@@ -1696,6 +1694,8 @@ absl::Status CalibrationServiceImpl::ValidateCameraToCamera(
   INTR_ASSIGN_OR_RETURN(
       const std::vector<CameraParams> active_camera_params,
       GetCameraParamsFromCachedResultsOrData(validation_data[0]));
+  const std::vector<Pose3d> camera_ts_sensor =
+      GetCameraTsSensor(validation_data[0]);
 
   auto object_world_service_stub = GetOrCreateObjectWorldServiceStub();
   world::ObjectWorldClient object_world_client(execute_world_id_,
@@ -1705,8 +1705,6 @@ absl::Status CalibrationServiceImpl::ValidateCameraToCamera(
       const world::WorldObject reference_camera,
       object_world_client.GetObject(
           camera_info_[kDefaultReferenceCameraId].camera_resource_handle));
-  INTR_ASSIGN_OR_RETURN(const world::Frame reference_camera_frame,
-                        reference_camera.GetFrame(SensorFrameName()));
 
   intrinsic_proto::perception::v1::MultiCameraValidationResult*
       multi_camera_validation_result =
@@ -1720,12 +1718,13 @@ absl::Status CalibrationServiceImpl::ValidateCameraToCamera(
     INTR_ASSIGN_OR_RETURN(
         const world::WorldObject camera,
         object_world_client.GetObject(camera_info_[i].camera_resource_handle));
-    INTR_ASSIGN_OR_RETURN(const world::Frame camera_frame,
-                          camera.GetFrame(SensorFrameName()));
 
     INTR_ASSIGN_OR_RETURN(
         const Pose3d cam_i_t_cam0,
-        object_world_client.GetTransform(camera_frame, reference_camera_frame));
+        object_world_client.GetTransform(camera, reference_camera));
+    const Pose3d sensor_i_t_sensor0 =
+        camera_ts_sensor[i].inverse() * cam_i_t_cam0 *
+        camera_ts_sensor[kDefaultReferenceCameraId];
 
     double total_reprojection_error = 0.0;
     int total_points = 0;
@@ -1741,21 +1740,21 @@ absl::Status CalibrationServiceImpl::ValidateCameraToCamera(
         continue;
       }
 
-      absl::StatusOr<Pose3d> cam0_t_board = ComputePoseFromPatternDetection(
+      absl::StatusOr<Pose3d> sensor0_t_board = ComputePoseFromPatternDetection(
           detection0, active_camera_params[kDefaultReferenceCameraId]);
-      if (!cam0_t_board.ok()) {
+      if (!sensor0_t_board.ok()) {
         LOG(WARNING) << "Failed to compute pose for reference camera "
                      << camera_info_[kDefaultReferenceCameraId]
                             .camera_resource_handle.name()
-                     << ": " << cam0_t_board.status();
+                     << ": " << sensor0_t_board.status();
         continue;
       }
 
-      Pose3d cam_i_t_board = cam_i_t_cam0 * (*cam0_t_board);
+      Pose3d sensor_i_t_board = sensor_i_t_sensor0 * (*sensor0_t_board);
 
       absl::StatusOr<ReprojectionErrorResult> result =
           ComputeReprojectionErrorForDetection(
-              detection_i, active_camera_params[i], cam_i_t_board);
+              detection_i, active_camera_params[i], sensor_i_t_board);
       if (!result.ok()) {
         LOG(WARNING) << "Failed to compute reprojection error for camera "
                      << camera_info_[i].camera_resource_handle.name() << ": "
@@ -1940,11 +1939,8 @@ grpc::Status CalibrationServiceImpl::SaveCameraPosesToInitialWorld(
             absl::StrCat("Failed to get camera ", camera_name,
                          " from init world: ", camera_init.status().message()));
       }
-      INTR_ASSIGN_OR_RETURN_GRPC(const auto camera_frame,
-                                 camera_init->GetFrame(SensorFrameName()));
       struct WorldUpdateParameters world_update_params{
           .camera = *camera_init,
-          .camera_frame = camera_frame,
           .robot = robot_object_.value(),
           .flange = robot_flange_.value(),
       };

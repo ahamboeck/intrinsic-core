@@ -37,6 +37,7 @@
 #include "grpcpp/support/status.h"
 #include "intrinsic/assets/proto/asset_deployment.grpc.pb.h"
 #include "intrinsic/assets/proto/v1/asset_instances.grpc.pb.h"
+#include "intrinsic/math/pose3.h"
 #include "intrinsic/perception/calibration/pattern_detector.h"
 #include "intrinsic/perception/cameras/camera.h"
 #include "intrinsic/perception/core/camera_params.h"
@@ -129,6 +130,7 @@ class CalibrationServiceImpl final
     std::vector<intrinsic_proto::perception::v1::PatternDetection>
         pattern_detections;
     std::vector<std::optional<CameraParams>> camera_params_from_capture;
+    std::vector<std::optional<Pose3d>> camera_ts_sensor_from_capture;
     // Optional field for robot pose, in case camera-to-robot calibration should
     // be performed.
     std::optional<intrinsic_proto::Pose> base_t_flange;
@@ -202,6 +204,8 @@ class CalibrationServiceImpl final
   absl::StatusOr<std::vector<CameraParams>>
   GetCameraParamsFromCachedResultsOrData(const CalibrationDataPoint& data_point)
       ABSL_EXCLUSIVE_LOCKS_REQUIRED(mutex_);
+  std::vector<Pose3d> GetCameraTsSensor(const CalibrationDataPoint& data_point)
+      const ABSL_EXCLUSIVE_LOCKS_REQUIRED(mutex_);
   absl::Status CalibrateIntrinsics(
       const intrinsic_proto::perception::v1::CalibrationRequest* request,
       intrinsic_proto::perception::v1::CalibrationResult* response,
