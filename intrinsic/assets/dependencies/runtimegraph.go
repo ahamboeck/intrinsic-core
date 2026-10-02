@@ -28,6 +28,8 @@ import (
 	"intrinsic/executive/go/behaviortree"
 	"intrinsic/util/proto/names"
 
+	log "github.com/golang/glog"
+
 	processassetpb "intrinsic/assets/processes/proto/process_asset_go_proto"
 	atypepb "intrinsic/assets/proto/asset_type_go_proto"
 	iapb "intrinsic/assets/proto/installed_assets_go_proto"
@@ -202,7 +204,10 @@ func processRuntimeAsset(ctx context.Context, rtr *rtrpb.ResourceTypeRuntime) (*
 			info.FileDescriptorSet = rtr.GetMetadata().GetFileDescriptorSet()
 			info.ConfigMessageName = skill.GetDetails().GetParameter().GetMessageFullName()
 		}
-
+	case atypepb.AssetType_ASSET_TYPE_UNSPECIFIED:
+		// TODO(b/517345754): Currently just log instead of returning an error.
+		// Solutions with legacy pose estimators have an unspecified Asset type.
+		log.WarningContextf(ctx, "unspecified Asset type for %q: %v", id, assetType)
 	default:
 		return nil, fmt.Errorf("unknown Asset type for %q: %v", id, assetType)
 	}

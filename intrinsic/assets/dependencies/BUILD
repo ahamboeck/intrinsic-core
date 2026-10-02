@@ -285,6 +285,7 @@ go_library(
         "//intrinsic/executive/go:behaviortree",
         "//intrinsic/resources/proto:resource_type_runtime_go_proto",
         "//intrinsic/util/proto:names",
+        "@com_github_golang_glog//:go_default_library",
         "@intrinsic_apis//intrinsic/assets/proto:asset_type_go_proto",
         "@intrinsic_apis//intrinsic/assets/proto/v1:asset_instances_go_proto",
         "@org_golang_google_protobuf//types/known/anypb",
