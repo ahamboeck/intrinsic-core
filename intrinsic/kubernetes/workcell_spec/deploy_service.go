@@ -475,12 +475,9 @@ func (s *DeployService) DeployApplication(ctx context.Context, req *deploypb.Dep
 
 	log.InfoContext(ctx, "Solution is not a branch.  No save data will be retrieved.")
 	var validateDependencies deployValidator = func(ctx context.Context, app *apb.Application, rts map[string]*rtrpb.ResourceTypeRuntime) error {
-		_, err := s.validateDependencies(ctx, app, rts)
-		if err != nil {
-			// TODO(b/536078799): As a temporary measure, we only log the errors here instead of fatally
-			// returning them. Once we are reasonably confident that this won't cause breakages for
-			// existing users, we should change this to return the error here.
+		if _, err := s.validateDependencies(ctx, app, rts); err != nil {
 			log.ErrorContextf(ctx, "dependency validation failed in DeployApplication: %v", err)
+			return status.Errorf(codes.FailedPrecondition, "dependency validation failed when deploying the Solution: %v", err)
 		}
 		return nil
 	}
@@ -990,10 +987,8 @@ func (s *DeployService) scheduleVersionedSolution(ctx context.Context, solutionI
 		var validateDependencies deployValidator = func(ctx context.Context, app *apb.Application, rts map[string]*rtrpb.ResourceTypeRuntime) error {
 			es, err := s.validateDependencies(ctx, app, rts)
 			if err != nil {
-				// TODO(b/536078799): As a temporary measure, we only log the errors here instead of fatally
-				// returning them. Once we are reasonably confident that this won't cause breakages for
-				// existing users, we should change this to return the error here.
 				log.ErrorContextf(ctx, "dependency validation failed in CreateSolutionDeploymentFromVersionedSolution: %v", err)
+				return status.Errorf(codes.FailedPrecondition, "dependency validation failed when deploying the Solution: %v", err)
 			} else if es != nil {
 				metadata := &solutiondeploymentpb.CreateSolutionDeploymentFromVersionedSolutionMetadata{
 					Warnings: es,
@@ -1118,10 +1113,8 @@ func (s *DeployService) UpdateSolutionDeployment(ctx context.Context, req *solut
 		var validateDependencies deployValidator = func(ctx context.Context, app *apb.Application, rts map[string]*rtrpb.ResourceTypeRuntime) error {
 			es, err := s.validateDependencies(ctx, app, rts)
 			if err != nil {
-				// TODO(b/536078799): As a temporary measure, we only log the errors here instead of fatally
-				// returning them. Once we are reasonably confident that this won't cause breakages for
-				// existing users, we should change this to return the error here.
 				log.ErrorContextf(ctx, "dependency validation failed in UpdateSolutionDeployment: %v", err)
+				return status.Errorf(codes.FailedPrecondition, "dependency validation failed when deploying the Solution: %v", err)
 			} else if es != nil {
 				metadata := &solutiondeploymentpb.UpdateSolutionDeploymentMetadata{
 					Warnings: es,
@@ -1316,7 +1309,11 @@ func (s *DeployService) validateDependencies(ctx context.Context, app *apb.Appli
 	r := report.New(report.AsWarningIfType[error]())
 	sc, err := runtimegraph.NewSolutionContext(ctx, app, slices.Collect(maps.Values(rts)), runtimegraph.WithPlatformRuntime())
 	if err != nil {
-		return nil, fmt.Errorf("failed to create solution context: %w", err)
+		// TODO(b/536078799): As a temporary measure, we only log the errors here instead of fatally
+		// returning them. Once we are reasonably confident that this won't cause breakages for
+		// existing users, we should change this to return the error here.
+		log.ErrorContextf(ctx, "failed to create solution context: %v", err)
+		return nil, nil
 	}
 	if err := graph.ValidateAll(ctx, sc, graph.WithReport(r)); err != nil {
 		return nil, err

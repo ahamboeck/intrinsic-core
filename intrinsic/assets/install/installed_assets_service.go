@@ -1005,13 +1005,10 @@ func (s *installedAssetsService) installAssets(
 	}
 	es, err := s.validateDependenciesAtInstall(ctx, actions.app, expectedRTRs, toInstall)
 	if err != nil {
-		// TODO(b/536078799): As a temporary measure, we only log the errors here instead of fatally
-		// returning them. Once we are reasonably confident that this won't cause breakages for
-		// existing users, we should change this to return the error here.
 		log.ErrorContextf(ctx, "dependency validation failed during installation: %v", err)
-	} else if es != nil {
-		setMetadata(es)
+		return status.Errorf(codes.FailedPrecondition, "dependency validation failed during installation: %v", err)
 	}
+	setMetadata(es)
 
 	tx := transaction.NewUnordered()
 	if actions.updateWorld {
