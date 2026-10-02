@@ -163,7 +163,7 @@ func (s *Server) CheckSolutionValidity(ctx context.Context, request *aiipb.Check
 
 	sc, err := runtimegraph.NewSolutionContext(
 		ctx,
-		appRes.GetApplication(),
+		appRes.GetApplication().GetResources().GetResourceInstances(),
 		rtrs,
 		runtimegraph.WithPlatformRuntime(),
 	)

@@ -491,7 +491,7 @@ func (d *deploy) validateDependencies(ctx context.Context, app *apppb.Applicatio
 	}
 	sc, err := runtimegraph.NewSolutionContext(
 		ctx,
-		app,
+		app.GetResources().GetResourceInstances(),
 		rtrs,
 		runtimegraph.WithPlatformRuntime(),
 	)

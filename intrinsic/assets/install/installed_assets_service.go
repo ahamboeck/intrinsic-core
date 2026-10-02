@@ -1102,7 +1102,7 @@ func (s *installedAssetsService) installAssets(
 func (s *installedAssetsService) validateDependenciesAtInstall(ctx context.Context, app *apb.Application, rtrs map[string]*rtrpb.ResourceTypeRuntime, toInstall *orderedmap.OrderedMap[string, *rtrpb.ResourceTypeRuntime]) (*statuspb.ExtendedStatus, error) {
 	sc, err := runtimegraph.NewSolutionContext(
 		ctx,
-		app,
+		app.GetResources().GetResourceInstances(),
 		slices.Collect(maps.Values(rtrs)),
 		runtimegraph.WithPlatformRuntime(),
 	)

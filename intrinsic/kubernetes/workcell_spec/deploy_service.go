@@ -1305,7 +1305,7 @@ func basicSolutionView(solution *solutionpb.Solution) *solutionpb.Solution {
 
 func (s *DeployService) validateDependencies(ctx context.Context, app *apb.Application, rts map[string]*rtrpb.ResourceTypeRuntime) (*espb.ExtendedStatus, error) {
 	r := report.New(report.AsWarningIfType[error]())
-	sc, err := runtimegraph.NewSolutionContext(ctx, app, slices.Collect(maps.Values(rts)), runtimegraph.WithPlatformRuntime())
+	sc, err := runtimegraph.NewSolutionContext(ctx, app.GetResources().GetResourceInstances(), slices.Collect(maps.Values(rts)), runtimegraph.WithPlatformRuntime())
 	if err != nil {
 		// TODO(b/536078799): As a temporary measure, we only log the errors here instead of fatally
 		// returning them. Once we are reasonably confident that this won't cause breakages for
