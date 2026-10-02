@@ -40,11 +40,11 @@ cc_library(
     deps = [
         "//intrinsic/util/status:status_macros",
         "//intrinsic_kinematics/intrinsic/kinematics/types:cartesian_limits",
-        "//intrinsic_sdk/intrinsic/eigenmath",
         "//intrinsic_sdk/intrinsic/math:pose3",
         "//intrinsic_sdk/intrinsic/math:proto_conversion",
         "//intrinsic_sdk/intrinsic/scene:constants",
         "//intrinsic_sdk/intrinsic/scene/conversion:object_properties_conversion",
+        "//intrinsic_sdk/intrinsic/scene/conversion:scene_object_model_utils",
         "@abseil-cpp//absl/algorithm:container",
         "@abseil-cpp//absl/container:flat_hash_map",
         "@abseil-cpp//absl/container:flat_hash_set",
