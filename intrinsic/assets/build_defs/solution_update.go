@@ -313,6 +313,10 @@ $ bazel run //intrinsic/config:empty_application --\
 				app.OperationMode = mode
 			}
 			app.GetMetadata().LastUpdatedBy = apputil.CurrentUsername()
+			// This is required for backwards compatibility with old clusters that
+			// enforce category is either instance or branch in the deploy service.
+			// TODO: b/568089088 - remove when all clusters we want to support have
+			// go/inpr/56938.
 			app.GetMetadata().Category = commonpb.Metadata_INSTANCE
 			dProcessAssets := time.Since(startProcessAssets)
 
