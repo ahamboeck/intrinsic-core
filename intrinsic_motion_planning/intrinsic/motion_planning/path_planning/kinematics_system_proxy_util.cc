@@ -146,24 +146,6 @@ absl::StatusOr<std::unique_ptr<KinematicsSystemProxy>> CreateKinematicsProxy(
 }
 
 absl::StatusOr<std::unique_ptr<KinematicsSystemProxy>> CreateKinematicsProxy(
-    const object_world::ObjectWorld& object_world,
-    const object_world::KinematicObject& robot,
-    std::optional<
-        intrinsic_proto::motion_planning::v1::UniformGeometricConstraint>
-        constraints_proto,
-    const intrinsic_proto::RuleSet& rule_set, bool disable_collision_checking,
-    std::optional<int> maybe_concurrent_thread_count) {
-  return CreateKinematicsProxy(
-      object_world, robot,
-      KinematicsProxyOptions{
-          .constraints_proto = std::move(constraints_proto),
-          .rule_set = rule_set,
-          .disable_collision_checking = disable_collision_checking,
-          .maybe_concurrent_thread_count = maybe_concurrent_thread_count,
-      });
-}
-
-absl::StatusOr<std::unique_ptr<KinematicsSystemProxy>> CreateKinematicsProxy(
     const World& world, const WorldObjectName& robot_name,
     std::optional<
         intrinsic_proto::motion_planning::v1::UniformGeometricConstraint>
@@ -173,8 +155,13 @@ absl::StatusOr<std::unique_ptr<KinematicsSystemProxy>> CreateKinematicsProxy(
                         object_world::ObjectWorld::CreateView(world));
   INTR_ASSIGN_OR_RETURN(auto* robot,
                         object_world->GetKinematicObject(robot_name));
-  return CreateKinematicsProxy(*object_world, *robot, constraints_proto,
-                               rule_set, disable_collision_checking);
+  return CreateKinematicsProxy(
+      *object_world, *robot,
+      KinematicsProxyOptions{
+          .constraints_proto = std::move(constraints_proto),
+          .rule_set = rule_set,
+          .disable_collision_checking = disable_collision_checking,
+      });
 }
 
 absl::StatusOr<std::unique_ptr<KinematicsSystemProxy>>

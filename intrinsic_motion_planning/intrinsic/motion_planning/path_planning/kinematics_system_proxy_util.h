@@ -98,17 +98,6 @@ absl::StatusOr<std::unique_ptr<KinematicsSystemProxy>> CreateKinematicsProxy(
     const object_world::KinematicObject& robot,
     const KinematicsProxyOptions& options = {});
 
-// Overload for legacy callers passing positional arguments.
-absl::StatusOr<std::unique_ptr<KinematicsSystemProxy>> CreateKinematicsProxy(
-    const object_world::ObjectWorld& object_world,
-    const object_world::KinematicObject& robot,
-    std::optional<
-        intrinsic_proto::motion_planning::v1::UniformGeometricConstraint>
-        constraints_proto,
-    const intrinsic_proto::RuleSet& rule_set = intrinsic_proto::RuleSet(),
-    bool disable_collision_checking = false,
-    std::optional<int> maybe_concurrent_thread_count = std::nullopt);
-
 // Short-hand for the above call when you don't need the actual object world
 // object.
 absl::StatusOr<std::unique_ptr<KinematicsSystemProxy>> CreateKinematicsProxy(
