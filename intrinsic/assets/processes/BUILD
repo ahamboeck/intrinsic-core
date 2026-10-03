@@ -12,69 +12,30 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-load("//bazel:go_macros.bzl", "go_library")
-
 package(default_visibility = ["//intrinsic:public_api_users"])
 
-go_library(
+alias(
     name = "processbundle",
-    srcs = ["processbundle.go"],
-    importpath = "intrinsic/assets/processes/processbundle",
+    actual = "//intrinsic_sdk/intrinsic/assets/processes:processbundle",
+    tags = ["go/intrinsic-ioc-transition-tdd"],
     visibility = ["//intrinsic:internal_api_users"],
-    deps = [
-        ":processmanifest",
-        ":processvalidate",
-        "//intrinsic/assets:ioutils",
-        "//intrinsic/assets/processes/proto:process_asset_go_proto",
-        "//intrinsic/assets/processes/proto:process_manifest_go_proto",
-        "//intrinsic/util/archive:tartooling",
-        "//intrinsic/util/proto:fieldbehavior",
-        "@com_github_google_safearchive//tar",
-        "@intrinsic_apis//intrinsic/assets/proto:asset_type_go_proto",
-        "@intrinsic_apis//intrinsic/assets/proto:id_go_proto",
-        "@intrinsic_apis//intrinsic/assets/proto:metadata_go_proto",
-    ],
 )
 
-go_library(
+alias(
     name = "processfix",
-    srcs = ["processfix.go"],
-    importpath = "intrinsic/assets/processes/processfix",
+    actual = "//intrinsic_sdk/intrinsic/assets/processes:processfix",
+    tags = ["go/intrinsic-ioc-transition-tdd"],
     visibility = ["//intrinsic:internal_api_users"],
-    deps = [
-        "//intrinsic/assets/processes/proto:process_asset_go_proto",
-        "//intrinsic/assets/processes/proto:process_manifest_go_proto",
-        "//intrinsic/util/proto:descriptorcompatibility",
-    ],
 )
 
-go_library(
+alias(
     name = "processmanifest",
-    srcs = ["processmanifest.go"],
-    importpath = "intrinsic/assets/processes/processmanifest",
-    deps = [
-        "//intrinsic/assets:idutils",
-        "//intrinsic/executive/proto:behavior_tree_go_proto",
-        "@intrinsic_apis//intrinsic/assets/proto:metadata_go_proto",
-        "@intrinsic_apis//intrinsic/skills/proto:skills_go_proto",
-    ],
+    actual = "//intrinsic_sdk/intrinsic/assets/processes:processmanifest",
+    tags = ["go/intrinsic-ioc-transition-tdd"],
 )
 
-go_library(
+alias(
     name = "processvalidate",
-    srcs = ["processvalidate.go"],
-    importpath = "intrinsic/assets/processes/processvalidate",
-    deps = [
-        "//intrinsic/assets:idutils",
-        "//intrinsic/assets:metadatautils",
-        "//intrinsic/assets/errors:report",
-        "//intrinsic/assets/processes/proto:process_asset_go_proto",
-        "//intrinsic/assets/processes/proto:process_manifest_go_proto",
-        "//intrinsic/executive/proto:behavior_tree_go_proto",
-        "@intrinsic_apis//intrinsic/assets/proto:asset_type_go_proto",
-        "@intrinsic_apis//intrinsic/assets/proto:documentation_go_proto",
-        "@intrinsic_apis//intrinsic/assets/proto:id_go_proto",
-        "@org_golang_google_grpc//codes:go_default_library",
-        "@org_golang_google_grpc//status:go_default_library",
-    ],
+    actual = "//intrinsic_sdk/intrinsic/assets/processes:processvalidate",
+    tags = ["go/intrinsic-ioc-transition-tdd"],
 )

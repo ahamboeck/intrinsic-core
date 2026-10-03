@@ -21,7 +21,6 @@ go_library(
     visibility = [
         "//intrinsic/assets/artifacts:__pkg__",
         "//intrinsic/assets/build_defs:__pkg__",
-        "//intrinsic/assets/catalog:__pkg__",
         "//intrinsic/tools/inctl/util:__pkg__",
     ],
     deps = [

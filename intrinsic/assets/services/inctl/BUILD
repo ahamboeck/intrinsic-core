@@ -12,55 +12,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-load("//bazel:go_macros.bzl", "go_library")
-
 package(default_visibility = ["//visibility:public"])
 
-go_library(
+alias(
     name = "service",
-    srcs = ["service.go"],
-    importpath = "intrinsic/assets/services/inctl/service",
-    deps = [
-        ":add",
-        ":delete",
-        "//intrinsic/assets/services/inctl/create",
-        "//intrinsic/assets/services/inctl/state",
-        "//intrinsic/tools/inctl/cmd:root",
-        "//intrinsic/tools/inctl/util:cobrautil",
-    ],
-)
-
-go_library(
-    name = "add",
-    srcs = ["add.go"],
-    importpath = "intrinsic/assets/services/inctl/add",
-    deps = [
-        "//intrinsic/assets:clientutils",
-        "//intrinsic/assets:cmdutils",
-        "//intrinsic/assets:idutils",
-        "//intrinsic/assets:version",
-        "//intrinsic/assets/proto:installed_assets_go_proto",
-        "@com_github_spf13_cobra//:go_default_library",
-        "@com_google_cloud_go_longrunning//autogen/longrunningpb",
-        "@intrinsic_apis//intrinsic/assets/proto:asset_deployment_go_proto",
-        "@org_golang_google_protobuf//proto",
-        "@org_golang_google_protobuf//types/known/anypb",
-    ],
-)
-
-go_library(
-    name = "delete",
-    srcs = ["delete.go"],
-    importpath = "intrinsic/assets/services/inctl/delete",
-    deps = [
-        "//intrinsic/assets:clientutils",
-        "//intrinsic/assets:cmdutils",
-        "//intrinsic/tools/inctl/util:agents",
-        "//intrinsic/tools/inctl/util:color",
-        "//intrinsic/util/status:extstatus",
-        "@com_github_spf13_cobra//:go_default_library",
-        "@com_google_cloud_go_longrunning//autogen/longrunningpb",
-        "@intrinsic_apis//intrinsic/assets/proto:asset_deployment_go_proto",
-        "@intrinsic_apis//intrinsic/util/status:extended_status_go_proto",
-    ],
+    actual = "//intrinsic_sdk/intrinsic/assets/services/inctl:service",
+    tags = ["go/intrinsic-ioc-transition-tdd"],
 )

@@ -12,44 +12,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-load("//bazel:go_macros.bzl", "go_binary", "go_library")
-
-go_library(
+alias(
     name = "datagen",
-    srcs = ["datagen.go"],
-    importpath = "intrinsic/assets/data/build_defs/datagen",
+    actual = "//intrinsic_sdk/intrinsic/assets/data/build_defs:datagen",
+    tags = ["go/intrinsic-ioc-transition-tdd"],
     visibility = [
         "//intrinsic/assets/data:__subpackages__",
         "//intrinsic_sdk/intrinsic/tools/inbuild:__subpackages__",
-    ],
-    deps = [
-        "//intrinsic/assets:referenceddata",
-        "//intrinsic/assets/data:databundle",
-        "//intrinsic/assets/data:datavalidate",
-        "//intrinsic/assets/data:utils",
-        "//intrinsic/util/proto:protoio",
-        "//intrinsic/util/proto:registryutil",
-        "@intrinsic_apis//intrinsic/assets/data/proto/v1:data_asset_go_proto",
-        "@intrinsic_apis//intrinsic/assets/data/proto/v1:data_manifest_go_proto",
-        "@intrinsic_apis//intrinsic/assets/proto:asset_type_go_proto",
-        "@intrinsic_apis//intrinsic/assets/proto:id_go_proto",
-        "@intrinsic_apis//intrinsic/assets/proto:metadata_go_proto",
-        "@org_golang_google_protobuf//reflect/protodesc:go_default_library",
-        "@org_golang_google_protobuf//types/descriptorpb:go_default_library",
-        "@org_golang_google_protobuf//types/known/anypb",
-    ],
-)
-
-go_binary(
-    name = "datagen_main",
-    srcs = ["datagen_main.go"],
-    importpath = "intrinsic/assets/data/build_defs/datagen_main",
-    visibility = ["//visibility:private"],
-    deps = [
-        ":datagen",
-        "//intrinsic/production:intrinsic",
-        "//intrinsic/util:flag",
-        "//intrinsic/util/proto:registryutil",
-        "@com_github_golang_glog//:go_default_library",
     ],
 )

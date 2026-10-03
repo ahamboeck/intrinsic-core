@@ -12,16 +12,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-load("//bazel:go_macros.bzl", "go_library")
-
 package(default_visibility = ["//intrinsic:public_api_users"])
 
-go_library(
+alias(
     name = "report",
-    srcs = ["report.go"],
-    importpath = "intrinsic/assets/errors/report",
-    deps = [
-        "//intrinsic/util/status:extstatus",
-        "@intrinsic_apis//intrinsic/util/status:extended_status_go_proto",
-    ],
+    actual = "//intrinsic_sdk/intrinsic/assets/errors:report",
+    tags = ["go/intrinsic-ioc-transition-tdd"],
 )

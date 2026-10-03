@@ -14,16 +14,13 @@
 
 # Testing utilities for assets.
 
-load("//bazel:cc_macros.bzl", "cc_library")
-
 package(
     default_testonly = True,
     default_visibility = ["//visibility:public"],
 )
 
-cc_library(
+alias(
     name = "id_test_utils",
-    srcs = ["id_test_utils.cc"],
-    hdrs = ["id_test_utils.h"],
-    deps = ["@abseil-cpp//absl/strings"],
+    actual = "//intrinsic_sdk/intrinsic/assets/testing:id_test_utils",
+    tags = ["go/intrinsic-ioc-transition-tdd"],
 )

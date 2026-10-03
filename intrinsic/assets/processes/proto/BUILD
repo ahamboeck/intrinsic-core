@@ -12,66 +12,22 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-load("@com_google_protobuf//bazel:py_proto_library.bzl", "py_proto_library")
-load("//bazel:go_macros.bzl", "go_proto_library")
-load("//bazel:protos.bzl", "proto_library")
-
 package(default_visibility = ["//intrinsic:public_api_users"])
 
-proto_library(
+alias(
     name = "process_asset_proto",
-    srcs = ["process_asset.proto"],
-    deps = [
-        "//intrinsic/executive/proto:behavior_tree_proto",
-        "@intrinsic_apis//intrinsic/assets/proto:metadata_proto",
-        "@intrinsic_apis//intrinsic/assets/proto/v1:reference_proto",
-    ],
+    actual = "//intrinsic_sdk/intrinsic/assets/processes/proto:process_asset_proto",
+    tags = ["go/intrinsic-ioc-transition-tdd"],
 )
 
-py_proto_library(
+alias(
     name = "process_asset_py_pb2",
-    deps = [":process_asset_proto"],
+    actual = "//intrinsic_sdk/intrinsic/assets/processes/proto:process_asset_py_pb2",
+    tags = ["go/intrinsic-ioc-transition-tdd"],
 )
 
-go_proto_library(
+alias(
     name = "process_asset_go_proto",
-    importpath = "intrinsic/assets/processes/proto/process_asset_go_proto",
-    protos = [":process_asset_proto"],
-    deps = [
-        "//intrinsic/executive/proto:behavior_tree_go_proto",
-        "@intrinsic_apis//intrinsic/assets/proto:metadata_go_proto",
-        "@intrinsic_apis//intrinsic/assets/proto/v1:reference_go_proto",
-    ],
-)
-
-proto_library(
-    name = "process_manifest_proto",
-    srcs = ["process_manifest.proto"],
-    deps = [
-        "//intrinsic/executive/proto:behavior_tree_proto",
-        "@intrinsic_apis//intrinsic/assets/proto:asset_tag_proto",
-        "@intrinsic_apis//intrinsic/assets/proto:documentation_proto",
-        "@intrinsic_apis//intrinsic/assets/proto:id_proto",
-        "@intrinsic_apis//intrinsic/assets/proto:vendor_proto",
-        "@intrinsic_apis//intrinsic/assets/proto/v1:reference_proto",
-    ],
-)
-
-py_proto_library(
-    name = "process_manifest_py_pb2",
-    deps = [":process_manifest_proto"],
-)
-
-go_proto_library(
-    name = "process_manifest_go_proto",
-    importpath = "intrinsic/assets/processes/proto/process_manifest_go_proto",
-    protos = [":process_manifest_proto"],
-    deps = [
-        "//intrinsic/executive/proto:behavior_tree_go_proto",
-        "@intrinsic_apis//intrinsic/assets/proto:asset_tag_go_proto",
-        "@intrinsic_apis//intrinsic/assets/proto:documentation_go_proto",
-        "@intrinsic_apis//intrinsic/assets/proto:id_go_proto",
-        "@intrinsic_apis//intrinsic/assets/proto:vendor_go_proto",
-        "@intrinsic_apis//intrinsic/assets/proto/v1:reference_go_proto",
-    ],
+    actual = "//intrinsic_sdk/intrinsic/assets/processes/proto:process_asset_go_proto",
+    tags = ["go/intrinsic-ioc-transition-tdd"],
 )

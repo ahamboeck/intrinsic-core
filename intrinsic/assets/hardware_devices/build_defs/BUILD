@@ -11,34 +11,3 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
-load("//bazel:go_macros.bzl", "go_binary", "go_library")
-
-go_library(
-    name = "hardwaredevicegen",
-    srcs = ["hardwaredevicegen.go"],
-    importpath = "intrinsic/assets/hardware_devices/build_defs/hardwaredevicegen",
-    visibility = ["//visibility:private"],
-    deps = [
-        "//intrinsic/assets:idutils",
-        "//intrinsic/assets/build_defs:asset_go_proto",
-        "//intrinsic/assets/hardware_devices:hardwaredevicebundle",
-        "//intrinsic/assets/hardware_devices:hardwaredevicefix",
-        "//intrinsic/util/proto:protoio",
-        "@intrinsic_apis//intrinsic/assets/hardware_devices/proto/v1:hardware_device_manifest_go_proto",
-        "@intrinsic_apis//intrinsic/assets/proto/v1:reference_go_proto",
-    ],
-)
-
-go_binary(
-    name = "hardwaredevicegen_main",
-    srcs = ["hardwaredevicegen_main.go"],
-    importpath = "intrinsic/assets/hardware_devices/build_defs/hardwaredevicegen_main",
-    visibility = ["//visibility:private"],
-    deps = [
-        ":hardwaredevicegen",
-        "//intrinsic/production:intrinsic",
-        "//intrinsic/util:flag",
-        "@com_github_golang_glog//:go_default_library",
-    ],
-)

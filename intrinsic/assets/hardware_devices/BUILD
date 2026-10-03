@@ -37,57 +37,9 @@ go_library(
     ],
 )
 
-go_library(
-    name = "hardwaredevicebundle",
-    srcs = ["hardwaredevicebundle.go"],
-    importpath = "intrinsic/assets/hardware_devices/hardwaredevicebundle",
-    visibility = ["//intrinsic:internal_api_users"],
-    deps = [
-        ":hardwaredevicevalidate",
-        "//intrinsic/assets:idutils",
-        "//intrinsic/assets:imageutils",
-        "//intrinsic/assets:ioutils",
-        "//intrinsic/assets:referenceddata",
-        "//intrinsic/assets/data:databundle",
-        "//intrinsic/assets/scene_objects:gzfprocessor",
-        "//intrinsic/assets/scene_objects:sceneobjectbundle",
-        "//intrinsic/assets/services:servicebundle",
-        "//intrinsic/util/archive:tartooling",
-        "@com_github_google_safearchive//tar",
-        "@intrinsic_apis//intrinsic/assets/hardware_devices/proto/v1:hardware_device_manifest_go_proto",
-        "@intrinsic_apis//intrinsic/assets/proto:asset_type_go_proto",
-    ],
-)
-
-go_library(
-    name = "hardwaredevicefix",
-    srcs = ["hardwaredevicefix.go"],
-    importpath = "intrinsic/assets/hardware_devices/hardwaredevicefix",
-    visibility = ["//intrinsic:internal_api_users"],
-    deps = [
-        "//intrinsic/assets/data:datafix",
-        "//intrinsic/assets/scene_objects:sceneobjectfix",
-        "//intrinsic/assets/services:servicefix",
-        "@intrinsic_apis//intrinsic/assets/hardware_devices/proto/v1:hardware_device_manifest_go_proto",
-    ],
-)
-
-go_library(
+alias(
     name = "hardwaredevicevalidate",
-    srcs = ["hardwaredevicevalidate.go"],
-    importpath = "intrinsic/assets/hardware_devices/hardwaredevicevalidate",
+    actual = "//intrinsic_sdk/intrinsic/assets/hardware_devices:hardwaredevicevalidate",
+    tags = ["go/intrinsic-ioc-transition-tdd"],
     visibility = ["//intrinsic:public_api_users"],
-    deps = [
-        "//intrinsic/assets:idutils",
-        "//intrinsic/assets:metadatautils",
-        "//intrinsic/assets/data:datavalidate",
-        "//intrinsic/assets/errors:report",
-        "//intrinsic/assets/scene_objects:sceneobjectvalidate",
-        "//intrinsic/assets/services:servicevalidate",
-        "@intrinsic_apis//intrinsic/assets/hardware_devices/proto/v1:hardware_device_manifest_go_proto",
-        "@intrinsic_apis//intrinsic/assets/proto:asset_type_go_proto",
-        "@intrinsic_apis//intrinsic/assets/proto:id_go_proto",
-        "@intrinsic_apis//intrinsic/assets/proto/v1:asset_graph_go_proto",
-        "@intrinsic_apis//intrinsic/assets/proto/v1:reference_go_proto",
-    ],
 )

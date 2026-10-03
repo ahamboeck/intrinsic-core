@@ -40,7 +40,7 @@ import (
 const (
 	// LINT.IfChange(bundle_file)
 	skillManifestPathInTar = "skill_manifest.binpb"
-	// LINT.ThenChange(//intrinsic/assets/bundle.go:skill_bundle_file)
+	// LINT.ThenChange(//intrinsic_sdk/intrinsic/assets/bundle.go:skill_bundle_file)
 )
 
 type writeOptions struct {
