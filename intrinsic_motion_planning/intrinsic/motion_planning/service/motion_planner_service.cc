@@ -413,9 +413,13 @@ absl::StatusOr<std::unique_ptr<KinematicsSystemProxy>> GetProxyForPathPlanning(
            << "We currently do not support resolving Cartesian motion targets "
               "for branching kinematic structures.";
   }
-  return CreateKinematicsProxyWithConfig(object_world, robot,
-                                         collision_checker_config, std::nullopt,
-                                         rule_set, disable_collision_checking);
+  return CreateKinematicsProxy(
+      object_world, robot,
+      KinematicsProxyOptions{
+          .collision_checker_config = collision_checker_config,
+          .rule_set = rule_set,
+          .disable_collision_checking = disable_collision_checking,
+      });
 }
 
 /*static*/

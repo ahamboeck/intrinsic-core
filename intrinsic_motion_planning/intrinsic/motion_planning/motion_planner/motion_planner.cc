@@ -706,11 +706,18 @@ absl::StatusOr<std::vector<PathSegment>> PlanPathImpl(
                 object_world, trajectory_segment.motion_segments.front()));
         INTR_ASSIGN_OR_RETURN(
             local_proxy_ptr,
-            CreateKinematicsProxyWithConfig(
-                object_world, robot, GetCollisionCheckerConfig(motion_config),
-                create_info.constraints_proto, create_info.rule_set,
-                create_info.disable_collision_checking,
-                maybe_concurrent_thread_count));
+            CreateKinematicsProxy(
+                object_world, robot,
+                KinematicsProxyOptions{
+                    .collision_checker_config =
+                        GetCollisionCheckerConfig(motion_config),
+                    .constraints_proto = create_info.constraints_proto,
+                    .rule_set = create_info.rule_set,
+                    .disable_collision_checking =
+                        create_info.disable_collision_checking,
+                    .maybe_concurrent_thread_count =
+                        maybe_concurrent_thread_count,
+                }));
 
         proxy_set.push_back(std::move(create_info));
       }
@@ -863,13 +870,17 @@ absl::StatusOr<std::vector<PathSegment>> SampleMotionTargetsAndPlanPath(
         GetConcurrentThreadCount(flags, distance_check_statistics);
     INTR_ASSIGN_OR_RETURN(
         global_proxy,
-        CreateKinematicsProxyWithConfig(
-            object_world, robot, GetCollisionCheckerConfig(motion_config),
-            /*constraints_proto=*/global_proxy_create_info.constraints_proto,
-            global_proxy_create_info.rule_set,
-            /*disable_collision_checking=*/
-            global_proxy_create_info.disable_collision_checking,
-            maybe_concurrent_thread_count));
+        CreateKinematicsProxy(
+            object_world, robot,
+            KinematicsProxyOptions{
+                .collision_checker_config =
+                    GetCollisionCheckerConfig(motion_config),
+                .constraints_proto = global_proxy_create_info.constraints_proto,
+                .rule_set = global_proxy_create_info.rule_set,
+                .disable_collision_checking =
+                    global_proxy_create_info.disable_collision_checking,
+                .maybe_concurrent_thread_count = maybe_concurrent_thread_count,
+            }));
 
     proxy_set.push_back(std::move(global_proxy_create_info));
   }

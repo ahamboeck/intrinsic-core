@@ -313,10 +313,15 @@ GetKinematicSystemsProxyForSegment(
   INTR_ASSIGN_OR_RETURN(
       ProxyCreateInfo create_info,
       GetKinematicSystemsProxyCreateInfoForSegment(object_world, segment));
-  return CreateKinematicsProxyWithConfig(
-      object_world, robot, collision_checker_config,
-      create_info.constraints_proto, create_info.rule_set,
-      create_info.disable_collision_checking, maybe_concurrent_thread_count);
+  return CreateKinematicsProxy(
+      object_world, robot,
+      KinematicsProxyOptions{
+          .collision_checker_config = collision_checker_config,
+          .constraints_proto = std::move(create_info.constraints_proto),
+          .rule_set = std::move(create_info.rule_set),
+          .disable_collision_checking = create_info.disable_collision_checking,
+          .maybe_concurrent_thread_count = maybe_concurrent_thread_count,
+      });
 }
 absl::StatusOr<CartesianKinematicsComponents>
 CreateCartesianKinematicsComponents(const KinematicsSystemProxy& proxy,

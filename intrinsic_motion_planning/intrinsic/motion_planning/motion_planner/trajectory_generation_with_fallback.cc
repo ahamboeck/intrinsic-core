@@ -394,12 +394,19 @@ absl::StatusOr<GenerateTrajectoryResult> GenerateTrajectoryWithFallback(
       INTR_ASSIGN_OR_RETURN(
           std::unique_ptr<KinematicsSystemProxy> proxy,
           CreateProxyWithRelaxedMargins(
-              world, robot, motion_config.collision_checker_config(),
-              create_info.constraints_proto, create_info.rule_set,
-              create_info.disable_collision_checking,
+              world, robot,
+              KinematicsProxyOptions{
+                  .collision_checker_config =
+                      motion_config.collision_checker_config(),
+                  .constraints_proto = create_info.constraints_proto,
+                  .rule_set = create_info.rule_set,
+                  .disable_collision_checking =
+                      create_info.disable_collision_checking,
+                  .maybe_concurrent_thread_count =
+                      maybe_concurrent_thread_count,
+              },
               flags.path_refinement_validation_margin_relative_factor,
-              flags.path_refinement_validation_margin_absolute_factor,
-              maybe_concurrent_thread_count));
+              flags.path_refinement_validation_margin_absolute_factor));
       validation_proxies.push_back(std::move(proxy));
     }
     result.validation_proxy_creation_duration = absl::Now() - before_t;
