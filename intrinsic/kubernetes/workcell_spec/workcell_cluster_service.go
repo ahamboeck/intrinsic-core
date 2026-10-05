@@ -558,7 +558,7 @@ func main() {
 		log.ExitContextf(ctx, "failed to create artifact processor: %v", err)
 	}
 	log.InfoContextf(ctx, "Starting AssetArtifacts service at %d", *assetArtifactsPort)
-	artifactsSvc, err := assetartifactsservice.New(ap, uploader.NewUploads(uploader.New(casClient)))
+	artifactsSvc, err := assetartifactsservice.New(ap, uploader.New(casClient))
 	if err != nil {
 		log.ExitContextf(ctx, "failed to create artifacts service: %v", err)
 	}
