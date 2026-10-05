@@ -74,7 +74,10 @@ go_library(
 
 go_library(
     name = "identity",
-    srcs = ["identity.go"],
+    srcs = [
+        "identity.go",
+        "identity_internal.go",
+    ],
     importpath = "intrinsic/kubernetes/acl/identity",
     deps = [
         ":clientcontext",
@@ -84,6 +87,7 @@ go_library(
         "//intrinsic/frontend/go:origin",
         "//intrinsic/stats/go:telemetry",
         "@com_github_golang_glog//:go_default_library",
+        "@com_github_google_go_containerregistry//pkg/authn:go_default_library",
         "@io_opencensus_go//trace:go_default_library",
         "@org_golang_google_grpc//codes:go_default_library",
         "@org_golang_google_grpc//metadata:go_default_library",
