@@ -329,8 +329,6 @@ ClipsExecutor::ClipsExecutor(ClipsExecutorCreateOptions create_options)
       object_world_service_stub_(
           std::move(create_options.object_world_service_stub)),
       world_updater_stub_(std::move(create_options.world_updater_stub)),
-      world_compatibility_service_stub_(
-          std::move(create_options.world_compatibility_service_stub)),
       simulation_service_stub_(
           std::move(create_options.simulation_service_stub)),
       clips_logger_(std::make_unique<ClipsLogger>(

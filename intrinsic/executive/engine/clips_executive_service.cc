@@ -91,7 +91,6 @@
 #include "intrinsic/util/unique_id.h"
 #include "intrinsic/world/proto/object_world_service.grpc.pb.h"
 #include "intrinsic/world/service/updater/world_updater.grpc.pb.h"
-#include "intrinsic/world/service/world_compatibility_service.grpc.pb.h"
 #include "intrinsic/world/service/world_service.grpc.pb.h"
 #include "opentelemetry/proto/trace/v1/trace.pb.h"
 #include "opentelemetry/trace/span.h"
@@ -447,8 +446,6 @@ absl::Status ClipsExecutiveService::InitExecutor() {
       world_service_stub;
   std::unique_ptr<intrinsic_proto::world::ObjectWorldService::Stub>
       object_world_service_stub;
-  std::unique_ptr<intrinsic_proto::world::WorldCompatibilityService::Stub>
-      world_compatibility_service_stub;
 
   if (!config.world_service_address().empty()) {
     INTR_ASSIGN_OR_RETURN(
@@ -459,9 +456,6 @@ absl::Status ClipsExecutiveService::InitExecutor() {
         intrinsic_proto::world::internal::WorldService::NewStub(world_channel);
     object_world_service_stub =
         intrinsic_proto::world::ObjectWorldService::NewStub(world_channel);
-    world_compatibility_service_stub =
-        intrinsic_proto::world::WorldCompatibilityService::NewStub(
-            world_channel);
   }
 
   std::unique_ptr<intrinsic_proto::world::WorldUpdater::Stub>
@@ -533,8 +527,6 @@ absl::Status ClipsExecutiveService::InitExecutor() {
              .world_service_stub = std::move(world_service_stub),
              .object_world_service_stub = std::move(object_world_service_stub),
              .world_updater_stub = std::move(world_updater_stub),
-             .world_compatibility_service_stub =
-                 std::move(world_compatibility_service_stub),
              .simulation_service_stub = std::move(simulation_service_stub),
              .solution_service_stub = std::move(solution_service_stub),
              .conductor_service_stub = std::move(conductor_service_stub)}));
