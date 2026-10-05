@@ -51,8 +51,8 @@ go_proto_library(
         "//intrinsic/kubernetes/workcell_spec:__pkg__",
         "//intrinsic/modified_solution:__subpackages__",
         "//intrinsic/solution_versions:__subpackages__",
-        "//intrinsic/tools/inctl/cmd/solution/create:__pkg__",
-        "//intrinsic/tools/inctl/cmd/solution_version:__pkg__",
+        "//intrinsic_sdk/intrinsic/tools/inctl/cmd/solution/create:__pkg__",
+        "//intrinsic_sdk/intrinsic/tools/inctl/cmd/solution_version:__pkg__",
     ],
     deps = [
         "//intrinsic/config/proto:application_go_proto",
@@ -107,6 +107,7 @@ go_proto_library(
         "//intrinsic/kubernetes/workcell_spec:__pkg__",
         "//intrinsic/modified_solution:__subpackages__",
         "//intrinsic/tools/inctl/cmd:__subpackages__",
+        "//intrinsic_sdk/intrinsic/tools/inctl/cmd:__subpackages__",
     ],
     deps = [
         ":modified_solution_metadata_go_proto",

@@ -16,35 +16,28 @@ load("//bazel:go_macros.bzl", "go_library")
 
 package(default_visibility = ["//visibility:public"])
 
-go_library(
+alias(
     name = "buildozer",
-    srcs = ["buildozer.go"],
-    importpath = "intrinsic/tools/inctl/util/buildozer",
-    deps = ["@com_github_bazelbuild_buildtools//edit:go_default_library"],
+    actual = "//intrinsic_sdk/intrinsic/tools/inctl/util:buildozer",
+    tags = ["go/intrinsic-ioc-transition-tdd"],
 )
 
-go_library(
+alias(
     name = "printer",
-    srcs = ["printer.go"],
-    importpath = "intrinsic/tools/inctl/util/printer",
-    deps = ["@com_github_spf13_cobra//:go_default_library"],
+    actual = "//intrinsic_sdk/intrinsic/tools/inctl/util:printer",
+    tags = ["go/intrinsic-ioc-transition-tdd"],
 )
 
-go_library(
+alias(
     name = "cobrautil",
-    srcs = ["cobrautil.go"],
-    importpath = "intrinsic/tools/inctl/util/cobrautil",
-    deps = ["@com_github_spf13_cobra//:go_default_library"],
+    actual = "//intrinsic_sdk/intrinsic/tools/inctl/util:cobrautil",
+    tags = ["go/intrinsic-ioc-transition-tdd"],
 )
 
-go_library(
+alias(
     name = "vmalias",
-    srcs = ["vmalias.go"],
-    importpath = "intrinsic/tools/inctl/util/vmalias",
-    deps = [
-        ":color",
-        "//intrinsic/tools/internal:k8sclientutil",
-    ],
+    actual = "//intrinsic_sdk/intrinsic/tools/inctl/util:vmalias",
+    tags = ["go/intrinsic-ioc-transition-tdd"],
 )
 
 go_library(
@@ -118,60 +111,28 @@ go_library(
     ],
 )
 
-go_library(
+alias(
     name = "templateutil",
-    srcs = ["templateutil.go"],
-    importpath = "intrinsic/tools/inctl/util/templateutil",
+    actual = "//intrinsic_sdk/intrinsic/tools/inctl/util:templateutil",
+    tags = ["go/intrinsic-ioc-transition-tdd"],
 )
 
-go_library(
+alias(
     name = "color",
-    srcs = ["color.go"],
-    importpath = "intrinsic/tools/inctl/util/color",
+    actual = "//intrinsic_sdk/intrinsic/tools/inctl/util:color",
+    tags = ["go/intrinsic-ioc-transition-tdd"],
 )
 
-go_library(
-    name = "util",
-    srcs = ["spinner.go"],
-    importpath = "intrinsic/tools/inctl/util",
-    deps = [
-        ":color",
-    ],
-)
-
-go_library(
-    name = "viperutil",
-    srcs = ["viperutil.go"],
-    importpath = "intrinsic/tools/inctl/util/viperutil",
-    deps = [
-        "@com_github_spf13_pflag//:go_default_library",
-        "@com_github_spf13_viper//:go_default_library",
-    ],
-)
-
-go_library(
+alias(
     name = "orgutil",
-    srcs = ["orgutil.go"],
-    importpath = "intrinsic/tools/inctl/util/orgutil",
-    deps = [
-        ":color",
-        ":viperutil",
-        "//intrinsic/config:environments",
-        "//intrinsic/tools/inctl/auth",
-        "//intrinsic/tools/inctl/config",
-        "@com_github_pkg_errors//:go_default_library",
-        "@com_github_spf13_cobra//:go_default_library",
-        "@com_github_spf13_viper//:go_default_library",
-    ],
+    actual = "//intrinsic_sdk/intrinsic/tools/inctl/util:orgutil",
+    tags = ["go/intrinsic-ioc-transition-tdd"],
 )
 
-go_library(
+alias(
     name = "agents",
-    srcs = ["agents.go"],
-    importpath = "intrinsic/tools/inctl/util/agents",
-    deps = [
-        "@com_github_spf13_cobra//:go_default_library",
-    ],
+    actual = "//intrinsic_sdk/intrinsic/tools/inctl/util:agents",
+    tags = ["go/intrinsic-ioc-transition-tdd"],
 )
 
 go_library(

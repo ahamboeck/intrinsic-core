@@ -147,6 +147,7 @@ go_proto_library(
     visibility = [
         "//intrinsic/executive:__subpackages__",
         "//intrinsic/tools/inctl/cmd:__pkg__",
+        "//intrinsic_sdk/intrinsic/tools/inctl/cmd:__pkg__",
     ],
     deps = [
         "@io_opentelemetry_go_proto_otlp//trace/v1:go_default_library",

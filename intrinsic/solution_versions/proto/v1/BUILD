@@ -71,6 +71,7 @@ go_proto_library(
         "//intrinsic/tools/inctl/cmd:__subpackages__",
         "//incode/cloud/devicemanager:__subpackages__",
         "//incode/frontend:__subpackages__",
+        "//intrinsic_sdk/intrinsic/tools/inctl/cmd:__subpackages__",
     ],
     deps = [
         ":solution_diff_go_proto",
@@ -107,7 +108,7 @@ go_proto_library(
     protos = [":solution_diff_proto"],
     visibility = [
         "//intrinsic/solution_versions:__subpackages__",
-        "//intrinsic/tools/inctl/cmd/solution_version:__pkg__",
+        "//intrinsic_sdk/intrinsic/tools/inctl/cmd/solution_version:__pkg__",
     ],
     deps = [
         "//intrinsic/assets/proto/v1:solution_go_proto",

@@ -29,7 +29,6 @@ go_library(
     importpath = "intrinsic/assets/services/inctl/create/create",
     visibility = [
         "//intrinsic/assets:__subpackages__",
-        "//intrinsic/assets/services/inctl:__pkg__",
         "//intrinsic_sdk/intrinsic/assets:__subpackages__",
     ],
     deps = [

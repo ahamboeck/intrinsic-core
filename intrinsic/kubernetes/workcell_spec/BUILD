@@ -234,6 +234,7 @@ go_library(
         "//intrinsic/assets/install:__pkg__",
         "//intrinsic/kubernetes:__pkg__",
         "//intrinsic/tools/inctl:__subpackages__",
+        "//intrinsic_sdk/intrinsic/tools/inctl:__subpackages__",
     ],
     deps = [
         "//intrinsic/kubernetes/appstat:inspect",

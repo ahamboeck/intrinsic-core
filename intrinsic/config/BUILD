@@ -94,6 +94,7 @@ go_library(
         "//intrinsic/kubernetes/workcell_spec:__subpackages__",
         "//intrinsic/storage/hot_shared_state:__pkg__",
         "//intrinsic/tools/inctl/cmd:__pkg__",
+        "//intrinsic_sdk/intrinsic/tools/inctl/cmd:__pkg__",
     ],
     deps = [
         "//intrinsic/config/proto:process_go_proto",
@@ -118,6 +119,7 @@ go_library(
         "//intrinsic/assets/install:__pkg__",
         "//intrinsic/kubernetes/workcell_spec:__pkg__",
         "//intrinsic/tools/inctl:__subpackages__",
+        "//intrinsic_sdk/intrinsic/tools/inctl:__subpackages__",
     ],
     deps = [
         "//intrinsic/assets:referenceddata",

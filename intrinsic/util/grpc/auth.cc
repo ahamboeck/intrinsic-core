@@ -35,7 +35,7 @@ constexpr std::string_view kStoreDirectory = "intrinsic/projects";
 constexpr std::string_view kEnvStoreDirectory = "intrinsic/environments";
 constexpr std::string_view kAuthConfigExtension = ".user-token";
 constexpr std::string_view kAliasDefaultToken = "default";
-// LINT.ThenChange(//intrinsic/tools/inctl/auth/auth.go,
+// LINT.ThenChange(//intrinsic_sdk/intrinsic/tools/inctl/auth/auth.go,
 // //intrinsic/util/grpc/auth.py)
 
 // Retrieves the API key for project `project_name`.

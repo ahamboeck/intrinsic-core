@@ -12,21 +12,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-load("//bazel:go_macros.bzl", "go_library")
-
-go_library(
+alias(
     name = "version",
-    srcs = ["version.go"],
-    importpath = "intrinsic/tools/inctl/cmd/version/version",
+    actual = "//intrinsic_sdk/intrinsic/tools/inctl/cmd/version",
+    tags = ["go/intrinsic-ioc-transition-tdd"],
     visibility = [
         "//intrinsic/skills/tools:__subpackages__",
         "//intrinsic/tools/inctl:__subpackages__",
-    ],
-    x_defs = {"SDKVersion": "{STABLE_SDK_VERSION}"},
-    deps = [
-        "//intrinsic/tools/inctl/cmd:root",
-        "//intrinsic/tools/inctl/util:printer",
-        "//intrinsic/util/go:build",
-        "@com_github_spf13_cobra//:go_default_library",
+        "//intrinsic_sdk/intrinsic/tools/inctl:__subpackages__",
     ],
 )

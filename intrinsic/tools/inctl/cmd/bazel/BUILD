@@ -12,31 +12,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-load("//bazel:go_macros.bzl", "go_library")
-
-go_library(
+alias(
     name = "bazel",
-    srcs = [
-        "bazel.go",
-        "bazelinit.go",
-    ],
-    embedsrcs = [
-        "//intrinsic/tools/inctl/cmd/bazel/templates:MODULE.bazel.template",  #keep
-        "//intrinsic/tools/inctl/cmd/bazel/templates:bazelrc.template",  #keep
-        "//intrinsic/tools/inctl/cmd/bazel/templates:bazelversion.template",  #keep
-        "//intrinsic/tools/inctl/cmd/bazel/templates:permissive_content_mirror.template",  #keep
-    ],
-    importpath = "intrinsic/tools/inctl/cmd/bazel/bazel",
+    actual = "//intrinsic_sdk/intrinsic/tools/inctl/cmd/bazel",
+    tags = ["go/intrinsic-ioc-transition-tdd"],
     visibility = [
         "//intrinsic/skills/tools:__subpackages__",
         "//intrinsic/tools/inctl:__subpackages__",
-    ],
-    deps = [
-        "//intrinsic/tools/inctl/cmd:root",
-        "//intrinsic/tools/inctl/cmd/version",
-        "//intrinsic/tools/inctl/util:cobrautil",
-        "//intrinsic/tools/inctl/util:printer",
-        "//intrinsic/tools/inctl/util:templateutil",
-        "@com_github_spf13_cobra//:go_default_library",
+        "//intrinsic_sdk/intrinsic/tools/inctl:__subpackages__",
     ],
 )

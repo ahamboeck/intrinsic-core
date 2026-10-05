@@ -28,6 +28,8 @@ go_library(
         "//intrinsic/skills/tools/skill/cmd:__subpackages__",
         "//intrinsic/tools/inctl/auth:__subpackages__",
         "//intrinsic/tools/inctl/util:__subpackages__",
+        "//intrinsic_sdk/intrinsic/tools/inctl/auth:__subpackages__",
+        "//intrinsic_sdk/intrinsic/tools/inctl/util:__subpackages__",
     ],
     deps = [
         "@com_github_golang_glog//:go_default_library",

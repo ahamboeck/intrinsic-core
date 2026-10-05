@@ -12,25 +12,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-load("//bazel:go_macros.bzl", "go_library")
-
-go_library(
+alias(
     name = "get",
-    srcs = ["get.go"],
-    importpath = "intrinsic/tools/inctl/cmd/solution/get/get",
+    actual = "//intrinsic_sdk/intrinsic/tools/inctl/cmd/solution/get",
+    tags = ["go/intrinsic-ioc-transition-tdd"],
     visibility = [
         "//intrinsic/skills/tools/skill/cmd:__pkg__",
-        "//intrinsic/tools/inctl/cmd/solution:__pkg__",
-    ],
-    deps = [
-        "//intrinsic/tools/inctl/auth",
-        "//intrinsic/tools/inctl/cmd:root",
-        "//intrinsic/tools/inctl/util:orgutil",
-        "//intrinsic/tools/inctl/util:printer",
-        "@com_github_spf13_cobra//:go_default_library",
-        "@com_github_spf13_viper//:go_default_library",
-        "@intrinsic_apis//intrinsic/frontend/cloud/api/v1:clusterdiscovery_api_go_proto",
-        "@intrinsic_apis//intrinsic/frontend/cloud/api/v1:solutiondiscovery_api_go_proto",
-        "@org_golang_google_grpc//:go_default_library",
+        "//intrinsic_sdk/intrinsic/tools/inctl/cmd/solution:__pkg__",
     ],
 )

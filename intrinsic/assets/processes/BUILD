@@ -15,13 +15,6 @@
 package(default_visibility = ["//intrinsic:public_api_users"])
 
 alias(
-    name = "processbundle",
-    actual = "//intrinsic_sdk/intrinsic/assets/processes:processbundle",
-    tags = ["go/intrinsic-ioc-transition-tdd"],
-    visibility = ["//intrinsic:internal_api_users"],
-)
-
-alias(
     name = "processfix",
     actual = "//intrinsic_sdk/intrinsic/assets/processes:processfix",
     tags = ["go/intrinsic-ioc-transition-tdd"],
