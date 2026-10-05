@@ -874,17 +874,6 @@ http_jar(
 # Others #
 ##########
 
-# For cloud/alertmanager
-# TODO(https://github.com/abrisco/rules_helm/pull/124): Do not use use_repo_rule
-# once upstream has support fo doing this in an extension
-helm_import_repository = use_repo_rule("@rules_helm//helm:defs.bzl", "helm_import_repository")
-
-helm_import_repository(
-    name = "alertmanager",
-    chart_name = "alertmanager",
-    repository = "https://prometheus-community.github.io/helm-charts",
-    version = "1.13.1",
-)
 
 bazel_dep(name = "rules_distroless", version = "0.8.0")
 
