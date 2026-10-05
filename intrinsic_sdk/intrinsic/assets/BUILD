@@ -381,7 +381,6 @@ go_library(
     deps = [
         "//intrinsic/util/go:seekable",
         "//intrinsic/util/proto:walkmessages",
-        "//intrinsic_sdk/intrinsic/assets/catalog/proto/v1:asset_catalog_go_proto",
         "@com_github_golang_glog//:go_default_library",
         "@com_google_cloud_go_longrunning//autogen/longrunningpb",
         "@intrinsic_apis//intrinsic/assets/data/proto/v1:referenced_data_go_proto",

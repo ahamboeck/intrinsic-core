@@ -214,7 +214,6 @@ func FromBundle(ctx context.Context, path string, options ...FromBundleOption) e
 		opts.aaClient,
 		opts.lroClient,
 		referenceddata.WithDryRun(opts.dryRun),
-		referenceddata.WithFallbackCatalogClient(opts.acClient),
 		referenceddata.WithProgressWriter(opts.progressWriter),
 	)
 
