@@ -22,6 +22,12 @@ package(default_visibility = [
     "//visibility:public",
 ])
 
+alias(
+    name = "geometry_types",
+    actual = "//intrinsic_sdk/intrinsic/world:geometry_types",
+    tags = ["go/intrinsic-ioc-transition-tdd"],
+)
+
 cc_library(
     name = "grouping",
     hdrs = ["grouping.h"],

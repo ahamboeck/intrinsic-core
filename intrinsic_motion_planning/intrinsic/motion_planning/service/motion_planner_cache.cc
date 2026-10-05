@@ -26,6 +26,7 @@
 #include <utility>
 #include <vector>
 
+#include "absl/algorithm/container.h"
 #include "absl/container/flat_hash_map.h"
 #include "absl/container/flat_hash_set.h"
 #include "absl/log/check.h"
@@ -52,6 +53,7 @@
 #include "intrinsic/motion_planning/proto/v1/motion_specification.pb.h"
 #include "intrinsic/motion_planning/proto/v1/robot_specification.pb.h"
 #include "intrinsic/motion_planning/service/motion_planner_cache.pb.h"
+#include "intrinsic/motion_planning/service/motion_planner_cache_key_normalization.h"
 #include "intrinsic/motion_planning/service/motion_planner_cache_utils.h"
 #include "intrinsic/util/eigen.h"
 #include "intrinsic/util/proto/pb_hash.h"
@@ -646,9 +648,10 @@ MotionPlanningRequestCacheKey::Create(
     const object_world::ObjectWorld& object_world,
     const intrinsic_proto::motion_planning::v1::MotionPlanningRequest& request
 ) {
-  // Make a copy of motion specification so we can modify it.
-  intrinsic_proto::motion_planning::v1::MotionSpecification
-      motion_specification(request.motion_specification());
+  INTR_ASSIGN_OR_RETURN(
+      const MotionPlanningCacheGroupSignature group_signature,
+      CreateMotionPlanningCacheGroupSignature(object_world, request),
+      _ << "Failed to create motion planning cache group signature.");
 
   // The order of overwriting for collisions settings is
   // collision settings in each segment -> collision settings in the world.
@@ -657,18 +660,19 @@ MotionPlanningRequestCacheKey::Create(
   // collisions settings and they all have `disable_collision_checking` set to
   // True. We will skip collision checking.
 
-  // Extract collisions settings from each motion segment.
+  // Extract collision settings from each motion segment in the request.
   std::vector<intrinsic_proto::world::CollisionSettings>
       motion_segment_collision_settings;
 
   // The default collision settings is empty.
-  intrinsic_proto::world::CollisionSettings
+  const intrinsic_proto::world::CollisionSettings
       default_collision_settings_from_request;
 
   // Whether collision checking is disabled.
   // Set `disable_collision_checking` to true first.
   bool disable_collision_checking = true;
-  for (auto& segment : *motion_specification.mutable_motion_segments()) {
+  for (const intrinsic_proto::motion_planning::v1::MotionSegment& segment :
+       request.motion_specification().motion_segments()) {
     if (segment.has_collision_settings()) {
       // Use the collision settings in the path constraints if they are set.
       motion_segment_collision_settings.push_back(segment.collision_settings());
@@ -676,12 +680,6 @@ MotionPlanningRequestCacheKey::Create(
       // explicitly.
       disable_collision_checking &=
           segment.collision_settings().disable_collision_checking();
-      // Clear the collision settings in the segment since we will store it
-      // separately in the final cache key.
-      segment.clear_collision_settings();
-      if (segment.path_constraints().ByteSizeLong() == 0) {
-        segment.clear_path_constraints();
-      }
     } else {
       motion_segment_collision_settings.push_back(
           default_collision_settings_from_request);
@@ -701,21 +699,18 @@ MotionPlanningRequestCacheKey::Create(
   }
 
   // Unpack the robot information from the request.
-  intrinsic_proto::motion_planning::v1::RobotSpecification robot_specification(
-      request.robot_specification());
   INTR_ASSIGN_OR_RETURN(
       const object_world::KinematicObject* robot,
-      GetRobot(robot_specification.robot_reference(), &object_world),
+      GetRobot(request.robot_specification().robot_reference(), &object_world),
       _.LogError());
-  INTR_ASSIGN_OR_RETURN(eigenmath::VectorXd starting_robot_configuration,
-                        robot->GetJointPositions());
-  if (robot_specification.has_start_configuration()) {
-    // Extract the starting robot configuration.
-    starting_robot_configuration = RepeatedDoubleToVectorXd(
-        robot_specification.start_configuration().joints());
-    // Clear the start configuration from robot specification.
-    robot_specification.clear_start_configuration();
-  }
+  INTR_ASSIGN_OR_RETURN(const eigenmath::VectorXd world_robot_configuration,
+                        robot->GetJointPositions(),
+                        _ << "Failed to get joint positions for robot.");
+  const eigenmath::VectorXd starting_robot_configuration =
+      request.robot_specification().has_start_configuration()
+          ? RepeatedDoubleToVectorXd(
+                request.robot_specification().start_configuration().joints())
+          : world_robot_configuration;
 
   // Get robot application limits.
   INTR_ASSIGN_OR_RETURN(const JointLimitsXd world_application_limits,
@@ -776,7 +771,8 @@ MotionPlanningRequestCacheKey::Create(
   INTR_RETURN_IF_ERROR(GetAllObjectsAsIDWithPose(
       object_world, /*ignore_list=*/robot_offspring, poses_of_all_objects));
   INTR_RETURN_IF_ERROR(ExtractIdWithPoseFromMotionSpecification(
-      object_world, motion_specification, poses_of_all_related_frames));
+      object_world, request.motion_specification(),
+      poses_of_all_related_frames));
 
   // Extract attachment and geometry information in the world
   absl::flat_hash_set<uint32_t> attachment_parent_ids;
@@ -866,9 +862,11 @@ MotionPlanningRequestCacheKey::Create(
   const std::string caller_id =
       request.has_caller_id() ? request.caller_id() : "Anonymous";
 
+  const size_t group_id = group_signature.ComputeGroupId();
+
   return MotionPlanningRequestCacheKey{
-      .motion_specification = std::move(motion_specification),
-      .robot_specification = std::move(robot_specification),
+      .group_signature = std::move(group_signature),
+      .group_id = group_id,
       .poses_of_all_related_frames = std::move(poses_of_all_related_frames),
       .poses_of_all_objects = std::move(poses_of_all_objects),
       .rel_attachment_poses_robot =
@@ -896,8 +894,10 @@ MotionPlanningRequestCacheKey::Create(
 intrinsic_proto::motion_planning::MotionPlanningRequestCacheKey
 MotionPlanningRequestCacheKey::ToProto() const {
   intrinsic_proto::motion_planning::MotionPlanningRequestCacheKey key_proto;
-  *key_proto.mutable_motion_specification() = motion_specification;
-  *key_proto.mutable_robot_specification() = robot_specification;
+  *key_proto.mutable_motion_specification() =
+      group_signature.normalized_motion_specification;
+  *key_proto.mutable_robot_specification() =
+      group_signature.normalized_robot_specification;
   for (const auto& [id, pose] : poses_of_all_related_frames) {
     (*key_proto.mutable_poses_of_all_related_frames())[id.value()] =
         intrinsic::ToProto(pose);
@@ -1006,9 +1006,15 @@ MotionPlanningRequestCacheKey::FromProto(
   INTR_ASSIGN_OR_RETURN(const JointLimitsXd world_application_limits,
                         ToJointLimitsXd(key_proto.world_application_limits()));
 
+  MotionPlanningCacheGroupSignature group_signature{
+      .normalized_motion_specification = key_proto.motion_specification(),
+      .normalized_robot_specification = key_proto.robot_specification(),
+  };
+  const size_t group_id = group_signature.ComputeGroupId();
+
   return MotionPlanningRequestCacheKey{
-      .motion_specification = key_proto.motion_specification(),
-      .robot_specification = key_proto.robot_specification(),
+      .group_signature = std::move(group_signature),
+      .group_id = group_id,
       .poses_of_all_related_frames = poses_of_all_related_frames,
       .poses_of_all_objects = poses_of_all_objects,
       .rel_attachment_poses_robot = poses_of_attachment_components_robot,
@@ -1035,16 +1041,6 @@ MotionPlanningRequestCacheKey::FromProto(
       .other_kinematic_object_ids = kinematic_object_configs,
       .uuid = key_proto.uuid(),
   };
-}
-
-size_t MotionPlanningRequestCacheKey::GetGroupId() const {
-  intrinsic::pb_hash pb_hasher = intrinsic::pb_hash{};
-  size_t seed = pb_hasher(motion_specification);
-  // Combine two hashes following what is done in boost.
-  // www.boost.org/doc/libs/1_35_0/doc/html/boost/hash_combine_id241013.html
-  seed ^=
-      pb_hasher(robot_specification) + 0x9e3779b9 + (seed << 6) + (seed >> 2);
-  return seed;
 }
 
 PlanTrajectoryCache::PlanTrajectoryCache(

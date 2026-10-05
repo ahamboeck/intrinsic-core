@@ -41,6 +41,7 @@
 #include "intrinsic/motion_planning/proto/v1/motion_specification.pb.h"
 #include "intrinsic/motion_planning/proto/v1/robot_specification.pb.h"
 #include "intrinsic/motion_planning/service/motion_planner_cache.pb.h"
+#include "intrinsic/motion_planning/service/motion_planner_cache_key_normalization.h"
 #include "intrinsic/util/lru_cache.h"
 #include "intrinsic/world/objects/object_world.h"
 #include "intrinsic/world/objects/object_world_ids.h"
@@ -65,14 +66,13 @@ static const auto* const distance_cache_format = new absl::ParsedFormat<
 
 // The key type used for caching results from MotionPlanner::PlanTrajectory.
 struct MotionPlanningRequestCacheKey {
-  // The MotionSpecification from the planning request but without the collision
-  // settings in each segment or in the high-level.
-  const intrinsic_proto::motion_planning::v1::MotionSpecification
-      motion_specification;
-  // The RobotSpecification from the planning request but without the
-  // `start_configuration`.
-  const intrinsic_proto::motion_planning::v1::RobotSpecification
-      robot_specification;
+  // Normalized input to the group ID hash computation, contains the normalized
+  // motion specification and robot specification from the motion request.
+  const MotionPlanningCacheGroupSignature group_signature;
+  // Precomputed group ID hash of `group_signature`. When `std::nullopt`
+  // (e.g., in aggregate-initialized test keys), `GetGroupId()` falls back
+  // to computing `group_signature.ComputeGroupId()`.
+  const std::optional<size_t> group_id;
   // References and poses of all frames referred in the MotionSpecification with
   // respect to the root.
   const absl::flat_hash_map<ObjectWorldResourceId, Pose3d>
@@ -135,11 +135,10 @@ struct MotionPlanningRequestCacheKey {
       const intrinsic_proto::motion_planning::MotionPlanningRequestCacheKey&
           key_proto);
 
-  // Group ID of this MotionPlanningRequestCacheKey
-  // This is deterministic given a MotionPlanningRequestCacheKey instance.
-  // But different MotionPlanningRequestCacheKey instances might have the same
-  // group id.
-  size_t GetGroupId() const;
+  // Group ID of this `MotionPlanningRequestCacheKey`.
+  size_t GetGroupId() const {
+    return group_id.has_value() ? *group_id : group_signature.ComputeGroupId();
+  }
 };
 
 // Distance between two `MotionPlanningRequestCacheKey` instances.

@@ -447,6 +447,7 @@ cc_library(
     hdrs = ["motion_planner_cache.h"],
     deps = [
         ":motion_planner_cache_cc_proto",
+        ":motion_planner_cache_key_normalization",
         ":motion_planner_cache_utils",
         "//intrinsic/logging/proto:log_item_cc_proto",
         "//intrinsic/util:eigen",
@@ -477,6 +478,7 @@ cc_library(
         "//intrinsic_sdk/intrinsic/world/component:kinematics_component",
         "//intrinsic_sdk/intrinsic/world/objects:object_world_ids",
         "//third_party/simple_lru_cache",
+        "@abseil-cpp//absl/algorithm:container",
         "@abseil-cpp//absl/base:core_headers",
         "@abseil-cpp//absl/container:flat_hash_map",
         "@abseil-cpp//absl/container:flat_hash_set",
@@ -566,6 +568,35 @@ cc_library(
         "@abseil-cpp//absl/strings:string_view",
         "@com_github_grpc_grpc//:grpc++",
         "@intrinsic_apis//intrinsic/assets/proto/v1:resolved_dependency_cc_proto",
+    ],
+)
+
+cc_library(
+    name = "motion_planner_cache_key_normalization",
+    srcs = ["motion_planner_cache_key_normalization.cc"],
+    hdrs = ["motion_planner_cache_key_normalization.h"],
+    deps = [
+        "//intrinsic/util:hash",
+        "//intrinsic/util/proto:pb_hash",
+        "//intrinsic/util/status:status_macros",
+        "//intrinsic/world",
+        "//intrinsic/world:geometry_types",
+        "//intrinsic/world/objects:object_world",
+        "//intrinsic/world/objects:object_world_proto_utils",
+        "//intrinsic_motion_planning/intrinsic/motion_planning/proto/v1:motion_planner_service_cc_proto",
+        "//intrinsic_motion_planning/intrinsic/motion_planning/proto/v1:motion_specification_cc_proto",
+        "//intrinsic_sdk/intrinsic/eigenmath",
+        "//intrinsic_sdk/intrinsic/geometry/api:geometry_fingerprint",
+        "//intrinsic_sdk/intrinsic/world:entity_id",
+        "//intrinsic_sdk/intrinsic/world/component:geometry_component",
+        "//intrinsic_sdk/intrinsic/world/objects:object_world_ids",
+        "@abseil-cpp//absl/status",
+        "@abseil-cpp//absl/status:statusor",
+        "@abseil-cpp//absl/strings",
+        "@abseil-cpp//absl/strings:string_view",
+        "@intrinsic_apis//intrinsic/motion_planning/proto/v1:geometric_constraints_cc_proto",
+        "@intrinsic_apis//intrinsic/motion_planning/proto/v1:robot_specification_cc_proto",
+        "@intrinsic_apis//intrinsic/world/proto:object_world_refs_cc_proto",
     ],
 )
 
