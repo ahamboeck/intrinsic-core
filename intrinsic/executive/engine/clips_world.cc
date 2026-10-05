@@ -69,8 +69,6 @@
 #include "intrinsic/world/proto/object_world_updates.pb.h"
 #include "intrinsic/world/service/updater/world_updater.grpc.pb.h"
 #include "intrinsic/world/service/updater/world_updater.pb.h"
-#include "intrinsic/world/service/world_compatibility_service.grpc.pb.h"
-#include "intrinsic/world/service/world_compatibility_service.pb.h"
 #include "intrinsic/world/util/remove_redundant_updates.h"
 #include "intrinsic/world/world.pb.h"
 #include "opentelemetry/trace/span.h"
@@ -195,15 +193,12 @@ ClipsWorld::ClipsWorld(
     clips::ProtobufManager* proto_manager,
     clips::TraceSpanManager* span_manager,
     intrinsic_proto::world::ObjectWorldService::StubInterface* object_stub,
-    intrinsic_proto::world::WorldUpdater::StubInterface* world_updater_stub,
-    intrinsic_proto::world::WorldCompatibilityService::StubInterface*
-        compatibility_stub)
+    intrinsic_proto::world::WorldUpdater::StubInterface* world_updater_stub)
     : assert_facade_(assert_facade),
       proto_manager_(proto_manager),
       span_manager_(span_manager),
       object_world_service_stub_(object_stub),
-      world_updater_stub_(world_updater_stub),
-      world_compatibility_service_stub_(compatibility_stub) {}
+      world_updater_stub_(world_updater_stub) {}
 
 absl::Status ClipsWorld::Init(clips::EnvironmentFunctionFacade* facade) {
   // Create a thread pool with 10 threads.
@@ -296,12 +291,11 @@ absl::StatusOr<clips::ProtoMessageId> ClipsWorld::DownloadObjectWorld(
     const std::string& world_id) {
   grpc::ClientContext context;
   intrinsic::ConfigureClientContext(&context);
-  intrinsic_proto::world::GetWorldWithEntitiesRequest request;
+  intrinsic_proto::world::ListObjectsRequest request;
   request.set_world_id(world_id);
-  intrinsic_proto::world::WorldWithEntities response;
-  INTR_RETURN_IF_ERROR(
-      ToAbslStatus(world_compatibility_service_stub_->GetWorldWithEntities(
-          &context, request, &response)));
+  intrinsic_proto::world::ListObjectsResponse response;
+  INTR_RETURN_IF_ERROR(ToAbslStatus(
+      object_world_service_stub_->ListObjects(&context, request, &response)));
   return proto_manager_->AddGeneratedProto(response);
 }
 
