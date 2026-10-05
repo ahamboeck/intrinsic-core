@@ -277,6 +277,27 @@ absl::Status ExtractIdWithPoseFromConstraint(
 
 }  // namespace
 
+absl::StatusOr<std::vector<const TransformNodeReference*>>
+CollectTransformNodeReferencesFromMotionSegment(
+    const MotionSegment& motion_segment) {
+  std::vector<const TransformNodeReference*> references;
+  if (motion_segment.has_target()) {
+    INTR_ASSIGN_OR_RETURN(
+        const std::vector<const TransformNodeReference*> target_references,
+        CollectTransformNodeReferences(motion_segment.target()));
+    references.insert(references.end(), target_references.begin(),
+                      target_references.end());
+  }
+  if (motion_segment.has_path_constraints()) {
+    INTR_ASSIGN_OR_RETURN(
+        const std::vector<const TransformNodeReference*> path_references,
+        CollectTransformNodeReferences(motion_segment.path_constraints()));
+    references.insert(references.end(), path_references.begin(),
+                      path_references.end());
+  }
+  return references;
+}
+
 absl::Status ExtractIdWithPoseFromGeometricConstraint(
     const object_world::ObjectWorld& object_world,
     const intrinsic_proto::motion_planning::v1::GeometricConstraint&

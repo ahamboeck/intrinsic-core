@@ -15,10 +15,13 @@
 #ifndef INTRINSIC_MOTION_PLANNING_SERVICE_MOTION_PLANNER_CACHE_UTILS_H_
 #define INTRINSIC_MOTION_PLANNING_SERVICE_MOTION_PLANNER_CACHE_UTILS_H_
 
+#include <vector>
+
 #include "absl/container/flat_hash_map.h"
 #include "absl/log/check.h"
 #include "absl/log/log.h"
 #include "absl/status/status.h"
+#include "absl/status/statusor.h"
 #include "intrinsic/icon/proto/joint_space.pb.h"
 #include "intrinsic/logging/proto/log_item.pb.h"
 #include "intrinsic/math/pose3.h"
@@ -34,6 +37,13 @@
 #include "intrinsic/world/world.pb.h"
 
 namespace intrinsic {
+
+// Collects all non-owning pointers to `TransformNodeReference`s present in the
+// target and path constraints of `motion_segment`.
+absl::StatusOr<
+    std::vector<const intrinsic_proto::world::TransformNodeReference*>>
+CollectTransformNodeReferencesFromMotionSegment(
+    const intrinsic_proto::motion_planning::v1::MotionSegment& motion_segment);
 
 // Resolves all transform nodes referenced in `top_level_constraint` in
 // `object_world` and inserts their resource IDs and root-relative poses into
