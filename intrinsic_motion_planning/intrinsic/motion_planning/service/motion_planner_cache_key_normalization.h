@@ -33,6 +33,10 @@
 
 namespace intrinsic {
 
+// Function determining if `object` is a kinematic object, returning `true` if
+// it is and `false` otherwise.
+bool IsKinematicObject(const object_world::WorldObject& object);
+
 // Holds the `geometry_fingerprint` (hash of the geometry) and `ref_t_shape`
 // affine transformation matrix of a single collision geometry obtained from a
 // world entity, representing the collision geometry of the workd entity

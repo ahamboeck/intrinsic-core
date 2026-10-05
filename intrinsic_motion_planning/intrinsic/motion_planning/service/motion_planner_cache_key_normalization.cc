@@ -195,16 +195,6 @@ struct IsKinematicObjectVisitor
   bool is_kinematic = false;
 };
 
-// Function that determines if `object` is a kinemtaic object by visitng it with
-// a `IsKinematicObjectVisitor`.
-bool IsKinematicObject(const object_world::WorldObject& object) {
-  IsKinematicObjectVisitor visitor;
-  // The error can be ignored as `Visit` and `DefaultVisit` functions of
-  // `IsKinematicObjectVisitor` always returns `absl::OkStatus()`.
-  object.Accept(visitor).IgnoreError();
-  return visitor.is_kinematic;
-}
-
 // Appends mutable pointers to the `mutable_moving_frame()` and
 // `mutable_target_frame()` transform nodes of `constraint` to `references`,
 // where `SubConstraint` is any constraint type containing
@@ -520,6 +510,14 @@ absl::Status NormalizeRobotSpecification(
 }
 
 }  // namespace
+
+bool IsKinematicObject(const object_world::WorldObject& object) {
+  IsKinematicObjectVisitor visitor;
+  // The error can be ignored as `Visit` and `DefaultVisit` functions of
+  // `IsKinematicObjectVisitor` always returns `absl::OkStatus()`.
+  object.Accept(visitor).IgnoreError();
+  return visitor.is_kinematic;
+}
 
 absl::StatusOr<std::vector<EntityCollisionGeometryFeature>>
 ExtractEntityCollisionGeometryFeatures(const World& entity_world,
