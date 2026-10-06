@@ -52,15 +52,16 @@ java_binary(
     ],
 )
 
-# This test just makes sure we can build and link the profiler.
-# It does not use it.
+# This test just makes sure we can build and link the profilers.
+# Set CPUPROFILE=<path> to write a gperftools CPU profile, and/or
+# HEAPPROFILE=<path> to write a tcmalloc heap profile (gzipped pprof proto).
 # TODO(b/390153423): Consider linking it into every cc target like in g3.
 cc_test(
     name = "gperftools_test",
     srcs = ["gperftools_test.cc"],
     deps = [
+        "//bazel/cpp:cpu_profiler",
+        "//bazel/cpp:heap_profiler",
         "@com_google_googletest//:gtest_main",
-        "@gperftools//:cpu_profiler",
-        "@tcmalloc//tcmalloc",
     ],
 )

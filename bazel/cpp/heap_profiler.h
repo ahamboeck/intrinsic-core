@@ -12,28 +12,22 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <gtest/gtest.h>
+#ifndef BAZEL_CPP_HEAP_PROFILER_H_
+#define BAZEL_CPP_HEAP_PROFILER_H_
 
-#include <memory>
-#include <vector>
+#include <string>
+
+#include "absl/status/status.h"
 
 namespace intrinsic {
-namespace {
 
-// Memory kept alive until process exit so that the heap profile written by
-// :heap_profiler (when HEAPPROFILE is set) has something in it.
-std::vector<std::unique_ptr<char[]>>& LiveAllocations() {
-  static auto* allocations = new std::vector<std::unique_ptr<char[]>>();
-  return *allocations;
-}
+// Writes a snapshot of the live heap, as sampled by tcmalloc, to `path` as a
+// gzipped pprof proto. View it with `pprof -http=: <binary> <path>`.
+//
+// Linking the :heap_profiler target also writes a profile automatically at
+// process exit if the HEAPPROFILE environment variable is set.
+absl::Status WriteHeapProfile(const std::string& path);
 
-TEST(Gperftools, CanRun) {
-  // Allocate well above tcmalloc's default ~2 MiB sampling interval so the
-  // heap profile reliably contains samples.
-  for (int i = 0; i < 16; ++i) {
-    LiveAllocations().push_back(std::make_unique<char[]>(4 << 20));
-  }
-}
-
-}  // namespace
 }  // namespace intrinsic
+
+#endif  // BAZEL_CPP_HEAP_PROFILER_H_
