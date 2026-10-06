@@ -54,7 +54,7 @@ spec:
             - --world_service_address=world.app-intrinsic-base.svc.cluster.local:8080
             - --world_updater_address=world.app-intrinsic-base.svc.cluster.local:8080
             - --asset_info_internal_service_address=asset-info-internal.app-intrinsic-base.svc.cluster.local:8080
-            - --solution_service_address=solution-service.app-intrinsic-base.svc.cluster.local:8082
+            - --solution_service_address=solution-service.app-intrinsic-base.svc.cluster.local:8086
             - --world_id=world
             - --grpc_client_connection_timeout=5m
             - --port=8080

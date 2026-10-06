@@ -31,7 +31,7 @@ spec:
           image: {{ .Values.registry }}{{ .Values.images.solution_service }}
           args:
             - /intrinsic/frontend/solution_service/solution_service_main
-            - --port=8082
+            - --port=8086
             - --hss_address=hot-shared-state.app-intrinsic-base.svc.cluster.local:9777
             - --transfer_service_address=workcell-cluster-service.app-intrinsic-base.svc.cluster.local:9957
             - --skill_registry_address=istio-ingressgateway.app-ingress.svc.cluster.local:80
@@ -40,7 +40,7 @@ spec:
             {{ if .Values.feature_options.enable_backend_sequence_list }}
             - --logger_address=logger.app-intrinsic-base.svc.cluster.local:8080
             {{ end}}
-            - --opencensus_metrics_port=9103
+            - --opencensus_metrics_port=9106
             - --opencensus_tracing={{ .Values.opencensus_tracing }}
             - --trace_probability=0.01
       securityContext:
@@ -55,7 +55,7 @@ metadata:
     app: solution-service
 spec:
   ports:
-    - port: 8082
+    - port: 8086
       name: grpc-solution-service
   selector:
     app: solution-service
@@ -68,7 +68,7 @@ metadata:
     app: solution-service-metrics
 spec:
   ports:
-    - port: 9103
+    - port: 9106
       name: http-solution-service-metrics
   selector:
     app: solution-service
@@ -90,7 +90,7 @@ spec:
         - destination:
             host: solution-service
             port:
-              number: 8082
+              number: 8086
 ---
 apiVersion: monitoring.coreos.com/v1
 kind: ServiceMonitor
