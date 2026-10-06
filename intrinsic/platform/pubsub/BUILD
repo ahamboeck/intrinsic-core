@@ -15,6 +15,8 @@
 # Home of pubsub, a non-real-time Publish-Subscribe messaging
 # for robotics systems.
 
+load("//bazel:cc_macros.bzl", "cc_library")
+
 package(default_visibility = ["//visibility:public"])
 
 filegroup(
@@ -62,6 +64,17 @@ alias(
     name = "subscription",
     actual = "//intrinsic_sdk/intrinsic/platform/pubsub:subscription",
     tags = ["go/intrinsic-ioc-transition-tdd"],
+)
+
+cc_library(
+    name = "pubsub_metrics",
+    srcs = ["pubsub_metrics.cc"],
+    hdrs = ["pubsub_metrics.h"],
+    deps = [
+        "//intrinsic/stats:metrics_utils",
+        "@abseil-cpp//absl/strings:string_view",
+        "@io_opentelemetry_cpp//api",
+    ],
 )
 
 alias(

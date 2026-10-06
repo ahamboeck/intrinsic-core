@@ -164,6 +164,7 @@ cc_library(
     deps = [
         ":publisher_stats",
         ":zenoh_publisher_data",
+        "//intrinsic/platform/pubsub:pubsub_metrics",
         "//intrinsic/util:proto_time",
         "//intrinsic/util/status:ret_check",
         "//intrinsic/util/status:status_macros",
@@ -174,7 +175,7 @@ cc_library(
         "@abseil-cpp//absl/time",
         "@com_google_protobuf//:protobuf",
         "@intrinsic_apis//intrinsic/platform/pubsub/adapters:pubsub_cc_proto",
-        "@io_opencensus_cpp//opencensus/stats",
+        "@io_opentelemetry_cpp//api",
     ],
 )
 
