@@ -144,10 +144,6 @@ cc_library(
 cc_binary(
     name = "motion_planner_service_assetized_main",
     srcs = ["motion_planner_service_assetized_main.cc"],
-    data = [
-        # (b/264577959) Remove dependency on temporary UR kinematic skeletons.
-        "//intrinsic_kinematics/intrinsic/kinematics/ur_proto_skeletons:robot_skeletons",
-    ],
     deps = [
         ":motion_planner_cache",
         ":motion_planner_service",
