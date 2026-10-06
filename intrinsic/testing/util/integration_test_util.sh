@@ -442,6 +442,16 @@ function inctl_vm_return() {
       "$@"
 }
 
+function inctl_service_add() {
+  inctl service add \
+      "$@"
+}
+
+function inctl_asset_install() {
+  inctl asset install \
+      "$@"
+}
+
 #######################################
 # Ensures that a pod is in running phase or fails.
 # Globals:
