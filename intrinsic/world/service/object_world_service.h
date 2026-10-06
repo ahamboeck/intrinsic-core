@@ -210,11 +210,6 @@ class ObjectWorldService final
       intrinsic_proto::world::AreFootprintsCompatibleResponse* response)
       override;
 
-  grpc::Status GetWorldWithEntities(
-      grpc::ServerContext* context,
-      const intrinsic_proto::world::GetWorldWithEntitiesRequest* request,
-      intrinsic_proto::world::WorldWithEntities* response) override;
-
   grpc::Status GetWorldState(
       grpc::ServerContext* context,
       const intrinsic_proto::world::GetWorldStateRequest* request,

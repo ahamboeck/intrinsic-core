@@ -2552,78 +2552,6 @@ grpc::Status ObjectWorldService::AreFootprintsCompatible(
 
 namespace {
 
-absl::Status AddEntityAsProto(
-    EntityId entity_id, const World& entity_world,
-    intrinsic_proto::world::WorldEntitiesById& entities) {
-  INTR_ASSIGN_OR_RETURN(const WorldEntity* entity,
-                        entity_world.GetEntityById(entity_id));
-  INTR_ASSIGN_OR_RETURN(
-      intrinsic_proto::world::internal::WorldEntity entity_proto,
-      entity->ToProto());
-  entities.mutable_entities()->insert(
-      {entity_id.value(), std::move(entity_proto)});
-  return absl::OkStatus();
-}
-
-absl::StatusOr<google::protobuf::Map<std::string,
-                                     intrinsic_proto::world::WorldEntitiesById>>
-BuildEntitiesByObjectWorldResourceId(const ObjectWorld& world,
-                                     const World& entity_world) {
-  google::protobuf::Map<std::string, intrinsic_proto::world::WorldEntitiesById>
-      result;
-  for (const WorldObject* object : world.GetObjects()) {
-    // Add entities for 'object'.
-    intrinsic_proto::world::WorldEntitiesById object_entities;
-    if (object->GetCollectionEntity().has_value()) {
-      INTR_RETURN_IF_ERROR_GRPC(AddEntityAsProto(
-          *object->GetCollectionEntity(), entity_world, object_entities));
-    }
-    for (AttachmentEntityId entity_id : object->GetEntityIds()) {
-      INTR_RETURN_IF_ERROR_GRPC(
-          AddEntityAsProto(entity_id, entity_world, object_entities));
-    }
-    result.insert({object->GetId().value(), std::move(object_entities)});
-
-    // Add entities for each frame of 'object'.
-    for (const Frame* frame : object->GetFrames()) {
-      intrinsic_proto::world::WorldEntitiesById frame_entities;
-      INTR_RETURN_IF_ERROR_GRPC(
-          AddEntityAsProto(frame->GetEntityId(), entity_world, frame_entities));
-      result.insert({frame->GetId().value(), std::move(frame_entities)});
-    }
-  }
-  return result;
-}
-
-absl::StatusOr<intrinsic_proto::world::WorldWithEntities>
-BuildWorldWithEntities(const std::string& world_id,
-                       WorldStorage& world_storage) {
-  const stats::ScopedSpan span("ObjectWorldService/BuildWorldWithEntities");
-
-  intrinsic_proto::world::WorldWithEntities response;
-
-  // Get access to objects and entities of given world.
-  INTR_ASSIGN_OR_RETURN(std::shared_ptr<WorldAndMutex> world_ptr,
-                        world_storage.GetWorld(world_id));
-  absl::MutexLock lock(*world_ptr->mtx);
-  INTR_ASSIGN_OR_RETURN(const auto world, world_ptr->GetObjectWorld());
-
-  INTR_ASSIGN_OR_RETURN(*response.mutable_world_metadata(),
-                        ToProtoLocked(*world_ptr, world_id));
-  INTR_ASSIGN_OR_RETURN(
-      *response.mutable_objects(),
-      AllWorldObjects(*world, world_id, {},
-                      intrinsic_proto::world::ObjectView::FULL));
-  INTR_ASSIGN_OR_RETURN(
-      *response.mutable_entities_by_object_world_resource_id(),
-      BuildEntitiesByObjectWorldResourceId(*world, world_ptr->world));
-
-  *response.mutable_collision_settings() =
-      MakeCollisionSettings((*world_ptr)->GetDefaultRuleSet());
-
-  return response;
-}
-
 absl::StatusOr<intrinsic_proto::world::World> BuildWorldProto(
     const std::string& world_id, WorldAndMutex& world_ptr,
     const intrinsic_proto::world::WorldView& world_view)
@@ -2660,22 +2588,6 @@ absl::StatusOr<intrinsic_proto::world::World> BuildWorldProto(
   }
 }
 
-}  // namespace
-
-grpc::Status ObjectWorldService::GetWorldWithEntities(
-    grpc::ServerContext* context,
-    const intrinsic_proto::world::GetWorldWithEntitiesRequest* request,
-    intrinsic_proto::world::WorldWithEntities* response) {
-  const stats::ScopedSpan span("ObjectWorldService/GetWorldWithEntities",
-                               context);
-
-  INTR_ASSIGN_OR_RETURN_GRPC(
-      *response, BuildWorldWithEntities(request->world_id(), WorldStore()));
-
-  return grpc::Status::OK;
-}
-
-namespace {
 absl::Status PopulateGetWorldStateResponseExceptMetadata(
     const World& world,
     intrinsic_proto::world::GetWorldStateResponse* response) {

@@ -27,25 +27,10 @@ option go_package = "intrinsic/world/service/world_compatibility_service_go_prot
 // Internal helpers for translating and migrating between entity-based and
 // object-based view onto the world.
 service WorldCompatibilityService {
-  // Returns all objects and corresponding entities in a world.
-  //
-  // This is an advanced variant of ObjectWorldService.ListObjects which
-  // enriches the response with the entities corresponding to returned objects.
-  // It is meant as a internal solution until we include the entities (in a
-  // simplified form) in the Object message itself. Then this endpoint can be
-  // fully replaced by ObjectWorldService.ListObjects.
-  rpc GetWorldWithEntities(GetWorldWithEntitiesRequest)
-      returns (WorldWithEntities) {}
-
   // Gets a simplified world state for a given world. This includes only things
   // that are considered state, such as dof values of kinematic objects or poses
   // like parent_t_this of entities.s
   rpc GetWorldState(GetWorldStateRequest) returns (GetWorldStateResponse) {}
-}
-
-message GetWorldWithEntitiesRequest {
-  // Id of the world to be queried.
-  string world_id = 1;
 }
 
 // A set of entities in a world.
