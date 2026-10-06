@@ -847,7 +847,6 @@ use_repo(
     "com_google_glog_googleinit_h",  
     "com_google_s2geometry_bit_interleave_cc",  
     "com_google_s2geometry_bit_interleave_h",  
-    "com_googlecloudplatform_perfkitbenchmarker_tests_matchers_py",  
     "libkmsp11",  
     "oss_licenses",  
 )

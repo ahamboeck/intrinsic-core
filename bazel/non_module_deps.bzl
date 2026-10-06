@@ -126,14 +126,6 @@ filegroup(
         urls = ["https://storage.googleapis.com/intrinsic-mirror/bazel/helmlint/schemas-b3d60bb6a5c10815dcfb1ee592b4e5b6f10cef29.tar.gz"],
     )
 
-    PERFKITBENCHMARKER_COMMIT = "def24810d209eaa38abb802547edb1e144d515da"  # 2024-22-10
-    http_file(
-        name = "com_googlecloudplatform_perfkitbenchmarker_tests_matchers_py",
-        downloaded_file_path = "matchers.py",
-        urls = ["https://raw.githubusercontent.com/GoogleCloudPlatform/PerfKitBenchmarker/%s/tests/matchers.py" % PERFKITBENCHMARKER_COMMIT],
-        sha256 = "1e5045af622e088d711ceb3dbda96b7c4ce19356b5335860862b82357eb35eec",
-    )
-
     S2GEOMETRY_COMMIT = "418c55893f6123b90f2768ed2ec9f5f47fa512de"  # 2024-05-12
     http_file(
         name = "com_google_s2geometry_bit_interleave_h",
