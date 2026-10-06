@@ -699,6 +699,50 @@ absl::StatusOr<bool> NonFrameEntityPosesEqual(const WorldObject* object_a,
   return true;
 }
 
+// Returns whether `object` is a KinematicObject.
+absl::StatusOr<bool> IsKinematicObject(const WorldObject& object) {
+  struct IsKinematicVisitor : public WorldObjectConstVisitor {
+    absl::Status Visit(const RootObject& root_object) override {
+      return absl::OkStatus();
+    }
+    absl::Status Visit(const PhysicalObject& physical_object) override {
+      return absl::OkStatus();
+    }
+    absl::Status Visit(const KinematicObject& kinematic_object) override {
+      is_kinematic = true;
+      return absl::OkStatus();
+    }
+    bool is_kinematic = false;
+  };
+  IsKinematicVisitor visitor;
+  INTR_RETURN_IF_ERROR(object.Accept(visitor));
+  return visitor.is_kinematic;
+}
+
+// Returns whether the kinematic state of `object` (joint values and kinematic
+// object properties) is memorized as ObjectWorldUpdates. Such updates reference
+// the object as a KinematicObject and thus are only applicable if the object
+// is a KinematicObject:
+absl::StatusOr<bool> ShouldExtractKinematicUpdates(
+    const WorldObject& object, const WorldObject* baseline_object) {
+  INTR_ASSIGN_OR_RETURN(const bool is_kinematic, IsKinematicObject(object));
+  if (!is_kinematic) {
+    return false;
+  }
+  // `baseline_object` should never really be nullptr for a kinematic object,
+  // but it happens, we try to extract updates for it anyway.
+  if (baseline_object == nullptr) {
+    return true;
+  }
+  INTR_ASSIGN_OR_RETURN(const bool baseline_is_kinematic,
+                        IsKinematicObject(*baseline_object));
+  LOG_IF(INFO, !baseline_is_kinematic)
+      << "Not memorizing kinematic state of '" << object.GetName().value()
+      << "' since it is not a kinematic object when composed from asset "
+         "instance.";
+  return baseline_is_kinematic;
+}
+
 // Returns a UpdateObjectJointsRequest that will position the object correctly
 // if it is a kinematic object. Returns nullopt if the object is not a kinematic
 // object.
@@ -713,6 +757,14 @@ MaybeExtractUpdateObjectJointsRequest(
   // If we did not get any updatable values we can skip this object.
   if (!visitor.positions.has_value() && !visitor.system_limits.has_value() &&
       !visitor.application_limits.has_value()) {
+    return std::nullopt;
+  }
+
+  // Kinematic objects without any DOF (e.g., legacy multi-camera objects which
+  // only carry a RobotComponent for simulated devices) have no joint state to
+  // memorize. An update would contain neither joint positions nor limits and
+  // could not be applied when composing the world.
+  if (visitor.positions.has_value() && visitor.positions->size() == 0) {
     return std::nullopt;
   }
 
@@ -2826,29 +2878,35 @@ grpc::Status ObjectWorldService::ExtractResourceInstances(
     LOG_IF(INFO, baseline_object == nullptr)
         << "Baseline object not found: " << object->GetName().value();
 
-    // Memorize the kinematic object joint values.
     INTR_ASSIGN_OR_RETURN_GRPC(
-        auto joint_update,
-        MaybeExtractUpdateObjectJointsRequest(baseline_object, *cloned_world,
-                                              object, entity_id_to_object),
-        _ << " Failed to extract joint update for resource "
-             "instance in the world.");
-    if (joint_update.has_value()) {
-      *composition_updates.add_updates()->mutable_update_object_joints() =
-          std::move(joint_update).value();
-    }
+        const bool extract_kinematic_updates,
+        ShouldExtractKinematicUpdates(*object, baseline_object));
 
-    // Memorize the kinematic object property data.
-    INTR_ASSIGN_OR_RETURN_GRPC(
-        auto kinematic_object_update,
-        MaybeExtractUpdateKinematicObjectPropertiesRequest(
-            baseline_object, *cloned_world, object),
-        _ << " Failed to extract kinematic object properties for "
-             "resource instance in the world.");
-    if (kinematic_object_update.has_value()) {
-      *composition_updates.add_updates()
-           ->mutable_update_kinematic_object_properties() =
-          std::move(kinematic_object_update).value();
+    if (extract_kinematic_updates) {
+      // Memorize the kinematic object joint values.
+      INTR_ASSIGN_OR_RETURN_GRPC(
+          auto joint_update,
+          MaybeExtractUpdateObjectJointsRequest(baseline_object, *cloned_world,
+                                                object, entity_id_to_object),
+          _ << " Failed to extract joint update for asset "
+               "instance in the world.");
+      if (joint_update.has_value()) {
+        *composition_updates.add_updates()->mutable_update_object_joints() =
+            std::move(joint_update).value();
+      }
+
+      // Memorize the kinematic object property data.
+      INTR_ASSIGN_OR_RETURN_GRPC(
+          auto kinematic_object_update,
+          MaybeExtractUpdateKinematicObjectPropertiesRequest(
+              baseline_object, *cloned_world, object),
+          _ << " Failed to extract kinematic object properties for "
+               "asset instance in the world.");
+      if (kinematic_object_update.has_value()) {
+        *composition_updates.add_updates()
+             ->mutable_update_kinematic_object_properties() =
+            std::move(kinematic_object_update).value();
+      }
     }
 
     // Memorize entity properties for all links.
