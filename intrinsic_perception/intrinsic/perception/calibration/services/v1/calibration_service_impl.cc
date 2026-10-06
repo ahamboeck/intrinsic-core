@@ -459,19 +459,8 @@ grpc::Status CalibrationServiceImpl::Initialize(
 
   INTR_ASSIGN_OR_RETURN_GRPC(std::shared_ptr<KeyValueStore> kvstore,
                              kvstore_factory_(kDefaultKeyPrefix));
-  absl::Notification notification;
-  INTR_ASSIGN_OR_RETURN_GRPC(
-      absl::StatusOr<intrinsic::KVQuery> query,
-      kvstore->GetAll(
-          absl::StrCat(kCalibrationKVStoragePrefix, "**"),
-          [kvstore](std::string_view key,
-                    std::unique_ptr<google::protobuf::Any>) {
-            kvstore->Delete(key).IgnoreError();
-          },
-          [&notification](std::string_view) { notification.Notify(); }));
-  const absl::Cleanup on_return = [&notification] {
-    notification.WaitForNotification();
-  };
+  kvstore->Delete(absl::StrCat(kCalibrationKVStoragePrefix, "**"))
+      .IgnoreError();
 
   session_id_ =
       absl::FormatTime("%Y%m%d_%H%M%S", absl::Now(), absl::UTCTimeZone());
