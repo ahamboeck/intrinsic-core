@@ -227,8 +227,11 @@ GetPathPlanningPipelineForMotionSegment(
   if (IsLinearMotion(segment)) {
     auto linear_move_planner = pipeline_config.add_specs();
     linear_move_planner->set_name("LinearCartesianMotionPathPlanner");
-    linear_move_planner->mutable_config()->PackFrom(
-        GetLinearCartesianMotionConfig(configuration_options));
+    if (!linear_move_planner->mutable_config()->PackFrom(
+            GetLinearCartesianMotionConfig(configuration_options))) {
+      return absl::InternalError(
+          "Failed to pack LinearCartesianMotionPathPlanner config");
+    }
     return pipeline_config;
   }
 
@@ -245,7 +248,10 @@ GetPathPlanningPipelineForMotionSegment(
     }
     *joint_planner_config.mutable_point_validator_spec() = point_spec;
     *joint_planner_config.mutable_edge_validator_spec() = edge_spec;
-    joint_move_planner->mutable_config()->PackFrom(joint_planner_config);
+    if (!joint_move_planner->mutable_config()->PackFrom(joint_planner_config)) {
+      return absl::InternalError(
+          "Failed to pack JointInterpolationPathPlanner config");
+    }
     return pipeline_config;
   }
 
@@ -271,7 +277,9 @@ GetPathPlanningPipelineForMotionSegment(
   }
   *rrt_path_planner_config.mutable_point_validator_spec() = point_spec;
   *rrt_path_planner_config.mutable_edge_validator_spec() = edge_spec;
-  rrt_planner->mutable_config()->PackFrom(rrt_path_planner_config);
+  if (!rrt_planner->mutable_config()->PackFrom(rrt_path_planner_config)) {
+    return absl::InternalError("Failed to pack RrtConnectPathPlanner config");
+  }
 
   // 2. JointShortcutter for smoothing the results of the planned path.
   auto joint_shortcutter = pipeline_config.add_specs();
@@ -282,7 +290,10 @@ GetPathPlanningPipelineForMotionSegment(
       motion_config.shortcutting_combine_collinear_segments());
   *joint_shortcutter_config.mutable_point_validator_spec() = point_spec;
   *joint_shortcutter_config.mutable_edge_validator_spec() = edge_spec;
-  joint_shortcutter->mutable_config()->PackFrom(joint_shortcutter_config);
+  if (!joint_shortcutter->mutable_config()->PackFrom(
+          joint_shortcutter_config)) {
+    return absl::InternalError("Failed to pack JointShortcutter config");
+  }
   return pipeline_config;
 }
 

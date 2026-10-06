@@ -477,11 +477,15 @@ absl::Status GetMotionPlanningExtendedStatusErrorMessage(
   status.ForEachPayload([&](absl::string_view type_url,
                             const absl::Cord& payload) {
     if (absl::StrContains(type_url, "MotionPipelineError")) {
-      motion_pipeline_error.ParseFromString(payload);
+      if (!motion_pipeline_error.ParseFromString(payload)) {
+        return;
+      }
       motion_planning_error =
           motion_pipeline_error.motion_planning_error().at(0);
     } else if (absl::StrContains(type_url, "MotionPlanningError")) {
-      motion_planning_error.ParseFromString(payload);
+      if (!motion_planning_error.ParseFromString(payload)) {
+        return;
+      }
     } else {
       return;
     }

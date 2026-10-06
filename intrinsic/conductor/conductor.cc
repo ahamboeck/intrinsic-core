@@ -745,7 +745,9 @@ ConductorImpl::PrepareProcessStartImpl(
 
   PrepareProcessStartMetadata metadata;
   google::protobuf::Any op_metadata;
-  op_metadata.PackFrom(metadata);
+  if (!op_metadata.PackFrom(metadata)) {
+    return absl::InternalError("Failed to pack metadata into Any.");
+  }
 
   auto operation_func =
       [this, pps_op_fn](
@@ -764,7 +766,9 @@ ConductorImpl::PrepareProcessStartImpl(
     response.set_sim_world_id(execution_context_->SimWorldID());
 
     google::protobuf::Any any_response;
-    any_response.PackFrom(response);
+    if (!any_response.PackFrom(response)) {
+      return absl::InternalError("Failed to pack response into Any.");
+    }
     return any_response;
   };
 

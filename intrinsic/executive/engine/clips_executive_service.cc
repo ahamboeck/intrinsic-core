@@ -680,14 +680,16 @@ grpc::Status ClipsExecutiveService::GetOperationView(
       intrinsic_proto::executive::RunMetadata metadata = operation->metadata;
       google::protobuf::util::FieldMaskUtil::TrimMessage(
           request->metadata_fieldmask(), &metadata);
-      response->mutable_metadata()->PackFrom(std::move(metadata));
+      static_cast<void>(response->mutable_metadata()->PackFrom(
+          std::move(metadata)));  // TODO: Handle return value
     }
   } else if (request->has_view()) {
     if (request->view() ==
         intrinsic_proto::executive::GetOperationViewRequest::VIEW_STATE_ONLY) {
       intrinsic_proto::executive::RunMetadata metadata = operation->metadata;
       metadata.clear_behavior_tree();
-      response->mutable_metadata()->PackFrom(std::move(metadata));
+      static_cast<void>(response->mutable_metadata()->PackFrom(
+          std::move(metadata)));  // TODO: Handle return value
     }
   }
   return grpc::Status::OK;
@@ -1302,8 +1304,8 @@ void ClipsExecutiveService::UpdateOperationData(
 
   *operation_data->metadata.mutable_log_context() =
       executor_->GetStateLogContext(operation_data->operation.name());
-  operation_data->operation.mutable_metadata()->PackFrom(
-      operation_data->metadata);
+  static_cast<void>(operation_data->operation.mutable_metadata()->PackFrom(
+      operation_data->metadata));  // TODO: Handle return value
 
   // No more metadata changes beyond this point (because it has already been
   // packed).
@@ -1318,7 +1320,9 @@ void ClipsExecutiveService::UpdateOperationData(
       if (operation_return_value.ok()) {
         intrinsic_proto::executive::RunResponse response;
         *response.mutable_result() = *operation_return_value;
-        operation_data->operation.mutable_response()->PackFrom(response);
+        static_cast<void>(
+            operation_data->operation.mutable_response()->PackFrom(
+                response));  // TODO: Handle return value
       }
     } else if (operation_data->metadata.operation_state() ==
                intrinsic_proto::executive::RunMetadata::FAILED) {
@@ -1348,7 +1352,8 @@ void ClipsExecutiveService::UpdateOperationData(
 
       if (extended_status.ok()) {
         google::protobuf::Any es_detail;
-        es_detail.PackFrom(*extended_status);
+        static_cast<void>(
+            es_detail.PackFrom(*extended_status));  // TODO: Handle return value
         *operation_data->operation.mutable_error()->add_details() =
             std::move(es_detail);
       }

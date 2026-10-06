@@ -4507,7 +4507,7 @@ TEST_P(MotionPlannerTest, StatusWithErrorProtoForSegmentId) {
                                      const absl::Cord& payload) {
     intrinsic_proto::motion_planning::v1::MotionPipelineError
         motion_pipeline_error;
-    motion_pipeline_error.ParseFromString(payload);
+    ASSERT_TRUE(motion_pipeline_error.ParseFromString(payload));
     ASSERT_TRUE(!motion_pipeline_error.motion_planning_error().empty());
     ASSERT_EQ(
         motion_pipeline_error.motion_planning_error().at(0).segment_id().size(),

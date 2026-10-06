@@ -70,7 +70,9 @@ absl::StatusOr<std::tuple<std::string, std::string>> UploadToCASV0(
   std::string renderable_uri;
   {
     std::string geo_proto_contents;
-    geo_proto.SerializeToString(&geo_proto_contents);
+    if (!geo_proto.SerializeToString(&geo_proto_contents)) {
+      return absl::InternalError("Failed to serialize Geometry proto");
+    }
     auto cli_context = make_client_context();
     INTR_ASSIGN_OR_RETURN(geometry_uri,
                           ContentAddressableStorageCreate(
@@ -110,7 +112,9 @@ absl::StatusOr<CasRefsV1> UploadToCASV1(
   CasRefsV1 refs;
   {
     std::string exact_geo_proto_contents;
-    exact_geo_proto.SerializeToString(&exact_geo_proto_contents);
+    if (!exact_geo_proto.SerializeToString(&exact_geo_proto_contents)) {
+      return absl::InternalError("Failed to serialize ExactGeometry proto");
+    }
     auto cli_context = make_client_context();
     INTR_ASSIGN_OR_RETURN(
         refs.exact_geo_uri,
@@ -174,7 +178,9 @@ class CasGeometryLibrary : public GeometryLibrary,
                                      geo_storage_refs.geometry_ref()),
         _ << "Failed to get geometry from CAS");
     intrinsic_proto::geometry::Geometry geo_proto;
-    geo_proto.ParseFromString(geo_bytes);
+    if (!geo_proto.ParseFromString(geo_bytes)) {
+      return absl::InternalError("Failed to parse Geometry proto");
+    }
     INTR_ASSIGN_OR_RETURN(Geometry geo,
                           geometry_compatibility::ToGeometry(geo_proto, options,
                                                              geo_storage_refs));
@@ -211,7 +217,9 @@ class CasGeometryLibrary : public GeometryLibrary,
                                      geo_storage_refs.exact_geometry_ref()),
         _ << "Failed to get geometry from CAS");
     intrinsic_proto::geometry::v1::ExactGeometry geo_proto;
-    geo_proto.ParseFromString(geo_bytes);
+    if (!geo_proto.ParseFromString(geo_bytes)) {
+      return absl::InternalError("Failed to parse ExactGeometry proto");
+    }
     INTR_ASSIGN_OR_RETURN(ExactGeometry exact_geo, ToGeometry(geo_proto));
 
     std::shared_ptr<const Renderable> renderable = nullptr;

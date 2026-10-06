@@ -112,14 +112,16 @@ bool HasCollisionOrUnreachableError(const absl::Status& status) {
         has_collision_or_unreachable_error = [&]() {
           if (absl::StrContains(type_url, "MotionPipelineError")) {
             intrinsic_proto::motion_planning::v1::MotionPipelineError error;
-            error.ParseFromCord(payload);
+            static_cast<void>(
+                error.ParseFromCord(payload));  // TODO: Handle return value
             if (absl::c_any_of(error.motion_planning_error(),
                                IsCollisionOrUnreachable))
               return true;
           }
           if (absl::StrContains(type_url, "MotionPlanningError")) {
             intrinsic_proto::motion_planning::v1::MotionPlanningError error;
-            error.ParseFromCord(payload);
+            static_cast<void>(
+                error.ParseFromCord(payload));  // TODO: Handle return value
             if (IsCollisionOrUnreachable(error)) return true;
           }
           return false;

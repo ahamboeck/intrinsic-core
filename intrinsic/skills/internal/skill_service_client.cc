@@ -93,7 +93,9 @@ BuildExecuteRequestAndContextWithoutWorld(
     const intrinsic_proto::data_logger::Context& log_context) {
   intrinsic_proto::skills::ExecuteRequest request;
   *request.mutable_instance() = instance;
-  request.mutable_parameters()->PackFrom(params);
+  if (!request.mutable_parameters()->PackFrom(params)) {
+    return absl::InternalError("Failed to pack skill execute parameters.");
+  }
   *request.mutable_footprint() = footprint;
   intrinsic_proto::data_logger::Context skill_context = log_context;
   if (log_context.skill_id() != 0) {
@@ -137,7 +139,9 @@ BuildPreviewRequestAndContextWithoutWorld(
     const intrinsic_proto::data_logger::Context& log_context) {
   intrinsic_proto::skills::PreviewRequest request;
   *request.mutable_instance() = instance;
-  request.mutable_parameters()->PackFrom(params);
+  if (!request.mutable_parameters()->PackFrom(params)) {
+    return absl::InternalError("Failed to pack skill preview parameters.");
+  }
   *request.mutable_footprint() = footprint;
   intrinsic_proto::data_logger::Context skill_context = log_context;
   if (log_context.skill_id() != 0) {

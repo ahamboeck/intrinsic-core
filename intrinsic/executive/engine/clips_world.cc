@@ -119,7 +119,8 @@ intrinsic_proto::executive::AnyList ConvertIdNameToAnyList(
   for (const intrinsic_proto::world::IdAndName& id_name : id_name_list) {
     M ref;
     ref.set_id(id_name.id());
-    any_list.add_items()->PackFrom(ref);
+    static_cast<void>(
+        any_list.add_items()->PackFrom(ref));  // TODO: Handle return value
   }
   return any_list;
 }
@@ -138,7 +139,8 @@ intrinsic_proto::executive::AnyList ExtractNamedJointConfigurations(
   }
   for (const intrinsic_proto::world::IdAndName& id_name : id_name_list) {
     if (joint_configs.contains(id_name.name())) {
-      any_list.add_items()->PackFrom(joint_configs[id_name.name()]);
+      static_cast<void>(any_list.add_items()->PackFrom(
+          joint_configs[id_name.name()]));  // TODO: Handle return value
     }
   }
   return any_list;

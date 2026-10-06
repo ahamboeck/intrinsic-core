@@ -433,7 +433,9 @@ MotionPlannerNonvolatileCache::SaveToNonvolatileCache(
         intrinsic_proto::motion_planning::MotionPlannerNonvolatileCacheEntry
             proto,
         ToProto(entry));
-    proto.SerializeToString(&proto_contents);
+    if (!proto.SerializeToString(&proto_contents)) {
+      return absl::InternalError("Failed to serialize cache entry proto.");
+    }
     grpc::ClientContext cas_context;
     INTR_ASSIGN_OR_RETURN(
         const std::string uuid,
@@ -463,7 +465,9 @@ MotionPlannerNonvolatileCache::LoadFromNonvolatileCache(
     }
     LOG(INFO) << "Successfully retrieved a CAS entry for " << key.uuid;
     intrinsic_proto::motion_planning::MotionPlannerNonvolatileCacheEntry proto;
-    proto.ParseFromString(status_or_proto_string.value());
+    if (!proto.ParseFromString(status_or_proto_string.value())) {
+      return absl::InternalError("Failed to parse cache entry proto from CAS.");
+    }
     INTR_ASSIGN_OR_RETURN(MotionPlannerNonvolatileCacheEntry entry,
                           FromProto(proto));
     return std::move(entry);

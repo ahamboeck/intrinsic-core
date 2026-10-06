@@ -1608,8 +1608,9 @@ absl::Status ApplySimulationSpec(
             collections_id));
     google::protobuf::StringValue str_val;
     str_val.set_value(absl::StrJoin(extra_plugins, "\n"));
-    user_data_component->MutableUserDataProtos()[sdf::kGazeboPlugins].PackFrom(
-        str_val);
+    static_cast<void>(
+        user_data_component->MutableUserDataProtos()[sdf::kGazeboPlugins]
+            .PackFrom(str_val));  // TODO: Handle return value
   }
 
   return absl::OkStatus();

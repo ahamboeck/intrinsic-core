@@ -230,7 +230,8 @@ class RequestWatcher {
   // Adds a request.
   void AddRequest(const ::google::protobuf::Message& request) {
     google::protobuf::Any request_any;
-    request_any.PackFrom(request);
+    static_cast<void>(
+        request_any.PackFrom(request));  // TODO: Handle return value
     requests_.push_back(request_any);
   }
 
@@ -253,7 +254,8 @@ class RequestWatcher {
       if (!request_any.Is<TRequest>()) continue;
 
       TRequest request;
-      request_any.UnpackTo(&request);
+      static_cast<void>(
+          request_any.UnpackTo(&request));  // TODO: Handle return value
       requests.push_back(request);
     }
     return requests;
