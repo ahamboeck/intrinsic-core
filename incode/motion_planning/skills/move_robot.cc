@@ -507,11 +507,11 @@ absl::StatusOr<intrinsic_proto::skills::Footprint> MoveRobot::GetFootprint(
     robot_object = robot;
   }
 
-  // Precalculate and cache the motion plan.
-  INTR_RETURN_IF_ERROR(GetOrComputePlan(context.context_id(), params,
-                                        context.object_world(),
-                                        context.motion_planner(), robot_object)
-                           .status());
+  // Compute and store the motion plan.
+  INTR_RETURN_IF_ERROR(
+      ComputeAndStorePlan(context.context_id(), params, context.object_world(),
+                          context.motion_planner(), robot_object)
+          .status());
 
   intrinsic_proto::skills::Footprint out;
   INTR_ASSIGN_OR_RETURN(
@@ -724,13 +724,34 @@ MoveRobot::ComputePlan(
 }
 
 absl::StatusOr<intrinsic_proto::skills::MoveRobotInternalData>
+MoveRobot::ComputeAndStorePlan(
+    absl::string_view context_id,
+    const intrinsic_proto::skills::MoveRobotParams& params,
+    world::ObjectWorldClient& world,
+    motion_planning::MotionPlannerClient& planner,
+    std::optional<world::KinematicObject> robot_object) const {
+  // Drop any plan from a previous projection of this action before planning
+  // (b/569565855). Re-projection under the same `context_id` means the world
+  // may have changed, so the old plan must neither be returned here nor survive
+  // a failed recomputation and be picked up by `Execute()` or `Preview()`.
+  // This removes all keys of the context; MoveRobot only stores "plan".
+  // Note: `Delete()` and `GetOrCompute()` are not atomic, but the Executive
+  // projects an action one call at a time sequentially.
+  if (!context_id.empty()) {
+    GetSkillData().Delete(context_id);
+  }
+  return GetOrComputePlan(context_id, params, world, planner,
+                          std::move(robot_object));
+}
+
+absl::StatusOr<intrinsic_proto::skills::MoveRobotInternalData>
 MoveRobot::GetOrComputePlan(
     absl::string_view context_id,
     const intrinsic_proto::skills::MoveRobotParams& params,
     world::ObjectWorldClient& world,
     motion_planning::MotionPlannerClient& planner,
     std::optional<world::KinematicObject> robot_object) const {
-  auto compute_fn =
+  const auto compute_fn =
       [&]() -> absl::StatusOr<intrinsic_proto::skills::MoveRobotInternalData> {
     return ComputePlan(params, world, planner, robot_object);
   };
@@ -971,9 +992,10 @@ absl::StatusOr<std::unique_ptr<::google::protobuf::Message>> MoveRobot::Preview(
   }
 
   INTR_ASSIGN_OR_RETURN(
-      const auto internal_data,
+      const intrinsic_proto::skills::MoveRobotInternalData internal_data,
       GetOrComputePlan(context.context_id(), params, context.object_world(),
-                       context.motion_planner(), robot_object));
+                       context.motion_planner(), robot_object),
+      _ << "Failed to obtain or compute motion plan for Preview.");
 
   const auto& trajectory = internal_data.execution_plan().planned_trajectory();
   absl::Duration previous_time = absl::ZeroDuration();

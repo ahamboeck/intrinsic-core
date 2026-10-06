@@ -1389,6 +1389,220 @@ TEST_P(MoveRobotFixtureTest, FootprintCachesPlanInSkillData) {
                          *execute_context, &return_value));
 }
 
+TEST_P(MoveRobotFixtureTest,
+       GetFootprintRecomputesPlanOnReprojectionWithSameContextId) {
+  const intrinsic_proto::skills::MoveRobotParams params =
+      CreateJointTargetParams();
+  constexpr absl::string_view kContextId = "reprojection_recompute_ctx";
+  constexpr double kTolerance = 1e-6;
+
+  eigenmath::VectorNd start_a(6);
+  start_a << -0.10, 0.48, -1.36, -0.77, 0.83, -1.0;
+
+  const MoveRobotTestParams test_params_1{
+      .world_id = "reprojection_world_1",
+  };
+  ASSERT_OK_AND_ASSIGN(auto skill_and_equipment_1,
+                       PrepareMoveRobotTest(start_a, test_params_1));
+
+  const GetFootprintRequest footprint_request =
+      skill_test_factory_.MakeGetFootprintRequest(params);
+  const auto footprint_context_1 = skill_test_factory_.MakeGetFootprintContext({
+      .equipment_pack = skill_and_equipment_1.equipment,
+      .world_id = std::string(test_params_1.world_id),
+      .motion_planner_service = motion_planner_stub_,
+      .object_world_service = world_service_->NewObjectStub(),
+      .context_id = std::string(kContextId),
+  });
+
+  ASSERT_OK(skill_and_equipment_1.skill->GetFootprint(footprint_request,
+                                                      *footprint_context_1));
+
+  ASSERT_OK_AND_ASSIGN(
+      const std::optional<intrinsic_proto::skills::MoveRobotInternalData>
+          plan_1,
+      GetSkillData().Get<intrinsic_proto::skills::MoveRobotInternalData>(
+          kContextId, "plan"));
+  ASSERT_TRUE(plan_1.has_value());
+  ASSERT_TRUE(plan_1->execution_plan().has_planned_trajectory());
+  ASSERT_GT(plan_1->execution_plan().planned_trajectory().state_size(), 0);
+  ASSERT_EQ(
+      plan_1->execution_plan().planned_trajectory().state(0).position_size(),
+      start_a.size());
+  for (int i = 0; i < start_a.size(); ++i) {
+    EXPECT_NEAR(
+        plan_1->execution_plan().planned_trajectory().state(0).position(i),
+        start_a[i], kTolerance);
+  }
+
+  eigenmath::VectorNd start_b(6);
+  start_b << 0.00, 0.48, -1.36, -0.77, 0.83, -1.0;
+
+  const MoveRobotTestParams test_params_2{
+      .world_id = "reprojection_world_2",
+  };
+  ASSERT_OK_AND_ASSIGN(auto skill_and_equipment_2,
+                       PrepareMoveRobotTest(start_b, test_params_2));
+
+  const auto footprint_context_2 = skill_test_factory_.MakeGetFootprintContext({
+      .equipment_pack = skill_and_equipment_2.equipment,
+      .world_id = std::string(test_params_2.world_id),
+      .motion_planner_service = motion_planner_stub_,
+      .object_world_service = world_service_->NewObjectStub(),
+      .context_id = std::string(kContextId),
+  });
+
+  ASSERT_OK(skill_and_equipment_2.skill->GetFootprint(footprint_request,
+                                                      *footprint_context_2));
+
+  ASSERT_OK_AND_ASSIGN(
+      const std::optional<intrinsic_proto::skills::MoveRobotInternalData>
+          plan_2,
+      GetSkillData().Get<intrinsic_proto::skills::MoveRobotInternalData>(
+          kContextId, "plan"));
+  ASSERT_TRUE(plan_2.has_value());
+  ASSERT_TRUE(plan_2->execution_plan().has_planned_trajectory());
+  ASSERT_GT(plan_2->execution_plan().planned_trajectory().state_size(), 0);
+  ASSERT_EQ(
+      plan_2->execution_plan().planned_trajectory().state(0).position_size(),
+      start_b.size());
+  for (int i = 0; i < start_b.size(); ++i) {
+    EXPECT_NEAR(
+        plan_2->execution_plan().planned_trajectory().state(0).position(i),
+        start_b[i], kTolerance);
+  }
+}
+
+TEST_P(MoveRobotFixtureTest, GetFootprintFailureClearsPreviouslyStoredPlan) {
+  const intrinsic_proto::skills::MoveRobotParams params =
+      CreateJointTargetParams();
+  constexpr absl::string_view kContextId = "reprojection_failure_ctx";
+
+  eigenmath::VectorNd initial(6);
+  initial << -0.10, 0.48, -1.36, -0.77, 0.83, -1.0;
+
+  const MoveRobotTestParams test_params_1{
+      .world_id = "reprojection_failure_world_1",
+  };
+  ASSERT_OK_AND_ASSIGN(auto skill_and_equipment_1,
+                       PrepareMoveRobotTest(initial, test_params_1));
+
+  const GetFootprintRequest footprint_request =
+      skill_test_factory_.MakeGetFootprintRequest(params);
+  const auto footprint_context_1 = skill_test_factory_.MakeGetFootprintContext({
+      .equipment_pack = skill_and_equipment_1.equipment,
+      .world_id = std::string(test_params_1.world_id),
+      .motion_planner_service = motion_planner_stub_,
+      .object_world_service = world_service_->NewObjectStub(),
+      .context_id = std::string(kContextId),
+  });
+
+  ASSERT_OK(skill_and_equipment_1.skill->GetFootprint(footprint_request,
+                                                      *footprint_context_1));
+
+  ASSERT_OK_AND_ASSIGN(
+      const std::optional<intrinsic_proto::skills::MoveRobotInternalData>
+          initial_plan,
+      GetSkillData().Get<intrinsic_proto::skills::MoveRobotInternalData>(
+          kContextId, "plan"));
+  ASSERT_TRUE(initial_plan.has_value());
+
+  intrinsic_proto::skills::MoveRobotParams invalid_params = params;
+  invalid_params.clear_motion_segments();
+
+  const MoveRobotTestParams test_params_2{
+      .world_id = "reprojection_failure_world_2",
+  };
+  ASSERT_OK_AND_ASSIGN(auto skill_and_equipment_2,
+                       PrepareMoveRobotTest(initial, test_params_2));
+
+  const GetFootprintRequest invalid_footprint_request =
+      skill_test_factory_.MakeGetFootprintRequest(invalid_params);
+  const auto footprint_context_2 = skill_test_factory_.MakeGetFootprintContext({
+      .equipment_pack = skill_and_equipment_2.equipment,
+      .world_id = std::string(test_params_2.world_id),
+      .motion_planner_service = motion_planner_stub_,
+      .object_world_service = world_service_->NewObjectStub(),
+      .context_id = std::string(kContextId),
+  });
+
+  EXPECT_THAT(skill_and_equipment_2.skill->GetFootprint(
+                  invalid_footprint_request, *footprint_context_2),
+              StatusIs(absl::StatusCode::kInvalidArgument));
+
+  ASSERT_OK_AND_ASSIGN(
+      const std::optional<intrinsic_proto::skills::MoveRobotInternalData>
+          cleared_plan,
+      GetSkillData().Get<intrinsic_proto::skills::MoveRobotInternalData>(
+          kContextId, "plan"));
+  EXPECT_FALSE(cleared_plan.has_value());
+}
+
+TEST_P(MoveRobotFixtureTest, PreviewReusesPlanCachedByGetFootprint) {
+  const intrinsic_proto::skills::MoveRobotParams params =
+      CreateJointTargetParams();
+  constexpr absl::string_view kContextId = "preview_reuses_cached_plan_ctx";
+
+  eigenmath::VectorNd initial(6);
+  initial << -0.10, 0.48, -1.36, -0.77, 0.83, -1.0;
+
+  const MoveRobotTestParams test_params{
+      .world_id = "preview_cached_plan_world",
+  };
+  ASSERT_OK_AND_ASSIGN(const PreparedSkill skill_and_equipment,
+                       PrepareMoveRobotTest(initial, test_params));
+
+  const GetFootprintRequest footprint_request =
+      skill_test_factory_.MakeGetFootprintRequest(params);
+  const auto footprint_context = skill_test_factory_.MakeGetFootprintContext({
+      .equipment_pack = skill_and_equipment.equipment,
+      .world_id = std::string(test_params.world_id),
+      .motion_planner_service = motion_planner_stub_,
+      .object_world_service = world_service_->NewObjectStub(),
+      .context_id = std::string(kContextId),
+  });
+
+  ASSERT_OK(skill_and_equipment.skill->GetFootprint(footprint_request,
+                                                    *footprint_context));
+
+  // Verify the plan is stored in `SkillData` before `Preview()` is called.
+  ASSERT_OK_AND_ASSIGN(
+      const std::optional<intrinsic_proto::skills::MoveRobotInternalData>
+          cached_plan_before,
+      GetSkillData().Get<intrinsic_proto::skills::MoveRobotInternalData>(
+          kContextId, "plan"));
+  ASSERT_TRUE(cached_plan_before.has_value());
+  EXPECT_TRUE(cached_plan_before->execution_plan().has_planned_trajectory());
+
+  const PreviewRequest preview_request =
+      skill_test_factory_.MakePreviewRequest(params);
+  const auto preview_context = skill_test_factory_.MakePreviewContext({
+      .equipment_pack = skill_and_equipment.equipment,
+      .world_id = std::string(test_params.world_id),
+      .motion_planner_service = motion_planner_stub_,
+      .object_world_service = world_service_->NewObjectStub(),
+      .context_id = std::string(kContextId),
+  });
+
+  ASSERT_OK_AND_ASSIGN(
+      const std::unique_ptr<::google::protobuf::Message> preview_message,
+      skill_and_equipment.skill->Preview(preview_request, *preview_context));
+  const auto* preview_return_value =
+      dynamic_cast<const intrinsic_proto::skills::MoveRobotReturnValue*>(
+          preview_message.get());
+  ASSERT_NE(preview_return_value, nullptr);
+  // Verify `Preview()` preserved the plan in `SkillData` without deleting or
+  // recomputing it.
+  ASSERT_OK_AND_ASSIGN(
+      const std::optional<intrinsic_proto::skills::MoveRobotInternalData>
+          cached_plan_after,
+      GetSkillData().Get<intrinsic_proto::skills::MoveRobotInternalData>(
+          kContextId, "plan"));
+  ASSERT_TRUE(cached_plan_after.has_value());
+  EXPECT_EQ(cached_plan_before->SerializeAsString(),
+            cached_plan_after->SerializeAsString());
+}
+
 TEST_P(MoveRobotFixtureTest, ExecuteClearsStaleLockMotionIdOnReplan) {
   const intrinsic_proto::skills::MoveRobotParams params =
       CreateJointTargetParams();
