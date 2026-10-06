@@ -42,7 +42,7 @@ spec:
           args:
             - /intrinsic/simulation/gazebo/grpc_proxy/proxy_server_main
             - --opencensus_tracing=true
-            - --opencensus_metrics_port=9090
+            - --opencensus_metrics_port=9108
             {{ if not (and .Values.app_deployment_id .Values.simulated) }}
             - --sleep
             {{ end }}
@@ -147,7 +147,7 @@ metadata:
 spec:
   clusterIP: None
   ports:
-    - port: 9090
+    - port: 9108
       name: http-metrics
   selector:
     app: gzserver
