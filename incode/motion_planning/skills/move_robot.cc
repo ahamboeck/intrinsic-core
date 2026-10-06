@@ -572,7 +572,6 @@ MoveRobot::PlanTrajectory(
               .enable_strict_trajectory_fallback();
     }
   }
-
   absl::StatusOr<MotionPlannerClient::PlanTrajectoryResult>
       status_or_trajectory =
           planner.PlanTrajectory(robot_specification, motion_specs,

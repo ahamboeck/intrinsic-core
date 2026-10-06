@@ -38,6 +38,8 @@ class MotionPlannerInterface {
   // Path planning statistics, such as the path planning duration.
   struct PathPlanningStatistics {
     absl::Duration path_planning_duration;
+    // Number of motion segments in the path planning request.
+    int num_motion_segments = 0;
   };
 
   // Trajectory generation statistics, such as the combined duration of path
@@ -61,6 +63,8 @@ class MotionPlannerInterface {
     absl::Duration motion_planning_duration;
     PathPlanningStatistics path_planning_statistics;
     TrajectoryGenerationStatistics trajectory_generation_statistics;
+    // Number of motion segments in the motion planning request.
+    int num_motion_segments = 0;
   };
 
   // These are all the types of path generation fallback strategies that the

@@ -247,6 +247,10 @@ void ValidateMotionPlanningStatisticsFromPlanTrajectoryResult(
                     .path_refinement_and_trajectory_generation_duration),
             absl::ToDoubleSeconds(
                 motion_planning_statistics.motion_planning_duration));
+  EXPECT_GT(motion_planning_statistics.num_motion_segments, 0);
+  EXPECT_EQ(
+      motion_planning_statistics.path_planning_statistics.num_motion_segments,
+      motion_planning_statistics.num_motion_segments);
 }
 
 // Combines the validation logic of

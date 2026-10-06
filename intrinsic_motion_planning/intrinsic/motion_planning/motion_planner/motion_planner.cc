@@ -950,6 +950,11 @@ absl::StatusOr<MotionPlanner::PlanTrajectoryResult> PlanPathInternal(
             proxy_set, path_segment_to_validation_proxies_id_map));
   planning_result.motion_planning_statistics.path_planning_statistics
       .path_planning_duration = absl::Now() - planning_start_time;
+  const int num_motion_segments = motion_specification.motion_segments_size();
+  planning_result.motion_planning_statistics.path_planning_statistics
+      .num_motion_segments = num_motion_segments;
+  planning_result.motion_planning_statistics.num_motion_segments =
+      num_motion_segments;
   LOG(INFO) << "Path planning took "
             << absl::ToDoubleSeconds(
                    planning_result.motion_planning_statistics

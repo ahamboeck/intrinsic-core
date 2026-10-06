@@ -259,7 +259,6 @@ message MoveRobotParams {
   // motions. You should not typically need this option if you are planning
   // online.
   optional bool plan_using_last_commanded_position = 10;
-
   reserved 4, 5, 6, 7;
 }
 
