@@ -19,6 +19,7 @@
 #include <string>
 #include <vector>
 
+#include "absl/status/status.h"
 #include "absl/status/statusor.h"
 #include "intrinsic/eigenmath/types.h"
 #include "intrinsic/motion_planning/proto/v1/motion_planner_service.pb.h"
@@ -29,6 +30,7 @@
 #include "intrinsic/world/objects/object_world.h"
 #include "intrinsic/world/objects/transform_node_internal.h"
 #include "intrinsic/world/objects/world_object_internal.h"
+#include "intrinsic/world/proto/collision_settings.pb.h"
 #include "intrinsic/world/world.h"
 
 namespace intrinsic {
@@ -48,7 +50,11 @@ struct EntityCollisionGeometryFeature {
 
 // Extracts the geometry fingerprint and `ref_t_shape` matrix for each collision
 // geometry attached to `entity_id` in `entity_world`. Returns an empty vector
-// if `entity_id` has no `GeometryComponent` or no collision geometry.
+// (`absl::OkStatus()`) if `entity_id` exists in `entity_world` but has no
+// `GeometryComponent` or no collision geometry (`kKindCollisionGeometry`).
+// Returns `absl::NotFoundError` if `entity_id` does not exist in
+// `entity_world`, or propagates any error encountered while fingerprinting
+// collision shapes.
 absl::StatusOr<std::vector<EntityCollisionGeometryFeature>>
 ExtractEntityCollisionGeometryFeatures(const World& entity_world,
                                        EntityId entity_id);
@@ -102,17 +108,24 @@ struct MotionPlanningCacheGroupSignature {
   }
 };
 
-// Resolves a normalized identifier token for `object` (returning the configured
-// cell instance name for `KinematicObject`s, a collision geometry fingerprint
-// token when collision geometry is present, or `object`'s resource name as a
-// fallback).
-std::string GetNormalizedObjectToken(const object_world::WorldObject& object);
+// Resolves a normalized identifier token for `object`: returns the configured
+// cell instance name for `KinematicObject`s, a `geo_...` collision geometry
+// fingerprint token when collision geometry is present, or `object`'s resource
+// name as a fallback when `object` has no collision geometry. Propagates any
+// unexpected error encountered while extracting collision geometry
+// fingerprints.
+absl::StatusOr<std::string> GetNormalizedObjectToken(
+    const object_world::WorldObject& object);
 
 // Builds the full normalized hierarchical path string for `object` by
 // traversing its ancestor chain from the world root down to `object` and
-// joining each ancestor's normalized token with `/`. Returns `root` if
-// `object` is the world root.
-std::string GetNormalizedFullPath(const object_world::WorldObject& object);
+// joining each ancestor's normalized token (from `GetNormalizedObjectToken()`,
+// including its fallback to the object's resource name when an ancestor
+// has no collision geometry) with `/`. Returns `"root"` if `object` is the
+// world root, or propagates any unexpected error from
+// `GetNormalizedObjectToken()`.
+absl::StatusOr<std::string> GetNormalizedFullPath(
+    const object_world::WorldObject& object);
 
 // Resolves a normalized hierarchical path or identifier string for `node` in
 // `object_world` (returning `root` for the world root,
@@ -121,6 +134,15 @@ std::string GetNormalizedFullPath(const object_world::WorldObject& object);
 absl::StatusOr<std::string> GetNormalizedTransformNodeName(
     const object_world::ObjectWorld& object_world,
     const object_world::TransformNode& node);
+
+// Normalizes `collision_settings` in-place using `object_world` so that
+// equivalent collision rules produce identical protos. Replaces object and
+// entity IDs with normalized `by_name` paths, orders `left` and `right` sides
+// consistently, and sorts and deduplicates all rules. Returns an error if any
+// referenced object or entity is not found in `object_world`.
+absl::Status NormalizeCollisionSettings(
+    const object_world::ObjectWorld& object_world,
+    intrinsic_proto::world::CollisionSettings& collision_settings);
 
 // Creates a normalized `MotionPlanningCacheGroupSignature` from `request` using
 // `object_world` by replacing ephemeral object/frame IDs with canonical

@@ -22,11 +22,13 @@
 #include <utility>
 #include <vector>
 
+#include "absl/algorithm/container.h"
 #include "absl/status/status.h"
 #include "absl/status/statusor.h"
 #include "absl/strings/str_cat.h"
 #include "absl/strings/str_join.h"
 #include "absl/strings/string_view.h"
+#include "google/protobuf/repeated_ptr_field.h"
 #include "intrinsic/eigenmath/types.h"
 #include "intrinsic/geometry/api/geometry_fingerprint.h"
 #include "intrinsic/motion_planning/proto/v1/geometric_constraints.pb.h"
@@ -34,18 +36,23 @@
 #include "intrinsic/motion_planning/proto/v1/motion_specification.pb.h"
 #include "intrinsic/motion_planning/proto/v1/robot_specification.pb.h"
 #include "intrinsic/util/hash.h"
+#include "intrinsic/util/proto/pb_hash.h"
 #include "intrinsic/util/status/status_macros.h"
+#include "intrinsic/world/collision/util/make_collision_settings.h"
 #include "intrinsic/world/component/geometry_component.h"
+#include "intrinsic/world/entity.h"
 #include "intrinsic/world/entity_id.h"
 #include "intrinsic/world/geometry_types.h"
 #include "intrinsic/world/objects/defaulting_world_object_visitor.h"
 #include "intrinsic/world/objects/frame_internal.h"
 #include "intrinsic/world/objects/kinematic_object_internal.h"
 #include "intrinsic/world/objects/object_world.h"
+#include "intrinsic/world/objects/object_world_creation_utils.h"
 #include "intrinsic/world/objects/object_world_ids.h"
 #include "intrinsic/world/objects/object_world_proto_utils.h"
 #include "intrinsic/world/objects/transform_node_internal.h"
 #include "intrinsic/world/objects/world_object_internal.h"
+#include "intrinsic/world/proto/collision_settings.pb.h"
 #include "intrinsic/world/proto/object_world_refs.pb.h"
 #include "intrinsic/world/world.h"
 
@@ -62,7 +69,11 @@ using ::intrinsic_proto::motion_planning::v1::MotionSegment;
 using ::intrinsic_proto::motion_planning::v1::MotionSpecification;
 using ::intrinsic_proto::motion_planning::v1::RobotSpecification;
 using ::intrinsic_proto::motion_planning::v1::UniformGeometricConstraint;
+using ::intrinsic_proto::world::CollisionSettings;
+using ::intrinsic_proto::world::EntityReference;
 using ::intrinsic_proto::world::FrameReferenceByName;
+using ::intrinsic_proto::world::ObjectEntityFilter;
+using ::intrinsic_proto::world::ObjectOrEntityReference;
 using ::intrinsic_proto::world::ObjectReference;
 using ::intrinsic_proto::world::TransformNodeReference;
 
@@ -70,34 +81,32 @@ constexpr absl::string_view kPathDelimiter = "/";
 constexpr absl::string_view kRootObjectName = "root";
 constexpr absl::string_view kGeometryFingerprintPrefix = "geo_";
 
-// Gathers all collision geometry fingerprints across all constituent entities
-// of `object`, sorts them deterministically, and combines them into a
-// normalized token. Returns `std::nullopt` if `object` has no collision
-// geometry.
-std::optional<std::string> ComputeCollisionGeometryToken(
-    const object_world::WorldObject& object) {
-  const World& entity_world = object.GetEntityWorld();
-  std::vector<std::string> collision_fingerprints;
-
-  // Collect collision shape fingerprints from every entity of `object`.
-  for (const EntityId entity_id : object.GetEntityIds()) {
-    const absl::StatusOr<std::vector<EntityCollisionGeometryFeature>>
-        entity_features =
-            ExtractEntityCollisionGeometryFeatures(entity_world, entity_id);
-    if (!entity_features.ok()) {
-      // `ExtractEntityCollisionGeometryFeatures()` only returns a non-OK status
-      // if `entity_id` does not exist in `entity_world`. If an entity has no
-      // collision geometry, it returns an empty vector (`absl::OkStatus()`).
-      // Skipping an unexpected error here causes `GetNormalizedObjectToken()`
-      // to fall back to the object's unique resource name, which only prevents
-      // cross-instance cache sharing rather than risking a false cache hit.
-      continue;
-    }
-    for (const EntityCollisionGeometryFeature& feature : *entity_features) {
-      collision_fingerprints.push_back(feature.geometry_fingerprint);
-    }
+// Appends collision shape fingerprints for `entity_id` in `entity_world` to
+// `collision_fingerprints`. Leaves `collision_fingerprints` unchanged and
+// returns `absl::OkStatus()` if `entity_id` has no collision geometry.
+// Propagates any unexpected error from
+// `ExtractEntityCollisionGeometryFeatures()` such as `entity_id` not existing
+// in `entity_world` or fingerprint generation failing.
+absl::Status AppendEntityCollisionFingerprints(
+    const World& entity_world, const EntityId entity_id,
+    std::vector<std::string>& collision_fingerprints) {
+  INTR_ASSIGN_OR_RETURN(
+      const std::vector<EntityCollisionGeometryFeature> entity_features,
+      ExtractEntityCollisionGeometryFeatures(entity_world, entity_id),
+      _ << "Failed to extract collision geometry features for entity ID: "
+        << entity_id.value());
+  for (const EntityCollisionGeometryFeature& feature : entity_features) {
+    collision_fingerprints.push_back(feature.geometry_fingerprint);
   }
+  return absl::OkStatus();
+}
 
+// Formats `collision_fingerprints` into a canonical `geo_...` token, sorting
+// and hashing deterministically when multiple geometries are present so
+// multi-geometry tokens are map-order-independent. Returns `std::nullopt` if
+// `collision_fingerprints` is empty.
+std::optional<std::string> FormatCollisionGeometryToken(
+    std::vector<std::string>& collision_fingerprints) {
   if (collision_fingerprints.empty()) {
     return std::nullopt;
   }
@@ -109,16 +118,33 @@ std::optional<std::string> ComputeCollisionGeometryToken(
 
   // Sort fingerprints deterministically before hashing so multi-geometry
   // objects produce a map-order-independent token.
-  std::sort(collision_fingerprints.begin(), collision_fingerprints.end());
+  absl::c_sort(collision_fingerprints);
   const uint64_t combined_fingerprint =
       Fingerprint(absl::StrJoin(collision_fingerprints, ":"));
   return absl::StrCat(kGeometryFingerprintPrefix,
                       absl::Hex(combined_fingerprint));
 }
 
-// Returns the full normalized hierarchical path for `parent`, or the string
-// `root` when `parent` is `nullptr`.
-std::string GetNormalizedParentPath(
+// Gathers all collision geometry fingerprints across all entities belonging to
+// `object`, sorts them deterministically, and combines them into a
+// normalized `geo_...` token. Returns `std::nullopt` (`absl::OkStatus()`) if
+// `object` has no collision geometry across its entities, or propagates any
+// unexpected error encountered while extracting entity collision fingerprints.
+absl::StatusOr<std::optional<std::string>> ComputeCollisionGeometryToken(
+    const object_world::WorldObject& object) {
+  const World& entity_world = object.GetEntityWorld();
+  std::vector<std::string> collision_fingerprints;
+  for (const EntityId entity_id : object.GetEntityIds()) {
+    INTR_RETURN_IF_ERROR(AppendEntityCollisionFingerprints(
+        entity_world, entity_id, collision_fingerprints));
+  }
+  return FormatCollisionGeometryToken(collision_fingerprints);
+}
+
+// Returns the full normalized hierarchical path for `parent` via
+// `GetNormalizedFullPath()`, or `"root"` (`absl::OkStatus()`) when `parent` is
+// `nullptr`. Propagates any unexpected error from `GetNormalizedFullPath()`.
+absl::StatusOr<std::string> GetNormalizedParentPath(
     const object_world::WorldObject* const parent) {
   if (parent == nullptr) {
     return std::string(kRootObjectName);
@@ -146,10 +172,14 @@ absl::Status SetCanonicalByNameForTransformNode(
       status_or_frame.ok() && status_or_frame.value() != nullptr;
   if (is_frame_node) {
     const object_world::Frame* const frame = status_or_frame.value();
+    INTR_ASSIGN_OR_RETURN(
+        std::string normalized_parent_path,
+        GetNormalizedParentPath(frame->GetParent()),
+        _ << "Failed to compute normalized parent path for frame: "
+          << frame->GetName().value());
     FrameReferenceByName& frame_reference =
         *reference.mutable_by_name()->mutable_frame();
-    frame_reference.set_object_name(
-        GetNormalizedParentPath(frame->GetParent()));
+    frame_reference.set_object_name(std::move(normalized_parent_path));
     frame_reference.set_frame_name(frame->GetName().value());
     return absl::OkStatus();
   }
@@ -159,8 +189,13 @@ absl::Status SetCanonicalByNameForTransformNode(
   const bool is_world_object_node =
       status_or_world_object.ok() && status_or_world_object.value() != nullptr;
   if (is_world_object_node) {
+    INTR_ASSIGN_OR_RETURN(
+        std::string normalized_object_path,
+        GetNormalizedFullPath(*status_or_world_object.value()),
+        _ << "Failed to compute normalized path for WorldObject: "
+          << status_or_world_object.value()->GetName().value());
     reference.mutable_by_name()->mutable_object()->set_object_name(
-        GetNormalizedFullPath(*status_or_world_object.value()));
+        std::move(normalized_object_path));
     return absl::OkStatus();
   }
 
@@ -395,10 +430,14 @@ absl::Status NormalizeObjectReference(
       object_world::GetObjectByReference(object_world, object_reference),
       _ << "Failed to resolve object reference for normalization: "
         << object_reference.ShortDebugString());
+  INTR_ASSIGN_OR_RETURN(
+      std::string normalized_object_path, GetNormalizedFullPath(*world_object),
+      _ << "Failed to compute normalized path for object reference: "
+        << object_reference.ShortDebugString());
   object_reference.clear_debug_hint();
   object_reference.clear_id();
   object_reference.mutable_by_name()->set_object_name(
-      GetNormalizedFullPath(*world_object));
+      std::move(normalized_object_path));
   return absl::OkStatus();
 }
 
@@ -509,6 +548,191 @@ absl::Status NormalizeRobotSpecification(
       *robot_specification.mutable_robot_reference()->mutable_object_id());
 }
 
+// Returns a normalized name for `entity_id` in `entity_world`: uses the
+// entity's local name if set, or falls back to its collision geometry
+// fingerprint. Returns `NotFoundError` if the entity does not exist or has
+// neither.
+absl::StatusOr<std::string> GetNormalizedEntityToken(const World& entity_world,
+                                                     const EntityId entity_id) {
+  INTR_ASSIGN_OR_RETURN(
+      const WorldEntity* const entity, entity_world.GetEntityById(entity_id),
+      _ << "Failed to look up entity in World: " << entity_id.value());
+  if (entity == nullptr) {
+    return absl::NotFoundError(absl::StrCat(
+        "Entity lookup returned nullptr for entity ID: ", entity_id.value()));
+  }
+  const std::string local_name = entity->GetLocalName();
+  if (!local_name.empty()) {
+    return local_name;
+  }
+
+  std::vector<std::string> collision_fingerprints;
+  INTR_RETURN_IF_ERROR(AppendEntityCollisionFingerprints(
+      entity_world, entity_id, collision_fingerprints));
+  const std::optional<std::string> geometry_token =
+      FormatCollisionGeometryToken(collision_fingerprints);
+  if (geometry_token.has_value()) {
+    return *geometry_token;
+  }
+  return absl::NotFoundError(absl::StrCat(
+      "Entity with ID ", entity_id.value(),
+      " has neither a local name nor collision geometry for normalization."));
+}
+
+// Removes adjacent duplicate messages from an already-sorted `repeated_field`.
+template <typename MessageT>
+void DeduplicateSortedRepeatedField(
+    google::protobuf::RepeatedPtrField<MessageT>& repeated_field) {
+  const intrinsic::pb_equals pb_equals{};
+  repeated_field.erase(
+      std::unique(repeated_field.begin(), repeated_field.end(), pb_equals),
+      repeated_field.end());
+}
+
+// Normalizes `entity_filter` in-place by converting `entity_references()` into
+// sorted, deduplicated `entity_names()`. If `include_all_entities()` is true,
+// clears all other filter fields since they have no effect.
+absl::Status NormalizeEntityFilter(
+    const object_world::ObjectWorld& object_world,
+    ObjectEntityFilter& entity_filter) {
+  // When `include_all_entities()` is enabled, all narrower selection fields are
+  // redundant.
+  if (entity_filter.include_all_entities()) {
+    entity_filter.clear_include_base_entity();
+    entity_filter.clear_include_final_entity();
+    entity_filter.clear_entity_references();
+    entity_filter.clear_entity_names();
+    return absl::OkStatus();
+  }
+
+  const World& entity_world = object_world.GetEntityWorld();
+  std::vector<std::string> normalized_names(
+      entity_filter.entity_names().begin(), entity_filter.entity_names().end());
+
+  for (const EntityReference& entity_reference :
+       entity_filter.entity_references()) {
+    INTR_ASSIGN_OR_RETURN(
+        const EntityId entity_id,
+        object_world::ObjectWorldResourceIdToEntityId(
+            ObjectWorldResourceId(entity_reference.id())),
+        _ << "Failed to parse entity reference ID in ObjectEntityFilter: "
+          << entity_reference.id());
+    INTR_ASSIGN_OR_RETURN(
+        std::string resolved_token,
+        GetNormalizedEntityToken(entity_world, entity_id),
+        _ << "Failed to resolve entity reference in ObjectEntityFilter: "
+          << entity_reference.id());
+    normalized_names.push_back(std::move(resolved_token));
+  }
+
+  entity_filter.clear_entity_references();
+  absl::c_sort(normalized_names);
+  normalized_names.erase(
+      std::unique(normalized_names.begin(), normalized_names.end()),
+      normalized_names.end());
+  entity_filter.clear_entity_names();
+  for (const std::string& name : normalized_names) {
+    entity_filter.add_entity_names(name);
+  }
+  return absl::OkStatus();
+}
+
+// Converts an entity reference (`ObjectOrEntityReference::kEntity`) into an
+// object reference on the `WorldObject` that owns the entity: uses `kObject`
+// if the object has only one entity, or `kObjectWithFilter` (filtering for
+// that specific link/entity) if the object has multiple entities.
+absl::Status NormalizeEntityReferenceInCollisionRule(
+    const object_world::ObjectWorld& object_world,
+    ObjectOrEntityReference& reference) {
+  INTR_ASSIGN_OR_RETURN(
+      const EntityId entity_id,
+      object_world::ObjectWorldResourceIdToEntityId(
+          ObjectWorldResourceId(reference.entity().id())),
+      _ << "Failed to parse entity reference ID in collision rule: "
+        << reference.entity().id());
+  const AttachmentEntityId attachment_entity_id(entity_id.value());
+  INTR_ASSIGN_OR_RETURN(
+      const object_world::WorldObject* const world_object,
+      object_world.GetObjectByMemberEntityId(attachment_entity_id),
+      _ << "Failed to find owning WorldObject in ObjectWorld for entity "
+           "reference: "
+        << reference.entity().id());
+  if (world_object == nullptr) {
+    return absl::NotFoundError(absl::StrCat(
+        "Owning WorldObject lookup returned nullptr for entity reference: ",
+        reference.entity().id()));
+  }
+  INTR_ASSIGN_OR_RETURN(
+      std::string normalized_object_path, GetNormalizedFullPath(*world_object),
+      _ << "Failed to compute normalized path for owning WorldObject of entity "
+           "reference: "
+        << reference.entity().id());
+  // If the object only has one entity, refer to the whole object (`kObject`)
+  // so entity-based and object-based rules normalize to the same form.
+  if (world_object->GetEntityIds().size() == 1) {
+    reference.mutable_object()->mutable_by_name()->set_object_name(
+        std::move(normalized_object_path));
+    return absl::OkStatus();
+  }
+  // If the object has multiple entities (such as robot links), use
+  // `kObjectWithFilter` to select only this entity by name.
+  INTR_ASSIGN_OR_RETURN(
+      const std::string entity_token,
+      GetNormalizedEntityToken(object_world.GetEntityWorld(), entity_id),
+      _ << "Failed to resolve entity token for multi-entity object in "
+           "collision rule: "
+        << reference.entity().id());
+  reference.mutable_object_with_filter()
+      ->mutable_reference()
+      ->mutable_by_name()
+      ->set_object_name(std::move(normalized_object_path));
+  reference.mutable_object_with_filter()
+      ->mutable_entity_filter()
+      ->add_entity_names(entity_token);
+  return absl::OkStatus();
+}
+
+// Normalizes `reference` in-place by replacing object and entity IDs with
+// normalized `by_name` paths.
+absl::Status NormalizeObjectOrEntityReference(
+    const object_world::ObjectWorld& object_world,
+    ObjectOrEntityReference& reference) {
+  switch (reference.type_case()) {
+    case ObjectOrEntityReference::kObject: {
+      return NormalizeObjectReference(object_world,
+                                      *reference.mutable_object());
+    }
+    case ObjectOrEntityReference::kObjectWithFilter: {
+      INTR_RETURN_IF_ERROR(NormalizeObjectReference(
+          object_world,
+          *reference.mutable_object_with_filter()->mutable_reference()));
+      return NormalizeEntityFilter(
+          object_world,
+          *reference.mutable_object_with_filter()->mutable_entity_filter());
+    }
+    case ObjectOrEntityReference::kEntity: {
+      return NormalizeEntityReferenceInCollisionRule(object_world, reference);
+    }
+    case ObjectOrEntityReference::TYPE_NOT_SET:
+      return absl::OkStatus();
+  }
+  return absl::InvalidArgumentError(absl::StrCat(
+      "Unhandled ObjectOrEntityReference case: ", reference.type_case()));
+}
+
+// Normalizes, sorts, and deduplicates `references` against `object_world`.
+absl::Status NormalizeAndSortReferenceList(
+    const object_world::ObjectWorld& object_world,
+    google::protobuf::RepeatedPtrField<ObjectOrEntityReference>& references) {
+  for (ObjectOrEntityReference& reference : references) {
+    INTR_RETURN_IF_ERROR(
+        NormalizeObjectOrEntityReference(object_world, reference));
+  }
+  absl::c_sort(references, CompareReferences);
+  DeduplicateSortedRepeatedField(references);
+  return absl::OkStatus();
+}
+
 }  // namespace
 
 bool IsKinematicObject(const object_world::WorldObject& object) {
@@ -522,13 +746,22 @@ bool IsKinematicObject(const object_world::WorldObject& object) {
 absl::StatusOr<std::vector<EntityCollisionGeometryFeature>>
 ExtractEntityCollisionGeometryFeatures(const World& entity_world,
                                        const EntityId entity_id) {
+  if (!entity_world.HasEntity(entity_id)) {
+    return absl::NotFoundError(absl::StrCat(
+        "Entity with ID ", entity_id.value(), " does not exist in World."));
+  }
   const absl::StatusOr<NamedGeometrySet> collision_geometries =
       entity_world.GetGeometryForEntity(entity_id, kKindCollisionGeometry);
+  // Since `entity_id` exists in `entity_world`, `NotFound` indicates that the
+  // entity either has no `GeometryComponent` or has no collision geometry
+  // (`kKindCollisionGeometry`), both of which are expected for non-collidable
+  // entities.
   if (absl::IsNotFound(collision_geometries.status())) {
     return std::vector<EntityCollisionGeometryFeature>{};
   }
   INTR_RETURN_IF_ERROR(collision_geometries.status())
-      << "Failed to get collision geometry for entity.";
+      << "Failed to get collision geometry for entity ID: "
+      << entity_id.value();
 
   std::vector<EntityCollisionGeometryFeature> features;
   features.reserve(collision_geometries->size());
@@ -547,15 +780,19 @@ ExtractEntityCollisionGeometryFeatures(const World& entity_world,
   return features;
 }
 
-std::string GetNormalizedObjectToken(const object_world::WorldObject& object) {
+absl::StatusOr<std::string> GetNormalizedObjectToken(
+    const object_world::WorldObject& object) {
   // `KinematicObject` instances retain their object names
   // (e.g. "iris622" vs "iris692") since they are never ephemeral objects.
   if (IsKinematicObject(object)) {
     return object.GetName().value();
   }
 
-  const std::optional<std::string> geometry_token =
-      ComputeCollisionGeometryToken(object);
+  INTR_ASSIGN_OR_RETURN(
+      const std::optional<std::string> geometry_token,
+      ComputeCollisionGeometryToken(object),
+      _ << "Failed to compute collision geometry token for object: "
+        << object.GetName().value());
   if (geometry_token.has_value()) {
     return *geometry_token;
   }
@@ -564,7 +801,8 @@ std::string GetNormalizedObjectToken(const object_world::WorldObject& object) {
   return object.GetName().value();
 }
 
-std::string GetNormalizedFullPath(const object_world::WorldObject& object) {
+absl::StatusOr<std::string> GetNormalizedFullPath(
+    const object_world::WorldObject& object) {
   if (object.GetId() == RootObjectId()) {
     return std::string(kRootObjectName);
   }
@@ -575,7 +813,9 @@ std::string GetNormalizedFullPath(const object_world::WorldObject& object) {
   // Walk the parent chain up to the root and collect each ancestor's token.
   while (current_object != nullptr &&
          current_object->GetId() != RootObjectId()) {
-    path_tokens.push_back(GetNormalizedObjectToken(*current_object));
+    INTR_ASSIGN_OR_RETURN(std::string object_token,
+                          GetNormalizedObjectToken(*current_object));
+    path_tokens.push_back(std::move(object_token));
     current_object = current_object->GetParent();
   }
 
@@ -595,6 +835,34 @@ absl::StatusOr<std::string> GetNormalizedTransformNodeName(
                         reference.by_name().frame().frame_name());
   }
   return reference.by_name().object().object_name();
+}
+
+absl::Status NormalizeCollisionSettings(
+    const object_world::ObjectWorld& object_world,
+    CollisionSettings& collision_settings) {
+  for (CollisionSettings::CollisionRule& rule :
+       *collision_settings.mutable_collision_rules()) {
+    INTR_RETURN_IF_ERROR(
+        NormalizeAndSortReferenceList(object_world, *rule.mutable_left()));
+    INTR_RETURN_IF_ERROR(
+        NormalizeAndSortReferenceList(object_world, *rule.mutable_right()));
+
+    // Since collision rules are symmetric between `left` and `right`, put any
+    // empty side (which acts as a wildcard matching all objects) on `right`,
+    // and otherwise order `left` and `right` lexicographically.
+    const bool wildcard_on_left = rule.left().empty() && !rule.right().empty();
+    const bool both_non_empty = !rule.left().empty() && !rule.right().empty();
+    const bool right_precedes_left =
+        both_non_empty && absl::c_lexicographical_compare(
+                              rule.right(), rule.left(), CompareReferences);
+    if (wildcard_on_left || right_precedes_left) {
+      rule.mutable_left()->Swap(rule.mutable_right());
+    }
+  }
+
+  SortCollisionRules(collision_settings);
+  DeduplicateSortedRepeatedField(*collision_settings.mutable_collision_rules());
+  return absl::OkStatus();
 }
 
 absl::StatusOr<MotionPlanningCacheGroupSignature>
