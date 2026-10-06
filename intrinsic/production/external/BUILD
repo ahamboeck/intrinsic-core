@@ -24,16 +24,6 @@ exports_files(
     visibility = ["//:__pkg__"],
 )
 
-exports_files(
-    srcs = [
-        "intrinsic.bazelrc",
-        "intrinsic.bazelversion",
-    ],
-    visibility = [
-        "//intrinsic/tools/inctl/cmd/bazel/templates:__pkg__",
-    ],
-)
-
 py_test(
     name = "grpc_synchronized_py_test",
     size = "small",
