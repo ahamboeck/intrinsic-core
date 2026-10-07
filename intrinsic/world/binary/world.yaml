@@ -128,10 +128,21 @@ spec:
       storage: 100Mi
   storageClassName: local-path
 ---
+# TODO(b/566183116): temporary workaround for seamless updates for existing
+# deployments since Kubernetes does not allow changing an existing headless
+# service to ClusterIP (clusterIP is immutable).
 apiVersion: v1
 kind: Service
 metadata:
   name: world
+spec:
+  type: ExternalName
+  externalName: world2.app-intrinsic-base.svc.cluster.local
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: world2
   labels:
     app: world
 spec:
@@ -148,10 +159,21 @@ spec:
   selector:
     app: world
 ---
+# TODO(b/566183116): temporary workaround for seamless updates for existing
+# deployments since Kubernetes does not allow changing an existing headless
+# service to ClusterIP (clusterIP is immutable).
 apiVersion: v1
 kind: Service
 metadata:
   name: conductor
+spec:
+  type: ExternalName
+  externalName: conductor2.app-intrinsic-base.svc.cluster.local
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: conductor2
   labels:
     app: world
 spec:
@@ -244,7 +266,7 @@ spec:
             prefix: /intrinsic_proto.world.WorldUpdater/
       route:
         - destination:
-            host: world
+            host: world2
             port:
               number: 8080
     - match:
@@ -252,7 +274,7 @@ spec:
             prefix: /intrinsic_proto.conductor.ConductorService/
       route:
         - destination:
-            host: conductor
+            host: conductor2
             port:
               number: 8080
 ---
