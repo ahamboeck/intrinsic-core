@@ -16,13 +16,10 @@
 
 from collections.abc import Iterator
 from collections.abc import Sequence
-import errno
 import io
 from typing import Any
 from typing import List
 from typing import Optional
-from typing import Protocol
-from typing import runtime_checkable
 from typing import Tuple
 
 from absl import logging
@@ -43,14 +40,6 @@ DEFAULT_UPLOAD_CHUNK_SIZE = 1 * 1024 * 1024  # 1 MiB
 # client_helpers.get. The function is memory intensive and can be slow due
 # to repeated memory re-allocation.
 FILE_SIZE_THRESHOLD = 500 * 1024 * 1024  # 500 MiB.
-
-
-@runtime_checkable
-class BinaryWriter(Protocol):
-  """Protocol representing an object that can write raw bytes"""
-
-  def write(self, data: bytes, /) -> Any:
-    ...
 
 
 class IncompleteDownloadError(RuntimeError):
@@ -76,61 +65,6 @@ def _is_retriable(exc: BaseException) -> bool:
       isinstance(exc, IncompleteDownloadError)
       or _grpc_status_code(exc) in _RETRIABLE_STATUS_CODES
   )
-
-
-def get_range(
-    cas_stub: cas_service_pb2_grpc.ContentAddressableStorageServiceStub,
-    object_id: str,
-    start_offset: int,
-    writer: BinaryWriter,
-    grpc_metadata: Optional[Sequence[Tuple[str, str]]] = None,
-) -> int:
-  """Downloads content from the CAS service starting from start_offset.
-
-  Args:
-    cas_stub: Stub for the content-addressable storage service.
-    object_id: CAS object ID.
-    start_offset: Zero-based byte offset to start reading from.
-    writer: An object that implements write(bytes).
-    grpc_metadata: Optional gRPC metadata.
-
-  Returns:
-    Total bytes read and written to the writer.
-
-  Raises:
-    ValueError: If start_offset is invalid (< 0).
-    IncompleteDownloadError: If received byte count doesn't match expected size.
-    grpc.RpcError: If the gRPC call fails.
-  """
-  if start_offset < 0:
-    raise ValueError(f"Invalid start offset {start_offset}; must be >= 0.")
-
-  request = cas_service_pb2.GetRangeRequest(
-      object_id=object_id,
-      read_offset=start_offset,
-  )
-
-  bytes_read = 0
-  total_object_size: Optional[int] = None
-  grpc_kwargs = {"metadata": grpc_metadata} if grpc_metadata else {}
-
-  for response in cas_stub.GetRange(request, **grpc_kwargs):
-    if response.total_object_size:
-      total_object_size = response.total_object_size
-    chunk = response.checksummed_data.content
-    writer.write(chunk)
-    bytes_read += len(chunk)
-
-  if total_object_size:
-    expected_bytes = total_object_size - start_offset
-    if bytes_read != expected_bytes:
-      raise IncompleteDownloadError(
-          f"The total expected size for '{object_id}' from offset"
-          f" {start_offset} is {expected_bytes} bytes, but received"
-          f" {bytes_read} bytes."
-      )
-
-  return bytes_read
 
 
 class ResumableReader(io.BufferedIOBase):
@@ -448,78 +382,6 @@ def get_resumable_reader(
     initial_backoff_sec: Initial backoff duration in seconds.
     max_backoff_sec: Maximum backoff duration in seconds.
     backoff_multiplier: Multiplier for exponential backoff.
-    grpc_metadata: Optional gRPC metadata to attach to each RPC. See
-      get_resumable() for caveats regarding credentials.
-
-  Returns:
-    A ResumableReader. Close it (or use it as a context manager) when done.
-
-  Raises:
-    ValueError: If cas_stub is None, start_offset < 0, or max_retries < 0.
-
-  Example:
-    with client_helpers.get_resumable_reader(
-        object_id, cas_stub=stub
-    ) as reader:
-      with tarfile.open(fileobj=reader, mode="r|") as tar:
-        tar.extractall(dest_dir)
-  """
-  return ResumableReader(
-      object_id,
-      cas_stub=cas_stub,
-      start_offset=start_offset,
-      max_retries=max_retries,
-      initial_backoff_sec=initial_backoff_sec,
-      max_backoff_sec=max_backoff_sec,
-      backoff_multiplier=backoff_multiplier,
-      grpc_metadata=grpc_metadata,
-  )
-
-
-def _current_offset(writer: BinaryWriter) -> int:
-  """Returns the writer's current position, or 0 if it is not seekable.
-
-  Raises:
-    OSError: If querying the position fails for reasons other than the writer
-      not being seekable (e.g. pipes, sockets, terminals).
-  """
-  tell = getattr(writer, "tell", None)
-  if not callable(tell):
-    return 0
-  try:
-    return tell()
-  except (io.UnsupportedOperation, AttributeError):
-    return 0
-  except OSError as e:
-    if e.errno == errno.ESPIPE:
-      return 0
-    raise
-
-
-def get_resumable(
-    cas_stub: cas_service_pb2_grpc.ContentAddressableStorageServiceStub,
-    object_id: str,
-    writer: BinaryWriter,
-    max_retries: int | None = 5,
-    initial_backoff_sec: float = 0.1,
-    max_backoff_sec: float = 2.0,
-    backoff_multiplier: float = 1.5,
-    grpc_metadata: Sequence[Tuple[str, str]] | None = None,
-) -> int:
-  """Downloads an object with automatic chunk-level resumption on transient
-    failures.
-
-  Args:
-    cas_stub: Stub for the content-addressable storage service.
-    object_id: CAS object ID.
-    writer: An object implementing write(bytes). If it implements tell() (e.g.
-      a file opened in "r+b" or "ab" mode), the download starts at the current
-      position, which allows resuming a partially downloaded file.
-    max_retries: Maximum consecutive retries per chunk before failing. None
-      retries indefinitely.
-    initial_backoff_sec: Initial backoff duration in seconds.
-    max_backoff_sec: Maximum backoff duration in seconds.
-    backoff_multiplier: Multiplier for exponential backoff.
     grpc_metadata: Optional gRPC metadata to attach to each RPC. Note: any
       credentials passed here are static and will not be refreshed. If
       credentials need to be auto-updated (e.g. for long-running downloads that
@@ -527,12 +389,10 @@ def get_resumable(
       channel used to initialize cas_stub.
 
   Returns:
-    Total bytes written to the writer.
+    A ResumableReader. Close it (or use it as a context manager) when done.
 
   Raises:
-    RuntimeError / grpc.RpcError: If download fails permanently or retries are
-      exhausted.
-    OSError: If writing to the writer fails.
+    ValueError: If cas_stub is None, start_offset < 0, or max_retries < 0.
 
   Example:
     To ensure credentials auto-refresh across long downloads (> 1 hour),
@@ -547,25 +407,22 @@ def get_resumable(
       org_info = auth.parse_info_from_string("<org>@<project>")
       with dialerutil.create_channel_from_org(org_info) as channel:
         stub = cas_service_pb2_grpc.ContentAddressableStorageServiceStub(channel)
-        client_helpers.get_resumable(stub, object_id, writer)
+        with client_helpers.get_resumable_reader(
+            object_id, cas_stub=stub
+        ) as reader:
+          with tarfile.open(fileobj=reader, mode="r|") as tar:
+            tar.extractall(dest_dir)
   """
-  written = 0
-  with get_resumable_reader(
+  return ResumableReader(
       object_id,
       cas_stub=cas_stub,
-      start_offset=_current_offset(writer),
+      start_offset=start_offset,
       max_retries=max_retries,
       initial_backoff_sec=initial_backoff_sec,
       max_backoff_sec=max_backoff_sec,
       backoff_multiplier=backoff_multiplier,
       grpc_metadata=grpc_metadata,
-  ) as reader:
-    # read1() returns whole server chunks, so each chunk is handed to the
-    # writer in a single write() call.
-    while chunk := reader.read1():
-      writer.write(chunk)
-      written += len(chunk)
-  return written
+  )
 
 
 def get_iter(
