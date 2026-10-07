@@ -14,7 +14,7 @@
 
 load("//bazel:cc_macros.bzl", "cc_binary", "cc_library")
 load("//bazel:cc_oci_image.bzl", "cc_oci_image")
-load("//intrinsic/assets/services/build_defs:services.bzl", "intrinsic_service")
+load("//intrinsic_sdk/intrinsic/assets/services/build_defs:services.bzl", "intrinsic_service")
 
 package(default_visibility = [
     "//visibility:public",
@@ -25,7 +25,6 @@ cc_library(
     srcs = ["calibration_service_impl.cc"],
     hdrs = ["calibration_service_impl.h"],
     deps = [
-        "//intrinsic/assets/dependencies:utils_cc",
         "//intrinsic/util:proto_time",
         "//intrinsic/util/grpc",
         "//intrinsic/util/grpc:connection_params",
@@ -62,6 +61,7 @@ cc_library(
         "//intrinsic_perception/intrinsic/perception/proto_conversion/v1:intrinsic_params",
         "//intrinsic_perception/intrinsic/perception/proto_conversion/v1:post_processing",
         "//intrinsic_perception/intrinsic/perception/storage:capture_result_storage",
+        "//intrinsic_sdk/intrinsic/assets/dependencies:utils_cc",
         "//intrinsic_sdk/intrinsic/connect/cc/grpc:channel",
         "//intrinsic_sdk/intrinsic/eigenmath",
         "//intrinsic_sdk/intrinsic/math:pose3",
@@ -112,13 +112,13 @@ cc_binary(
     srcs = ["calibration_service_main.cc"],
     deps = [
         ":calibration_service_impl",
-        "//intrinsic/assets/dependencies:utils_cc",
         "//intrinsic/logging/proto:logger_service_cc_grpc",
         "//intrinsic/util/proto:any",
         "//intrinsic/util/status:status_macros",
         "//intrinsic/world/proto:object_world_service_cc_grpc_proto",
         "//intrinsic_control/intrinsic/icon/release:file_helpers",
         "//intrinsic_control/intrinsic/icon/release/portable:init_intrinsic",
+        "//intrinsic_sdk/intrinsic/assets/dependencies:utils_cc",
         "//intrinsic_sdk/intrinsic/connect/cc/grpc:channel",
         "//intrinsic_sdk/intrinsic/logging:data_logger_client",
         "@abseil-cpp//absl/flags:flag",

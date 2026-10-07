@@ -14,7 +14,7 @@
 
 load("@rules_python//python:defs.bzl", "py_binary", "py_library")
 load("//bazel:python_oci_image.bzl", "python_oci_image")
-load("//intrinsic/assets/services/build_defs:services.bzl", "intrinsic_service")
+load("//intrinsic_sdk/intrinsic/assets/services/build_defs:services.bzl", "intrinsic_service")
 
 package(default_visibility = [
     "//intrinsic_perception/intrinsic/perception/service/ioc_pose_estimator:__subpackages__",
@@ -26,9 +26,9 @@ py_library(
     srcs = ["service/segmentation_model.py"],
     data = ["model_files/segmentation/config.pbtxt"],
     deps = [
-        "//intrinsic/assets:id_utils_py",
         "//intrinsic_inference/core/utils:oip_mappings",
         "//intrinsic_inference/core/utils:oip_utils",
+        "//intrinsic_sdk/intrinsic/assets:id_utils_py",
         "//incode/util/runfiles",
         "@ai_intrinsic_sdks_pip_deps//numpy",
         "@ai_intrinsic_sdks_pip_deps//opencv_python_headless",
@@ -47,9 +47,9 @@ py_library(
     srcs = ["service/pose_estimator_model.py"],
     data = ["model_files/pose/config.pbtxt"],
     deps = [
-        "//intrinsic/assets:id_utils_py",
         "//intrinsic_inference/core/utils:oip_mappings",
         "//intrinsic_inference/core/utils:oip_utils",
+        "//intrinsic_sdk/intrinsic/assets:id_utils_py",
         "//incode/util/runfiles",
         "@ai_intrinsic_sdks_pip_deps//numpy",
         "@ai_intrinsic_sdks_pip_deps//opencv_python_headless",
@@ -138,8 +138,8 @@ py_binary(
     name = "run_pose_estimation",
     srcs = ["run_pose_estimation.py"],
     deps = [
-        "//intrinsic/assets:id_utils_py",
         "//intrinsic_perception/intrinsic/perception/skills/multi_view:estimate_pose_multi_view_py_pb2",
+        "//intrinsic_sdk/intrinsic/assets:id_utils_py",
         "//intrinsic_sdk/intrinsic/math/python:proto_conversion",
         "//intrinsic_sdk/intrinsic/solutions:deployments",
         "//intrinsic_sdk/intrinsic/solutions:execution",

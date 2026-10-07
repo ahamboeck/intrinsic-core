@@ -15,18 +15,6 @@
 package(default_visibility = ["//intrinsic:public_api_users"])
 
 alias(
-    name = "process_asset_proto",
-    actual = "//intrinsic_sdk/intrinsic/assets/processes/proto:process_asset_proto",
-    tags = ["go/intrinsic-ioc-transition-tdd"],
-)
-
-alias(
-    name = "process_asset_py_pb2",
-    actual = "//intrinsic_sdk/intrinsic/assets/processes/proto:process_asset_py_pb2",
-    tags = ["go/intrinsic-ioc-transition-tdd"],
-)
-
-alias(
     name = "process_asset_go_proto",
     actual = "//intrinsic_sdk/intrinsic/assets/processes/proto:process_asset_go_proto",
     tags = ["go/intrinsic-ioc-transition-tdd"],

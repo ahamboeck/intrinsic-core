@@ -70,10 +70,10 @@ py_library(
     srcs = ["motion_planner_client.py"],
     visibility = ["//intrinsic:public_api_users"],
     deps = [
-        "//intrinsic/assets/dependencies:utils_py",
         "//intrinsic_motion_planning/intrinsic/motion_planning/proto/v1:motion_planner_service_py_pb2",
         "//intrinsic_motion_planning/intrinsic/motion_planning/proto/v1:motion_planner_service_py_pb2_grpc",
         "//intrinsic_motion_planning/intrinsic/motion_planning/proto/v1:motion_specification_py_pb2",
+        "//intrinsic_sdk/intrinsic/assets/dependencies:utils_py",
         "//intrinsic_sdk/intrinsic/math/python:data_types",
         "//intrinsic_sdk/intrinsic/math/python:proto_conversion",
         "//intrinsic_sdk/intrinsic/world/python:object_world_ids",

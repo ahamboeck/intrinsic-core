@@ -63,35 +63,3 @@ alias(
         "//intrinsic:intrinsic_internal",
     ],
 )
-
-alias(
-    name = "installed_assets_py_pb2",
-    actual = "//intrinsic_sdk/intrinsic/assets/proto:installed_assets_py_pb2",
-    tags = ["go/intrinsic-ioc-transition-tdd"],
-    visibility = ["//intrinsic:public_api_users"],
-)
-
-alias(
-    name = "installed_assets_pb2_grpc",
-    actual = "//intrinsic_sdk/intrinsic/assets/proto:installed_assets_pb2_grpc",
-    tags = ["go/intrinsic-ioc-transition-tdd"],
-    visibility = ["//intrinsic:public_api_users"],
-)
-
-alias(
-    name = "installed_assets_cc_proto",
-    actual = "//intrinsic_sdk/intrinsic/assets/proto:installed_assets_cc_proto",
-    tags = ["go/intrinsic-ioc-transition-tdd"],
-    visibility = [
-        "//intrinsic:public_api_users",
-    ],
-)
-
-alias(
-    name = "installed_assets_cc_grpc_proto",
-    actual = "//intrinsic_sdk/intrinsic/assets/proto:installed_assets_cc_grpc_proto",
-    tags = ["go/intrinsic-ioc-transition-tdd"],
-    visibility = [
-        "//intrinsic:public_api_users",
-    ],
-)

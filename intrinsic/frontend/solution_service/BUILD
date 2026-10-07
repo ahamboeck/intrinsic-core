@@ -20,8 +20,6 @@ go_library(
     srcs = ["solution_service.go"],
     importpath = "intrinsic/frontend/solution_service/solutionservice",
     deps = [
-        "//intrinsic/assets:idutils",
-        "//intrinsic/assets/proto:installed_assets_go_proto",
         "//intrinsic/config/proto:application_go_proto",
         "//intrinsic/config/proto:process_go_proto",
         "//intrinsic/executive/proto:behavior_tree_go_proto",
@@ -34,6 +32,8 @@ go_library(
         "//intrinsic/storage/hot_shared_state/proto:application_service_go_proto",
         "//intrinsic/util/pagination:pagesize",
         "//intrinsic/util/pagination:pagetoken",
+        "//intrinsic_sdk/intrinsic/assets:idutils",
+        "//intrinsic_sdk/intrinsic/assets/proto:installed_assets_go_proto",
         "@com_github_golang_glog//:go_default_library",
         "@com_github_pkg_errors//:go_default_library",
         "@intrinsic_apis//intrinsic/assets/proto:asset_type_go_proto",
@@ -56,7 +56,6 @@ go_binary(
     importpath = "intrinsic/frontend/solution_service/solution_service_main",
     deps = [
         ":solutionservice",
-        "//intrinsic/assets/proto:installed_assets_go_proto",
         "//intrinsic/frontend/solution_service/proto:solution_service_go_proto",
         "//intrinsic/kubernetes:intrinsic",
         "//intrinsic/kubernetes/workcell_spec/proto:solution_internal_go_proto",
@@ -64,6 +63,7 @@ go_binary(
         "//intrinsic/modified_solution/proto/v1:modified_solution_service_go_proto",
         "//intrinsic/stats/go:telemetry",
         "//intrinsic/storage/hot_shared_state/proto:application_service_go_proto",
+        "//intrinsic_sdk/intrinsic/assets/proto:installed_assets_go_proto",
         "@com_github_golang_glog//:go_default_library",
         "@com_github_pkg_errors//:go_default_library",
         "@intrinsic_apis//intrinsic/skills/proto:skill_registry_go_proto",

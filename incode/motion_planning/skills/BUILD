@@ -65,7 +65,6 @@ cc_library(
     deps = [
         ":move_robot",
         ":preplan_motion_cc_proto",
-        "//intrinsic/assets/dependencies:utils_cc",
         "//intrinsic/skills/apps:attach_object_to_robot",
         "//intrinsic/skills/apps:attach_object_to_robot_cc_proto",
         "//intrinsic/skills/apps:detach_object",
@@ -82,6 +81,7 @@ cc_library(
         "//intrinsic_motion_planning/intrinsic/motion_planning/proto/v1:motion_planner_service_cc_proto",
         "//intrinsic_motion_planning/intrinsic/motion_planning/service:motion_planner_service_asset_utils",
         "//intrinsic_motion_planning/intrinsic/motion_planning/service/debug:timing_debug_logger",
+        "//intrinsic_sdk/intrinsic/assets/dependencies:utils_cc",
         "//intrinsic_sdk/intrinsic/connect/cc/grpc:channel",
         "//intrinsic_sdk/intrinsic/eigenmath",
         "//intrinsic_sdk/intrinsic/motion_planning:motion_planner_client",
@@ -194,7 +194,6 @@ cc_library(
     ],
     deps = [
         ":move_robot_util",
-        "//intrinsic/assets/dependencies:utils_cc",
         "//intrinsic/choreographer/footprints:footprint",
         "//intrinsic/choreographer/footprints:object_world_reservation",
         "//intrinsic/logging:log_item_builder",
@@ -230,6 +229,7 @@ cc_library(
         "//intrinsic_motion_planning/intrinsic/motion_planning/skills:motion_planning_error_util",
         "//intrinsic_motion_planning/intrinsic/motion_planning/skills:motion_planning_util",
         "//intrinsic_motion_planning/intrinsic/motion_planning/skills:move_robot_cc_proto",
+        "//intrinsic_sdk/intrinsic/assets/dependencies:utils_cc",
         "//intrinsic_sdk/intrinsic/connect/cc/grpc:channel",
         "//intrinsic_sdk/intrinsic/eigenmath",
         "//intrinsic_sdk/intrinsic/logging:data_logger_client",
@@ -280,7 +280,6 @@ cc_test(
     ],
     deps = [
         ":move_robot",
-        "//intrinsic/assets/testing:id_test_utils",
         "//intrinsic/skills/apps/testing:test_world",
         "//intrinsic/skills/internal:skill_service_client",
         "//intrinsic/skills/proto:skill_service_cc_proto",
@@ -322,6 +321,7 @@ cc_test(
         "//intrinsic_motion_planning/intrinsic/motion_planning/service:motion_planner_service_in_process",
         "//intrinsic_motion_planning/intrinsic/motion_planning/service:motion_planner_service_proxy",
         "//intrinsic_motion_planning/intrinsic/motion_planning/skills:move_robot_cc_proto",
+        "//intrinsic_sdk/intrinsic/assets/testing:id_test_utils",
         "//intrinsic_sdk/intrinsic/eigenmath",
         "//intrinsic_sdk/intrinsic/math:pose3",
         "//intrinsic_sdk/intrinsic/math:proto_conversion",

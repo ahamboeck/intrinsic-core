@@ -16,7 +16,7 @@ load("//bazel:cc_macros.bzl", "cc_binary", "cc_library")
 load("//bazel:container.bzl", "container_image")
 load("//bazel:python.bzl", "py_binary", "py_library")
 load("//bazel:python_oci_image.bzl", "python_oci_image")
-load("//intrinsic/assets/services/build_defs:services.bzl", "intrinsic_service")
+load("//intrinsic_sdk/intrinsic/assets/services/build_defs:services.bzl", "intrinsic_service")
 
 package(default_visibility = [
     "//visibility:public",
@@ -82,7 +82,7 @@ intrinsic_service(
     name = "calculator_service",
     default_config = ":calc_default_config.textproto",
     images = [
-        "//intrinsic/assets/services/examples/calcserver:calculator-image.tar",
+        ":calculator-image.tar",
     ],
     manifest = ":calc_manifest.textproto",
     deps = [

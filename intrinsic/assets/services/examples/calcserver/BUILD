@@ -25,12 +25,6 @@ package(default_visibility = [
 ])
 
 alias(
-    name = "calculator-image.tar",
-    actual = "//intrinsic_sdk/intrinsic/assets/services/examples/calcserver:calculator-image.tar",
-    tags = ["go/intrinsic-ioc-transition-tdd"],
-)
-
-alias(
     name = "calculator_service",
     actual = "//intrinsic_sdk/intrinsic/assets/services/examples/calcserver:calculator_service",
     tags = ["go/intrinsic-ioc-transition-tdd"],

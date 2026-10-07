@@ -122,10 +122,10 @@ go_library(
         "//intrinsic_sdk/intrinsic/tools/inctl:__subpackages__",
     ],
     deps = [
-        "//intrinsic/assets:referenceddata",
-        "//intrinsic/assets/data:utils",
         "//intrinsic/config/proto:application_go_proto",
         "//intrinsic/resources/proto:resource_type_runtime_go_proto",
+        "//intrinsic_sdk/intrinsic/assets:referenceddata",
+        "//intrinsic_sdk/intrinsic/assets/data:utils",
         "@com_github_golang_glog//:go_default_library",
         "@intrinsic_apis//intrinsic/assets/data/proto/v1:data_asset_go_proto",
         "@intrinsic_apis//intrinsic/kubernetes/workcell_spec/proto:transfer_go_proto",

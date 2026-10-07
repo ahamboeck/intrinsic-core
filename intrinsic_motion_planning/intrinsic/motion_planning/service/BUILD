@@ -17,9 +17,9 @@ load("//bazel:cc_macros.bzl", "cc_binary", "cc_library", "cc_test")
 load("//bazel:cc_oci_image.bzl", "cc_oci_image")
 load("//bazel:go_macros.bzl", "go_proto_library")
 load("//bazel:protos.bzl", "proto_library")
-load("//intrinsic/assets/services/build_defs:services.bzl", "intrinsic_service")
 load("//intrinsic/httpjson:intrinsic_http_image.bzl", "intrinsic_http_image")
 load("//intrinsic/httpjson/openapi:protoc_gen_openapi.bzl", "protoc_gen_openapi")
+load("//intrinsic_sdk/intrinsic/assets/services/build_defs:services.bzl", "intrinsic_service")
 
 package(default_visibility = [
     "//visibility:public",
@@ -42,7 +42,6 @@ cc_library(
         ":motion_planner_cache",
         ":motion_planner_service_asset_utils",
         ":motion_planner_service_utils",
-        "//intrinsic/assets:id_utils",
         "//intrinsic/logging:log_item_builder",
         "//intrinsic/logging/proto:log_dispatcher_service_cc_proto",
         "//intrinsic/logging/proto:log_item_cc_proto",
@@ -102,6 +101,7 @@ cc_library(
         "//intrinsic_motion_planning/intrinsic/motion_planning/service/debug:timing_debug_logger",
         "//intrinsic_motion_planning/intrinsic/motion_planning/service/nonvolatile_cache:motion_planner_nonvolatile_cache",
         "//intrinsic_motion_planning/intrinsic/motion_planning/service/nonvolatile_cache:motion_planner_nonvolatile_cache_utils",
+        "//intrinsic_sdk/intrinsic/assets:id_utils",
         "//intrinsic_sdk/intrinsic/eigenmath",
         "//intrinsic_sdk/intrinsic/geometry/api:affine_transform_of_geometry",
         "//intrinsic_sdk/intrinsic/geometry/api:io",
@@ -149,8 +149,6 @@ cc_binary(
         ":motion_planner_service",
         ":motion_planner_service_asset_utils",
         ":motion_planner_service_utils",
-        "//intrinsic/assets/dependencies:utils_cc",
-        "//intrinsic/assets/proto:installed_assets_cc_grpc_proto",
         "//intrinsic/geometry/proto:geometry_service_cc_grpc_proto",
         "//intrinsic/geometry/proto:geometry_service_cc_proto",
         "//intrinsic/geometry/storage:geometry_service_storage",
@@ -167,6 +165,8 @@ cc_binary(
         "//intrinsic_control/intrinsic/icon/release/portable:init_intrinsic",
         "//intrinsic_motion_planning/intrinsic/motion_planning/motion_planner:motion_planner_flags",
         "//intrinsic_motion_planning/intrinsic/motion_planning/service/nonvolatile_cache:motion_planner_nonvolatile_cache",
+        "//intrinsic_sdk/intrinsic/assets/dependencies:utils_cc",
+        "//intrinsic_sdk/intrinsic/assets/proto:installed_assets_cc_grpc_proto",
         "//intrinsic_sdk/intrinsic/connect/cc/grpc:channel",
         "//intrinsic_sdk/intrinsic/geometry/storage:geometry_library",
         "//intrinsic_sdk/intrinsic/logging:data_logger_client",
@@ -549,14 +549,14 @@ cc_library(
     srcs = ["motion_planner_service_asset_utils.cc"],
     hdrs = ["motion_planner_service_asset_utils.h"],
     deps = [
-        "//intrinsic/assets/dependencies:utils_cc",
-        "//intrinsic/assets/proto:installed_assets_cc_grpc_proto",
-        "//intrinsic/assets/proto:installed_assets_cc_proto",
         "//intrinsic/util/grpc:channel",
         "//intrinsic/util/status:status_conversion_grpc",
         "//intrinsic/util/status:status_macros",
         "//intrinsic_motion_planning/intrinsic/motion_planning/proto/v1:motion_planner_service_cc_grpc_proto",
         "//intrinsic_motion_planning/intrinsic/motion_planning/proto/v1:motion_planner_service_cc_proto",
+        "//intrinsic_sdk/intrinsic/assets/dependencies:utils_cc",
+        "//intrinsic_sdk/intrinsic/assets/proto:installed_assets_cc_grpc_proto",
+        "//intrinsic_sdk/intrinsic/assets/proto:installed_assets_cc_proto",
         "//intrinsic_sdk/intrinsic/connect/cc/grpc:channel",
         "//intrinsic_sdk/intrinsic/motion_planning:motion_planner_client",
         "@abseil-cpp//absl/log",

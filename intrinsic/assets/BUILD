@@ -17,13 +17,6 @@
 load("//bazel:go_macros.bzl", "go_library")
 
 alias(
-    name = "assetvalidate",
-    actual = "//intrinsic_sdk/intrinsic/assets:assetvalidate",
-    tags = ["go/intrinsic-ioc-transition-tdd"],
-    visibility = ["//intrinsic:public_api_users"],
-)
-
-alias(
     name = "baseclientutils",
     actual = "//intrinsic_sdk/intrinsic/assets:baseclientutils",
     tags = ["go/intrinsic-ioc-transition-tdd"],
@@ -47,13 +40,6 @@ alias(
 alias(
     name = "id_utils",
     actual = "//intrinsic_sdk/intrinsic/assets:id_utils",
-    tags = ["go/intrinsic-ioc-transition-tdd"],
-    visibility = ["//intrinsic:public_api_users"],
-)
-
-alias(
-    name = "id_utils_py",
-    actual = "//intrinsic_sdk/intrinsic/assets:id_utils_py",
     tags = ["go/intrinsic-ioc-transition-tdd"],
     visibility = ["//intrinsic:public_api_users"],
 )
@@ -132,13 +118,6 @@ alias(
 alias(
     name = "interface_utils",
     actual = "//intrinsic_sdk/intrinsic/assets:interface_utils",
-    tags = ["go/intrinsic-ioc-transition-tdd"],
-    visibility = ["//intrinsic:public_api_users"],
-)
-
-alias(
-    name = "interface_utils_py",
-    actual = "//intrinsic_sdk/intrinsic/assets:interface_utils_py",
     tags = ["go/intrinsic-ioc-transition-tdd"],
     visibility = ["//intrinsic:public_api_users"],
 )

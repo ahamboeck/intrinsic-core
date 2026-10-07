@@ -184,8 +184,6 @@ cc_library(
     deps = [
         ":scene_object_edit_service_impl",
         ":scene_object_import",
-        "//intrinsic/assets/proto:installed_assets_cc_grpc_proto",
-        "//intrinsic/assets/proto:installed_assets_cc_proto",
         "//intrinsic/geometry/proto:geometry_service_cc_grpc_proto",
         "//intrinsic/longrunning/cc:grpc_operations_proxy",
         "//intrinsic/longrunning/cc:operation_scheduler",
@@ -197,6 +195,8 @@ cc_library(
         "//intrinsic/stats:opencensus",
         "//intrinsic/util/grpc",
         "//intrinsic/util/status:status_macros",
+        "//intrinsic_sdk/intrinsic/assets/proto:installed_assets_cc_grpc_proto",
+        "//intrinsic_sdk/intrinsic/assets/proto:installed_assets_cc_proto",
         "//intrinsic_sdk/intrinsic/connect/cc/grpc:channel",
         "//intrinsic_sdk/intrinsic/scene/usd:utils",
         "@abseil-cpp//absl/log",

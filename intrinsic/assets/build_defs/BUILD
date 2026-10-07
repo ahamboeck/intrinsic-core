@@ -24,12 +24,6 @@ alias(
     tags = ["go/intrinsic-ioc-transition-tdd"],
 )
 
-alias(
-    name = "assetlocalinfogen",
-    actual = "//intrinsic_sdk/intrinsic/assets/build_defs:assetlocalinfogen",
-    tags = ["go/intrinsic-ioc-transition-tdd"],
-)
-
 go_binary(
     name = "localsolutiongen",
     srcs = ["localsolutiongen.go"],

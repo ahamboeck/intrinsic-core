@@ -37,13 +37,6 @@ go_library(
 )
 
 alias(
-    name = "datafix",
-    actual = "//intrinsic_sdk/intrinsic/assets/data:datafix",
-    tags = ["go/intrinsic-ioc-transition-tdd"],
-    visibility = ["//intrinsic:internal_api_users"],
-)
-
-alias(
     name = "datavalidate",
     actual = "//intrinsic_sdk/intrinsic/assets/data:datavalidate",
     tags = ["go/intrinsic-ioc-transition-tdd"],

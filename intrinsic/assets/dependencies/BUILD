@@ -76,20 +76,6 @@ alias(
     visibility = ["//intrinsic:public_api_users"],
 )
 
-alias(
-    name = "utils_cc",
-    actual = "//intrinsic_sdk/intrinsic/assets/dependencies:utils_cc",
-    tags = ["go/intrinsic-ioc-transition-tdd"],
-    visibility = ["//intrinsic:public_api_users"],
-)
-
-alias(
-    name = "utils_py",
-    actual = "//intrinsic_sdk/intrinsic/assets/dependencies:utils_py",
-    tags = ["go/intrinsic-ioc-transition-tdd"],
-    visibility = ["//intrinsic:public_api_users"],
-)
-
 go_library(
     name = "traversal",
     srcs = ["traversal.go"],

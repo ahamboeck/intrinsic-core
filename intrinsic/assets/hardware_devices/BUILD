@@ -36,10 +36,3 @@ go_library(
         "@org_golang_google_protobuf//proto",
     ],
 )
-
-alias(
-    name = "hardwaredevicevalidate",
-    actual = "//intrinsic_sdk/intrinsic/assets/hardware_devices:hardwaredevicevalidate",
-    tags = ["go/intrinsic-ioc-transition-tdd"],
-    visibility = ["//intrinsic:public_api_users"],
-)

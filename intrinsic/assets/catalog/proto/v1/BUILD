@@ -26,12 +26,6 @@ alias(
 )
 
 alias(
-    name = "asset_catalog_cc_proto",
-    actual = "//intrinsic_sdk/intrinsic/assets/catalog/proto/v1:asset_catalog_cc_proto",
-    tags = ["go/intrinsic-ioc-transition-tdd"],
-)
-
-alias(
     name = "asset_catalog_go_proto",
     actual = "//intrinsic_sdk/intrinsic/assets/catalog/proto/v1:asset_catalog_go_proto",
     tags = ["go/intrinsic-ioc-transition-tdd"],

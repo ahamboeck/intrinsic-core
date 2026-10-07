@@ -13,13 +13,6 @@
 # limitations under the License.
 
 alias(
-    name = "asset_proto",
-    actual = "//intrinsic_sdk/intrinsic/assets/proto/v1:asset_proto",
-    tags = ["go/intrinsic-ioc-transition-tdd"],
-    visibility = ["//intrinsic:public_api_users"],
-)
-
-alias(
     name = "asset_go_proto",
     actual = "//intrinsic_sdk/intrinsic/assets/proto/v1:asset_go_proto",
     tags = ["go/intrinsic-ioc-transition-tdd"],
@@ -29,27 +22,6 @@ alias(
 alias(
     name = "processed_asset_go_proto",
     actual = "//intrinsic_sdk/intrinsic/assets/proto/v1:processed_asset_go_proto",
-    tags = ["go/intrinsic-ioc-transition-tdd"],
-    visibility = ["//intrinsic:public_api_users"],
-)
-
-alias(
-    name = "solution_proto",
-    actual = "//intrinsic_sdk/intrinsic/assets/proto/v1:solution_proto",
-    tags = ["go/intrinsic-ioc-transition-tdd"],
-    visibility = ["//intrinsic:public_api_users"],
-)
-
-alias(
-    name = "solution_go_proto",
-    actual = "//intrinsic_sdk/intrinsic/assets/proto/v1:solution_go_proto",
-    tags = ["go/intrinsic-ioc-transition-tdd"],
-    visibility = ["//intrinsic:public_api_users"],
-)
-
-alias(
-    name = "solution_deployment_go_proto",
-    actual = "//intrinsic_sdk/intrinsic/assets/proto/v1:solution_deployment_go_proto",
     tags = ["go/intrinsic-ioc-transition-tdd"],
     visibility = ["//intrinsic:public_api_users"],
 )

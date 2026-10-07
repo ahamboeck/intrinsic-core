@@ -21,7 +21,6 @@ go_library(
     visibility = [
         "//intrinsic/assets:__subpackages__",
         "//intrinsic/assets/data:__subpackages__",
-        "//intrinsic/assets/data/build_defs:__pkg__",
         "//intrinsic_sdk/intrinsic/assets:__subpackages__",
         "//intrinsic_sdk/intrinsic/tools/inbuild:__subpackages__",
     ],

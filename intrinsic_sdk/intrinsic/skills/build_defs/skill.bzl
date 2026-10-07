@@ -22,7 +22,7 @@ load("//bazel:cc_macros.bzl", "cc_binary")
 load("//bazel:cc_oci_image.bzl", "cc_oci_image")
 load("//bazel:container.bzl", "container_image")
 load("//bazel:python_oci_image.bzl", "python_oci_image")
-load("//intrinsic/assets/build_defs:asset.bzl", "AssetInfo", "AssetLocalInfo")
+load("//intrinsic_sdk/intrinsic/assets/build_defs:asset.bzl", "AssetInfo", "AssetLocalInfo")
 load(
     "//intrinsic_sdk/intrinsic/skills/build_defs:manifest.bzl",
     "SkillManifestInfo",
@@ -389,7 +389,7 @@ _intrinsic_skill_rule = rule(
             providers = [SkillManifestInfo],
         ),
         "_assetlocalinfogen": attr.label(
-            default = Label("//intrinsic/assets/build_defs:assetlocalinfogen"),
+            default = Label("//intrinsic_sdk/intrinsic/assets/build_defs:assetlocalinfogen"),
             cfg = "exec",
             executable = True,
         ),

@@ -82,9 +82,9 @@ py_library(
     deps = [
         ":control_pinch_gripper_error_codes",
         ":control_pinch_gripper_py_pb2",
-        "//intrinsic/assets:interface_utils_py",
-        "//intrinsic/assets/dependencies:utils_py",
         "//intrinsic/world/proto:object_world_updates_py_pb2",
+        "//intrinsic_sdk/intrinsic/assets:interface_utils_py",
+        "//intrinsic_sdk/intrinsic/assets/dependencies:utils_py",
         "//intrinsic_sdk/intrinsic/skills/python:skill_interface",
         "//intrinsic_sdk/intrinsic/world/python:object_world_resources",
         "@com_github_grpc_grpc//src/python/grpcio/grpc:grpcio",
