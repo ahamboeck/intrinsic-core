@@ -140,13 +140,16 @@ func parseProcessRequest(req *assetartifactspb.ProcessRequest) (*referenceddata.
 
 // StartUpload starts a chunked upload session.
 func (s *service) StartUpload(ctx context.Context, req *assetartifactspb.StartUploadRequest) (*assetartifactspb.StartUploadResponse, error) {
-	id, err := s.uploader.Add(ctx)
+	id, artifactExists, err := s.uploader.Add(ctx, req.GetDigest())
 	if err != nil {
 		log.ErrorContextf(ctx, "StartUpload failed: %v", err)
 		return nil, err
 	}
 
-	return &assetartifactspb.StartUploadResponse{UploadId: id}, nil
+	return &assetartifactspb.StartUploadResponse{
+		ArtifactExists: artifactExists,
+		UploadId:       id,
+	}, nil
 }
 
 // UploadChunk uploads a chunk of data for an active upload session.

@@ -93,27 +93,30 @@ type Uploader struct {
 	uploads              map[string]Upload
 }
 
-// Add checks limits, starts a new upload, registers it, and returns the new upload's ID.
-func (u *Uploader) Add(ctx context.Context) (string, error) {
+// Add checks limits, starts a new upload, registers it, and returns the new upload's ID and whether
+// the artifact already exists in CAS.
+//
+// If the artifact already exists in CAS, a no-op Upload is returned.
+func (u *Uploader) Add(ctx context.Context, digest string) (string, bool, error) {
 	u.mu.Lock()
 	defer u.mu.Unlock()
 
 	if u.activeCount >= u.maxConcurrentUploads {
 		log.WarningContextf(ctx, "Max concurrent active uploads limit (%d) reached", u.maxConcurrentUploads)
-		return "", status.Error(codes.ResourceExhausted, "too many concurrent active uploads, try again later")
+		return "", false, status.Error(codes.ResourceExhausted, "too many concurrent active uploads, try again later")
 	}
 
 	id := uuid.New()
-	upload, err := u.newCASUpload(ctx, id)
+	upload, artifactExists, err := u.newUpload(ctx, id, digest)
 	if err != nil {
 		log.ErrorContextf(ctx, "Failed to start new upload in Uploader.Add: %v", err)
-		return "", err
+		return "", false, err
 	}
 
 	u.uploads[id] = upload
 	u.activeCount++
 
-	return id, nil
+	return id, artifactExists, nil
 }
 
 // Get retrieves an upload by ID.
@@ -128,6 +131,45 @@ func (u *Uploader) Get(id string) (Upload, error) {
 	}
 
 	return upload, nil
+}
+
+func (u *Uploader) newUpload(ctx context.Context, id, digest string) (Upload, bool, error) {
+	if digest != "" {
+		algo, hash, err := parseDigest(digest)
+		if err != nil {
+			return nil, false, err
+		}
+		// CAS is content-addressed by SHA-512, so non-sha512 digests (e.g., highwayhash128 on raw GZF
+		// ReferencedData protos) cannot be looked up in CAS and fall back to a streaming upload.
+		if algo == "sha512" {
+			// Check whether the associated object exists in CAS.
+			casURI := "intcas://" + hash
+			_, err := u.casClient.Stat(ctx, &caspb.StatRequest{ObjectId: casURI})
+			switch status.Code(err) {
+			case codes.OK:
+				return u.newNoOpUpload(id, casURI, digest), true, nil
+			case codes.NotFound:
+				// Artifact does not exist in CAS; proceed with streaming upload.
+			default:
+				return nil, false, status.Errorf(codes.Internal, "failed to stat CAS object for digest %q: %v", digest, err)
+			}
+		}
+	}
+
+	upload, err := u.newCASUpload(ctx, id)
+	if err != nil {
+		return nil, false, err
+	}
+
+	return upload, false, nil
+}
+
+func (u *Uploader) newNoOpUpload(id, casURI, digest string) Upload {
+	return &noOpUpload{
+		casURI: casURI,
+		digest: digest,
+		state:  u.newUploadState(id, nil),
+	}
 }
 
 func (u *Uploader) newCASUpload(ctx context.Context, id string) (Upload, error) {
@@ -191,6 +233,30 @@ type Upload interface {
 	//
 	// Enforces sequential offsets.
 	Send(ctx context.Context, offset int64, data []byte) error
+}
+
+// noOpUpload represents an active upload session for an artifact that already exists in CAS.
+type noOpUpload struct {
+	casURI string
+	digest string
+	state  *uploadState
+}
+
+// Send is a no-op that refreshes the upload session's inactivity timer.
+func (u *noOpUpload) Send(ctx context.Context, offset int64, data []byte) error {
+	return u.state.touch()
+}
+
+// Finalize verifies the expected digest against the existing digest and returns the ReferencedData.
+//
+// If the upload has already been finalized, it returns the cached result.
+func (u *noOpUpload) Finalize(ctx context.Context, expectedDigest string) (*rdpb.ReferencedData, error) {
+	return u.state.finalize(ctx, u.casURI, u.digest, expectedDigest)
+}
+
+// Abort cancels the upload and cleans up all resources.
+func (u *noOpUpload) Abort() {
+	u.state.abort()
 }
 
 // casUpload represents an active upload session that streams chunks to CAS.
