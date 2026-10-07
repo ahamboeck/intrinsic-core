@@ -77,6 +77,20 @@
 
 )
 
+(deffunction operation-events-add-task-node-execute-code-stdout-event
+               (?operation-name ?tree-id ?node-id ?stdout)
+
+  (bind ?event-proto
+    (pb-create "intrinsic_proto.executive.OperationEvent"))
+  (set-node-identifier-proto ?event-proto
+                             "task_node_execute_code_stdout.node_identifier"
+                             ?tree-id ?node-id)
+
+  (pb-set-field ?event-proto "task_node_execute_code_stdout.stdout" ?stdout)
+  (operation-events-add-event ?operation-name ?event-proto)
+
+)
+
 (deffunction operation-events-add-counter-change-event (?operation-name
                ?tree-id ?node-id ?counter)
 

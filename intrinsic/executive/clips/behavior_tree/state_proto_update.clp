@@ -373,6 +373,8 @@
   (bind ?path
     (proto-path-join ?run-metadata-proto-path "task.execute_code.stdout[*]"))
   (run-metadata-proto-update-field ?path ?stdout ?op)
+  (operation-events-add-task-node-execute-code-stdout-event
+    ?op ?tree-id ?node-id ?stdout)
   (retract ?ces)
 )
 
