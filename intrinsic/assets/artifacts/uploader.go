@@ -20,6 +20,7 @@ import (
 	"crypto/sha512"
 	"fmt"
 	"hash"
+	"slices"
 	"strings"
 	"sync"
 	"time"
@@ -37,6 +38,11 @@ import (
 )
 
 const (
+	// casUploadChunkSize is the maximum byte size of each chunk sent on the CAS Create stream.
+	//
+	// While the AssetArtifacts server configures a large gRPC max receive message size for
+	// UploadChunk requests, the backend CAS gRPC server uses the default 4 MiB limit.
+	casUploadChunkSize                = clienthelpers.DefaultUploadChunkSize
 	defaultIdleTimeout                = 30 * time.Second
 	defaultMaxConcurrentActiveUploads = 100
 	defaultFinalizedRetentionTimeout  = 5 * time.Minute
@@ -300,15 +306,20 @@ func (u *casUpload) Send(ctx context.Context, offset int64, data []byte) error {
 		return status.Errorf(codes.InvalidArgument, "offset mismatch: got %d, expected %d", offset, u.expectedOffset)
 	}
 
-	if err := u.casStream.Send(&caspb.CreateRequest{
-		ChecksummedData: &caspb.ChecksummedData{
-			Content: data,
-			Crc32C:  proto.Uint32(chunkMetadata.crc32c),
-		},
-	}); err != nil {
-		log.ErrorContextf(ctx, "Failed to send chunk (offset %d, size %d) to CAS stream: %v; aborting session", offset, len(data), err)
-		u.Abort()
-		return status.Errorf(codes.Internal, "failed to send chunk to CAS: %v", err)
+	// Split the incoming chunk into casUploadChunkSize sub-chunks to decouple AssetArtifacts'
+	// maximum request size from that of the CAS server. Offset tracking, retry deduplication, and
+	// SHA-512 hashing still operate on the full UploadChunk payload.
+	for subChunk := range slices.Chunk(data, casUploadChunkSize) {
+		if err := u.casStream.Send(&caspb.CreateRequest{
+			ChecksummedData: &caspb.ChecksummedData{
+				Content: subChunk,
+				Crc32C:  proto.Uint32(u.checksum(subChunk)),
+			},
+		}); err != nil {
+			log.ErrorContextf(ctx, "Failed to send chunk (offset %d, size %d) to CAS stream: %v; aborting session", offset, len(data), err)
+			u.Abort()
+			return status.Errorf(codes.Internal, "failed to send chunk to CAS: %v", err)
+		}
 	}
 
 	u.shaChecksummer.Write(data)
@@ -347,12 +358,15 @@ func (u *casUpload) Abort() {
 	u.state.abort()
 }
 
-func (u *casUpload) newChunkMetadata(offset int64, data []byte) *chunkMetadata {
+func (u *casUpload) checksum(data []byte) uint32 {
 	u.checksummer.Reset()
 	u.checksummer.Write(data)
+	return u.checksummer.Sum32()
+}
 
+func (u *casUpload) newChunkMetadata(offset int64, data []byte) *chunkMetadata {
 	return &chunkMetadata{
-		crc32c: u.checksummer.Sum32(),
+		crc32c: u.checksum(data),
 		offset: offset,
 		size:   int64(len(data)),
 	}
