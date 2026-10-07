@@ -70,10 +70,20 @@ def _skill_manifest_impl(ctx):
         mnemonic = "SkillManifest",
     )
 
+    legacy_symlinks = {}  
+
+
+    if ctx.label.package.startswith("intrinsic_sdk/intrinsic/"):
+        legacy_pkg = "google3/intrinsic/" + ctx.label.package[len("intrinsic_sdk/intrinsic/"):]
+        legacy_symlinks[legacy_pkg + "/" + ctx.label.name + ".pbbin"] = outputfile
+        legacy_symlinks[legacy_pkg + "/" + ctx.label.name + "_filedescriptor.pbbin"] = file_descriptor_set_out
+
+
+
     return [
         DefaultInfo(
             files = depset(outputs),
-            runfiles = ctx.runfiles(outputs),
+            runfiles = ctx.runfiles(files = outputs, symlinks = legacy_symlinks),  
         ),
         SkillManifestInfo(
             manifest_binary_file = outputfile,
@@ -116,7 +126,7 @@ skill_manifest = rule(
             doc = "textproto specifying an intrinsic_proto.skills.SkillManifest",
         ),
         "_skillmanifestgen": attr.label(
-            default = Label("//intrinsic/skills/build_defs:skillmanifestgen"),
+            default = Label("//intrinsic_sdk/intrinsic/skills/build_defs:skillmanifestgen"),
             executable = True,
             cfg = "exec",
         ),

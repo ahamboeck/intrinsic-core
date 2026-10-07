@@ -216,6 +216,7 @@ go_proto_library(
         "//intrinsic/resources/service:__pkg__",
         "//intrinsic/skills/internal:__pkg__",
         "//intrinsic/skills/tools:__pkg__",
+        "//intrinsic_sdk/intrinsic/skills/internal:__pkg__",
     ],
 )
 

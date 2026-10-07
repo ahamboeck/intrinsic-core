@@ -28,6 +28,7 @@ go_library(
         "//intrinsic/skills/tools/skill/cmd:__subpackages__",
         "//intrinsic/tools/inctl/auth:__subpackages__",
         "//intrinsic/tools/inctl/util:__subpackages__",
+        "//intrinsic_sdk/intrinsic/skills/tools/skill/cmd:__subpackages__",
         "//intrinsic_sdk/intrinsic/tools/inctl/auth:__subpackages__",
         "//intrinsic_sdk/intrinsic/tools/inctl/util:__subpackages__",
     ],

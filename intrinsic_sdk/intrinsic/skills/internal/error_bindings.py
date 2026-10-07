@@ -12,13 +12,16 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-alias(
-    name = "bazel",
-    actual = "//intrinsic_sdk/intrinsic/tools/inctl/cmd/bazel",
-    tags = ["go/intrinsic-ioc-transition-tdd"],
-    visibility = [
-        "//intrinsic/skills/tools:__subpackages__",
-        "//intrinsic/tools/inctl:__subpackages__",
-        "//intrinsic_sdk/intrinsic/tools/inctl:__subpackages__",
-    ],
-)
+"""Utility function that raises a pybind11_abseil StatusNotOk execption."""
+
+from pybind11_abseil import status
+
+
+def raise_status(code: status.StatusCode, text: str) -> None:
+  raise status.BuildStatusNotOk(code, text)
+
+
+# LINT.IfChange(skill_error_codes)
+SKILL_SERVICE_COMPONENT = 'ai.intrinsic.skill'
+SKILL_SERVICE_WAIT_TIMEOUT_CODE = 11010
+# LINT.ThenChange(//intrinsic_sdk/intrinsic/skills/internal/error_utils.h:skill_error_codes)

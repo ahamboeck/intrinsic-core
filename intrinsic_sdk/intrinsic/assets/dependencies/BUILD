@@ -89,6 +89,7 @@ go_library(
         "//intrinsic/assets:__subpackages__",
         "//intrinsic/assets/dependencies:__pkg__",
         "//intrinsic_sdk/intrinsic/assets:__subpackages__",
+        "//intrinsic_sdk/intrinsic/skills:__subpackages__",
     ],
     deps = [
         "//intrinsic/assets/hardware_devices:graph",

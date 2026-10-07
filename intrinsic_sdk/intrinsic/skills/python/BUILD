@@ -26,8 +26,8 @@ py_library(
         ":get_footprint_request",
         ":preview_context",
         ":preview_request",
-        "//intrinsic/skills/proto:skill_service_py_pb2",
         "//intrinsic/util/status:status_exception",
+        "//intrinsic_sdk/intrinsic/skills/proto:skill_service_py_pb2",
         "@com_google_protobuf//:protobuf_python",
         "@intrinsic_apis//intrinsic/skills/proto:footprint_py_pb2",
     ],
@@ -38,8 +38,8 @@ py_library(
     srcs = ["skill_interface_utils.py"],
     deps = [
         ":skill_interface",
-        "//intrinsic/skills/internal:execute_context_impl_py",
-        "//intrinsic/skills/internal:preview_context_impl_py",
+        "//intrinsic_sdk/intrinsic/skills/internal:execute_context_impl_py",
+        "//intrinsic_sdk/intrinsic/skills/internal:preview_context_impl_py",
         "@intrinsic_apis//intrinsic/resources/proto:resource_handle_py_pb2",
     ],
 )

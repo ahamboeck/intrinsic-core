@@ -38,7 +38,7 @@ namespace skills {
 // LINT.IfChange(skill_error_codes)
 constexpr std::string_view kSkillServiceComponent = "ai.intrinsic.skill";
 constexpr uint32_t kSkillServiceWaitTimeoutCode = 11010;
-// LINT.ThenChange(//intrinsic/skills/internal/error_bindings.py:skill_error_codes)
+// LINT.ThenChange(//intrinsic_sdk/intrinsic/skills/internal/error_bindings.py:skill_error_codes)
 
 // Details
 //

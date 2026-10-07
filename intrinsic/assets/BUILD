@@ -74,13 +74,6 @@ alias(
     ],
 )
 
-alias(
-    name = "imageutils",
-    actual = "//intrinsic_sdk/intrinsic/assets:imageutils",
-    tags = ["go/intrinsic-ioc-transition-tdd"],
-    visibility = ["//intrinsic:public_api_users"],
-)
-
 go_library(
     name = "pageutils",
     srcs = ["pageutils.go"],
@@ -120,16 +113,6 @@ alias(
     actual = "//intrinsic_sdk/intrinsic/assets:bundle",
     tags = ["go/intrinsic-ioc-transition-tdd"],
     visibility = ["//intrinsic:internal_api_users"],
-)
-
-alias(
-    name = "ioutils",
-    actual = "//intrinsic_sdk/intrinsic/assets:ioutils",
-    tags = ["go/intrinsic-ioc-transition-tdd"],
-    visibility = [
-        "//intrinsic/assets:__subpackages__",
-        "//intrinsic/skills:__subpackages__",
-    ],
 )
 
 alias(

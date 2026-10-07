@@ -68,6 +68,7 @@ go_library(
         "//intrinsic/resources/service:__pkg__",
         "//intrinsic/skills/internal:__pkg__",
         "//intrinsic/solution_versions:__subpackages__",
+        "//intrinsic_sdk/intrinsic/skills/internal:__pkg__",
     ],
     deps = [
         ":page_token_go_proto",

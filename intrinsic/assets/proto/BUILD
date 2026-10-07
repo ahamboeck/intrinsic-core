@@ -21,6 +21,7 @@ proto_library(
     visibility = [
         "//intrinsic/resources/proto:__pkg__",
         "//intrinsic/skills/proto:__pkg__",
+        "//intrinsic_sdk/intrinsic/skills/proto:__pkg__",
     ],
 )
 
@@ -37,6 +38,8 @@ go_proto_library(
         "//intrinsic/skills/internal:__pkg__",
         "//intrinsic/skills/proto:__pkg__",
         "//intrinsic/solution_versions:__subpackages__",
+        "//intrinsic_sdk/intrinsic/skills/internal:__pkg__",
+        "//intrinsic_sdk/intrinsic/skills/proto:__pkg__",
     ],
 )
 

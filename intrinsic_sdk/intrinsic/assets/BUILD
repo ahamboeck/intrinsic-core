@@ -298,6 +298,7 @@ go_library(
         "//intrinsic/assets:__pkg__",
         "//intrinsic/assets:__subpackages__",
         "//intrinsic/skills:__subpackages__",
+        "//intrinsic_sdk/intrinsic/skills:__subpackages__",
     ],
     deps = [
         "@com_github_google_safearchive//tar",

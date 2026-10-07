@@ -21,7 +21,7 @@ go_library(
     visibility = [
         "//intrinsic/skills/tools/skill/cmd:__pkg__",
         "//intrinsic/tools:__subpackages__",
-        "//intrinsic/tools/inctl/cmd/solution/get:__pkg__",
+        "//intrinsic_sdk/intrinsic/skills/tools/skill/cmd:__pkg__",
         "//intrinsic_sdk/intrinsic/tools:__subpackages__",
     ],
     deps = [

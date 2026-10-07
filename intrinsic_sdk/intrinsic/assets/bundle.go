@@ -74,7 +74,7 @@ const (
 	// LINT.ThenChange(//intrinsic_sdk/intrinsic/assets/services/servicebundle.go:bundle_file)
 	// LINT.IfChange(skill_bundle_file)
 	skillManifestPathInTar = "skill_manifest.binpb"
-	// LINT.ThenChange(//intrinsic/skills/skillbundle.go:bundle_file)
+	// LINT.ThenChange(//intrinsic_sdk/intrinsic/skills/skillbundle.go:bundle_file)
 )
 
 // bundleType is used to return the type of a bundle file.

@@ -22,7 +22,7 @@ go_library(
         "//intrinsic/skills/tools:__subpackages__",
         "//intrinsic/tools:__subpackages__",
         "//intrinsic/tools/inctl:__subpackages__",
-        "//intrinsic/tools/inctl/cmd/version:__pkg__",
+        "//intrinsic_sdk/intrinsic/skills/tools:__subpackages__",
         "//intrinsic_sdk/intrinsic/tools:__subpackages__",
     ],
     x_defs = {"SDKVersion": "{STABLE_SDK_VERSION}"},

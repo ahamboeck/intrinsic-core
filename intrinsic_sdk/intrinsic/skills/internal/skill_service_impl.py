@@ -1030,7 +1030,7 @@ def _skill_error_to_code_and_action(
 
   return status.StatusCode.INTERNAL, 'raised an error during'
   # LINT.ThenChange(
-  #     //intrinsic/skills/internal/error_utils.cc:skill_error_actions
+  #     //intrinsic_sdk/intrinsic/skills/internal/error_utils.cc:skill_error_actions
   # )
 
 

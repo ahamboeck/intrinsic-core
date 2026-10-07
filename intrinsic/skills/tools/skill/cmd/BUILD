@@ -12,46 +12,31 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-load("//bazel:go_macros.bzl", "go_library")
-
 package(default_visibility = ["//visibility:public"])
 
-go_library(
+alias(
     name = "cmd",
-    srcs = ["root.go"],
-    importpath = "intrinsic/skills/tools/skill/cmd/cmd",
-    deps = [
-        "//intrinsic/skills/tools/skill/cmd/create",
-        "//intrinsic/skills/tools/skill/cmd/install",
-        "//intrinsic/skills/tools/skill/cmd/list",
-        "//intrinsic/tools/inctl/cmd:root",
-        "//intrinsic/tools/inctl/util:cobrautil",
-    ],
+    actual = "//intrinsic_sdk/intrinsic/skills/tools/skill/cmd",
+    tags = ["go/intrinsic-ioc-transition-tdd"],
 )
 
-go_library(
+alias(
     name = "solutionutil",
-    srcs = ["solutionutil.go"],
-    importpath = "intrinsic/skills/tools/skill/cmd/solutionutil",
-    deps = [
-        "//intrinsic/tools/inctl/cmd/solution/get",
-        "@intrinsic_apis//intrinsic/frontend/cloud/api/v1:clusterdiscovery_api_go_proto",
-        "@org_golang_google_grpc//:go_default_library",
-    ],
+    actual = "//intrinsic_sdk/intrinsic/skills/tools/skill/cmd:solutionutil",
+    tags = ["go/intrinsic-ioc-transition-tdd"],
 )
 
-# NOTE: Do not use this library in new code. Use auth.NewCloudConnection instead.
-go_library(
+alias(
     name = "dialerutil",
-    srcs = ["dialerutil.go"],
-    importpath = "intrinsic/skills/tools/skill/cmd/dialerutil",
+    actual = "//intrinsic_sdk/intrinsic/skills/tools/skill/cmd:dialerutil",
+    tags = ["go/intrinsic-ioc-transition-tdd"],
     visibility = [
         "//intrinsic/skills/tools/skill/cmd:__pkg__",
         "//intrinsic/storage/artifacts/client:__pkg__",
         "//intrinsic/tools/inctl/cmd:__pkg__",
         "//intrinsic/tools/inctl/cmd/cluster:__pkg__",
         "//intrinsic/tools/inctl/cmd/logs:__pkg__",
-        "//intrinsic/tools/inctl/cmd/solution/get:__pkg__",
+        "//intrinsic_sdk/intrinsic/skills/tools/skill/cmd:__pkg__",
         "//intrinsic_sdk/intrinsic/tools/inctl/cmd:__pkg__",
         "//intrinsic_sdk/intrinsic/tools/inctl/cmd/cluster:__pkg__",
         "//intrinsic_sdk/intrinsic/tools/inctl/cmd/device:__pkg__",
@@ -62,35 +47,4 @@ go_library(
         "//intrinsic_sdk/intrinsic/tools/inctl/cmd/solution/start:__pkg__",
         "//intrinsic_sdk/intrinsic/tools/inctl/cmd/solution/stop:__pkg__",
     ],
-    deps = [
-        "//intrinsic/assets:baseclientutils",
-        "//intrinsic/kubernetes/acl:identity",
-        "//intrinsic/tools/inctl/auth",
-        "@io_opencensus_go//trace:go_default_library",
-        "@org_golang_google_grpc//:go_default_library",
-        "@org_golang_google_grpc//credentials:go_default_library",
-        "@org_golang_google_grpc//credentials/insecure:go_default_library",
-        "@org_golang_google_grpc//metadata:go_default_library",
-    ],
-)
-
-go_library(
-    name = "waitforskill",
-    srcs = ["waitforskill.go"],
-    importpath = "intrinsic/skills/tools/skill/cmd/waitforskill",
-    deps = [
-        "//intrinsic/stats/go:telemetry",
-        "@intrinsic_apis//intrinsic/skills/proto:skill_registry_go_proto",
-        "@io_opencensus_go//trace:go_default_library",
-        "@org_golang_google_grpc//:go_default_library",
-        "@org_golang_google_grpc//codes:go_default_library",
-        "@org_golang_google_grpc//status:go_default_library",
-    ],
-)
-
-go_library(
-    name = "listutil",
-    srcs = ["listutil.go"],
-    importpath = "intrinsic/skills/tools/skill/cmd/listutil",
-    deps = ["@intrinsic_apis//intrinsic/skills/proto:skills_go_proto"],
 )

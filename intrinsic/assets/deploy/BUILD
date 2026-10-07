@@ -44,6 +44,7 @@ go_library(
         "//intrinsic/assets:__subpackages__",
         "//intrinsic/kubernetes/workcell_spec:__pkg__",
         "//intrinsic/skills/internal:__pkg__",
+        "//intrinsic_sdk/intrinsic/skills/internal:__pkg__",
     ],
     deps = [
         "//intrinsic/assets:idutils",

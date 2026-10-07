@@ -24,6 +24,7 @@ go_library(
         "//intrinsic/skills/tools:__subpackages__",
         "//intrinsic/tools:__subpackages__",
         "//intrinsic/tools/inctl:__subpackages__",
+        "//intrinsic_sdk/intrinsic/skills/tools:__subpackages__",
         "//intrinsic_sdk/intrinsic/tools:__subpackages__",
     ],
     deps = [

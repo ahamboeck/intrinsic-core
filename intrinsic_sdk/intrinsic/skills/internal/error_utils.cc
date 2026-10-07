@@ -61,7 +61,7 @@ std::string ErrorToSkillAction(absl::Status status) {
     default:
       return "returned an error during";
   }
-  // LINT.ThenChange(//intrinsic/skills/internal/skill_service_impl.py:skill_error_actions)
+  // LINT.ThenChange(//intrinsic_sdk/intrinsic/skills/internal/skill_service_impl.py:skill_error_actions)
 }
 
 std::string EllipsizeString(absl::string_view s) {
