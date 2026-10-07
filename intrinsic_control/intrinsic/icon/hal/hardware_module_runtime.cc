@@ -311,10 +311,10 @@ class HardwareModuleRuntime::CallbackHandler final {
       INTRINSIC_RT_LOG_THROTTLED(ERROR)
           << message << "\nLatest stacktrace:\n"
           << GenerateRtErrorStackTrace(
-                 std::span(icon::GetThreadLocalMallocViolations()
-                               .latest_violation_stack_trace->stack_trace,
-                           icon::GetThreadLocalMallocViolations()
-                               .latest_violation_stack_trace->num_frames));
+                 absl::MakeSpan(icon::GetThreadLocalMallocViolations()
+                                    .latest_violation_stack_trace->stack_trace,
+                                icon::GetThreadLocalMallocViolations()
+                                    .latest_violation_stack_trace->num_frames));
       if (SetStateDirectly(intrinsic_fbs::StateCode::kFaulted, message)) {
         // Cancel all requests since we got a new error.
         CancelPendingRequests(
@@ -371,10 +371,10 @@ class HardwareModuleRuntime::CallbackHandler final {
       INTRINSIC_RT_LOG_THROTTLED(ERROR)
           << message << "\nLatest stacktrace:\n"
           << GenerateRtErrorStackTrace(
-                 std::span(icon::GetThreadLocalMallocViolations()
-                               .latest_violation_stack_trace->stack_trace,
-                           icon::GetThreadLocalMallocViolations()
-                               .latest_violation_stack_trace->num_frames));
+                 absl::MakeSpan(icon::GetThreadLocalMallocViolations()
+                                    .latest_violation_stack_trace->stack_trace,
+                                icon::GetThreadLocalMallocViolations()
+                                    .latest_violation_stack_trace->num_frames));
       if (SetStateDirectly(intrinsic_fbs::StateCode::kFaulted, message)) {
         // Cancel all requests since we got a new error.
         CancelPendingRequests(
