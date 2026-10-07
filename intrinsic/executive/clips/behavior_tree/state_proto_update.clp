@@ -459,6 +459,8 @@
   )
   (modify ?node (run-metadata-proto-execution-mode ?mode)
                 (run-metadata-proto-execution-mode-result-state ?result-state))
+  (operation-events-add-node-execution-settings-change-event
+    ?op ?tree-id ?node-id ?mode ?result-state)
 )
 
 (defrule run-metadata-proto-update-scene-id

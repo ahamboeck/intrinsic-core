@@ -114,6 +114,27 @@
 
 )
 
+(deffunction operation-events-add-node-execution-settings-change-event
+               (?operation-name ?tree-id ?node-id ?mode ?result-state)
+
+  (bind ?event-proto
+    (pb-create "intrinsic_proto.executive.OperationEvent"))
+  (set-node-identifier-proto ?event-proto
+                             "node_execution_settings.node_identifier"
+                             ?tree-id ?node-id)
+  (pb-set-field ?event-proto "node_execution_settings.settings.mode" ?mode)
+  ; disabled_result_state will only be set if the mode is set to DISABLED and
+  ; the user explicitly set a custom behavior. See behavior-tree-node slot
+  ; execution-mode-result-state for AUTO behavior.
+  (if (and (eq ?mode DISABLED) (neq ?result-state AUTO)) then
+    (pb-set-field ?event-proto
+                  "node_execution_settings.settings.disabled_result_state"
+                  ?result-state)
+  )
+  (operation-events-add-event ?operation-name ?event-proto)
+
+)
+
 
 
 ; Adds an event for ?operation-name
