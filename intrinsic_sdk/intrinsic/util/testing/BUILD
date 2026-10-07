@@ -12,11 +12,22 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+load("//bazel:cc_macros.bzl", "cc_library")
+
 # Helper utilities for handling testing.
 
-alias(
+cc_library(
     name = "status_payload_matchers",
-    actual = "//intrinsic_sdk/intrinsic/util/testing:status_payload_matchers",
-    tags = ["go/intrinsic-ioc-transition-tdd"],
+    testonly = 1,
+    hdrs = ["status_payload_matchers.h"],
     visibility = ["//intrinsic:intrinsic_internal"],
+    deps = [
+        "//intrinsic_sdk/intrinsic/util/proto:type_url",
+        "@abseil-cpp//absl/status",
+        "@abseil-cpp//absl/status:statusor",
+        "@abseil-cpp//absl/strings:cord",
+        "@com_google_googleapis//google/rpc:status_cc_proto",
+        "@com_google_googletest//:gtest",
+        "@com_google_protobuf//:protobuf",
+    ],
 )

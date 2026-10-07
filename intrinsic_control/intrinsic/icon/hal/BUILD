@@ -19,6 +19,7 @@ load("//bazel:go_macros.bzl", "go_proto_library")
 package(default_visibility = [
     "//intrinsic/simulation/gazebo/plugins:__pkg__",
     "//intrinsic/util/thread:__subpackages__",
+    "//intrinsic_sdk/intrinsic/util/thread:__subpackages__",
     "//visibility:public",
 ])
 

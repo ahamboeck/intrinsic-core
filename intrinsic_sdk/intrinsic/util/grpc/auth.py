@@ -46,7 +46,7 @@ AUTH_CONFIG_EXTENSION = ".user-token"
 STORE_DIRECTORY = "intrinsic/projects"
 ORG_STORE_DIRECTORY = "intrinsic/organizations"
 ENV_STORE_DIRECTORY = "intrinsic/environments"
-# LINT.ThenChange(//intrinsic_sdk/intrinsic/tools/inctl/auth/auth.go, //intrinsic/util/grpc/auth.cc)
+# LINT.ThenChange(//intrinsic_sdk/intrinsic/tools/inctl/auth/auth.go, //intrinsic_sdk/intrinsic/util/grpc/auth.cc)
 
 _MIN_TOKEN_LIFETIME = datetime.timedelta(minutes=1)
 

@@ -13,40 +13,33 @@
 # limitations under the License.
 
 load("//bazel:cc_macros.bzl", "cc_library")
-load("//bazel:go_macros.bzl", "go_library")
-load("//bazel:python.bzl", "py_library")
 
 package(
     default_visibility = ["//visibility:public"],
 )
 
-cc_library(
+alias(
     name = "demangle",
-    srcs = ["demangle.cc"],
-    hdrs = ["demangle.h"],
-    deps = [
-        "@abseil-cpp//absl/cleanup",
-    ],
+    actual = "//intrinsic_sdk/intrinsic/util:demangle",
+    tags = ["go/intrinsic-ioc-transition-tdd"],
 )
 
-cc_library(
+alias(
     name = "hash",
-    hdrs = ["hash.h"],
-    deps = [
-        "//third_party/thorough_hash",
-        "@abseil-cpp//absl/strings",
-    ],
+    actual = "//intrinsic_sdk/intrinsic/util:hash",
+    tags = ["go/intrinsic-ioc-transition-tdd"],
 )
 
-cc_library(
+alias(
     name = "aggregate_type",
-    hdrs = ["aggregate_type.h"],
+    actual = "//intrinsic_sdk/intrinsic/util:aggregate_type",
+    tags = ["go/intrinsic-ioc-transition-tdd"],
 )
 
-cc_library(
+alias(
     name = "atomic_sequence_num",
-    hdrs = ["atomic_sequence_num.h"],
-    deps = ["@or_tools//ortools/base:strong_int"],
+    actual = "//intrinsic_sdk/intrinsic/util:atomic_sequence_num",
+    tags = ["go/intrinsic-ioc-transition-tdd"],
 )
 
 cc_library(
@@ -78,34 +71,28 @@ cc_library(
     ],
 )
 
-cc_library(
+alias(
     name = "fixed_vector",
-    hdrs = ["fixed_vector.h"],
-    deps = [
-        "@abseil-cpp//absl/container:inlined_vector",
-        "@abseil-cpp//absl/log",
-    ],
+    actual = "//intrinsic_sdk/intrinsic/util:fixed_vector",
+    tags = ["go/intrinsic-ioc-transition-tdd"],
 )
 
-cc_library(
+alias(
     name = "invalid_until_set",
-    hdrs = ["invalid_until_set.h"],
+    actual = "//intrinsic_sdk/intrinsic/util:invalid_until_set",
+    tags = ["go/intrinsic-ioc-transition-tdd"],
 )
 
-cc_library(
+alias(
     name = "macros",
-    hdrs = ["macros.h"],
-    deps = [
-        "//intrinsic/util/status:status_builder",
-        "@abseil-cpp//absl/base:core_headers",
-        "@abseil-cpp//absl/log",
-    ],
+    actual = "//intrinsic_sdk/intrinsic/util:macros",
+    tags = ["go/intrinsic-ioc-transition-tdd"],
 )
 
-cc_library(
+alias(
     name = "page_fault_info",
-    srcs = ["page_fault_info.cc"],
-    hdrs = ["page_fault_info.h"],
+    actual = "//intrinsic_sdk/intrinsic/util:page_fault_info",
+    tags = ["go/intrinsic-ioc-transition-tdd"],
 )
 
 cc_library(
@@ -119,31 +106,16 @@ cc_library(
     ],
 )
 
-py_library(
+alias(
     name = "decorators",
-    srcs = ["decorators.py"],
+    actual = "//intrinsic_sdk/intrinsic/util:decorators",
+    tags = ["go/intrinsic-ioc-transition-tdd"],
 )
 
-cc_library(
+alias(
     name = "eigen",
-    srcs = ["eigen.cc"],
-    hdrs = ["eigen.h"],
-    deps = [
-        "//intrinsic/util/status:status_macros",
-        "//intrinsic_sdk/intrinsic/eigenmath",
-        "//intrinsic_sdk/intrinsic/eigenmath:pose2",
-        "//intrinsic_sdk/intrinsic/eigenmath:rotation_utils",
-        "//intrinsic_sdk/intrinsic/eigenmath:so3",
-        "//intrinsic_sdk/intrinsic/math:pose3",
-        "@abseil-cpp//absl/log",
-        "@abseil-cpp//absl/log:check",
-        "@abseil-cpp//absl/status",
-        "@abseil-cpp//absl/status:statusor",
-        "@abseil-cpp//absl/strings",
-        "@abseil-cpp//absl/strings:str_format",
-        "@abseil-cpp//absl/types:span",
-        "@boost.regex",
-    ],
+    actual = "//intrinsic_sdk/intrinsic/util:eigen",
+    tags = ["go/intrinsic-ioc-transition-tdd"],
 )
 
 cc_library(
@@ -162,61 +134,34 @@ cc_library(
     deps = ["@abseil-cpp//absl/strings:str_format"],
 )
 
-cc_library(
+alias(
     name = "lru_cache",
-    hdrs = ["lru_cache.h"],
-    deps = [
-        "//third_party/simple_lru_cache",
-        "@abseil-cpp//absl/container:flat_hash_map",
-        "@abseil-cpp//absl/log",
-    ],
+    actual = "//intrinsic_sdk/intrinsic/util:lru_cache",
+    tags = ["go/intrinsic-ioc-transition-tdd"],
 )
 
-cc_library(
+alias(
     name = "memory_lock",
-    hdrs = ["memory_lock.h"],
-    deps = [
-        "@abseil-cpp//absl/status",
-    ],
+    actual = "//intrinsic_sdk/intrinsic/util:memory_lock",
+    tags = ["go/intrinsic-ioc-transition-tdd"],
 )
 
-cc_library(
+alias(
     name = "string_type",
-    hdrs = ["string_type.h"],
-    deps = [
-        "@abseil-cpp//absl/flags:marshalling",
-        "@abseil-cpp//absl/hash",
-        "@abseil-cpp//absl/meta:type_traits",
-        "@abseil-cpp//absl/strings",
-        "@abseil-cpp//absl/strings:cord",
-    ],
+    actual = "//intrinsic_sdk/intrinsic/util:string_type",
+    tags = ["go/intrinsic-ioc-transition-tdd"],
 )
 
-cc_library(
+alias(
     name = "proto_time",
-    srcs = ["proto_time.cc"],
-    hdrs = ["proto_time.h"],
-    deps = [
-        "//third_party/ros2/ros_interfaces/jazzy/builtin_interfaces/msg:time_cc_proto",
-        "@abseil-cpp//absl/log",
-        "@abseil-cpp//absl/status",
-        "@abseil-cpp//absl/status:statusor",
-        "@abseil-cpp//absl/strings",
-        "@abseil-cpp//absl/time",
-        "@com_google_protobuf//:protobuf",
-    ],
+    actual = "//intrinsic_sdk/intrinsic/util:proto_time",
+    tags = ["go/intrinsic-ioc-transition-tdd"],
 )
 
-cc_library(
+alias(
     name = "cloud",
-    srcs = ["cloud.cc"],
-    hdrs = ["cloud.h"],
-    deps = [
-        "@abseil-cpp//absl/status",
-        "@abseil-cpp//absl/status:statusor",
-        "@abseil-cpp//absl/strings",
-        "@google_cloud_cpp//:common",
-    ],
+    actual = "//intrinsic_sdk/intrinsic/util:cloud",
+    tags = ["go/intrinsic-ioc-transition-tdd"],
 )
 
 cc_library(
@@ -237,33 +182,20 @@ cc_library(
     ],
 )
 
-cc_library(
+alias(
     name = "log_lines",
-    srcs = ["log_lines.cc"],
-    hdrs = ["log_lines.h"],
-    deps = [
-        "@abseil-cpp//absl/base:log_severity",
-        "@abseil-cpp//absl/log",
-        "@abseil-cpp//absl/strings",
-    ],
+    actual = "//intrinsic_sdk/intrinsic/util:log_lines",
+    tags = ["go/intrinsic-ioc-transition-tdd"],
 )
 
-go_library(
+alias(
     name = "flag",
-    srcs = ["flag.go"],
-    importpath = "intrinsic/util/flag",
+    actual = "//intrinsic_sdk/intrinsic/util:flag",
+    tags = ["go/intrinsic-ioc-transition-tdd"],
 )
 
-cc_library(
+alias(
     name = "version",
-    srcs = ["version.cc"],
-    hdrs = ["version.h"],
-    deps = [
-        "//intrinsic/util/status:status_builder",
-        "//third_party/strings_numbers:sort",
-        "@abseil-cpp//absl/algorithm:container",
-        "@abseil-cpp//absl/status:statusor",
-        "@abseil-cpp//absl/strings",
-        "@com_googlesource_code_re2//:re2",
-    ],
+    actual = "//intrinsic_sdk/intrinsic/util:version",
+    tags = ["go/intrinsic-ioc-transition-tdd"],
 )

@@ -12,13 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Forwarding definitions to intrinsic_sdk."""
-
-# Forwarding definitions were added in support of go/intrinsic-ioc-transition-tdd.
-
-load(
-    "//intrinsic_sdk/intrinsic/util/proto/build_defs:proto_data.bzl",
-    _proto_data = "proto_data",
+package(
+    default_visibility = ["//visibility:public"],
 )
-
-proto_data = _proto_data

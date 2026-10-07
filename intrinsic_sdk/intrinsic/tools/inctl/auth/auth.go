@@ -45,7 +45,7 @@ const (
 	envStoreDirectory   = "intrinsic/environments"
 	authConfigExtension = ".user-token"
 
-	// LINT.ThenChange(//intrinsic/util/grpc/auth.py, //intrinsic/util/grpc/auth.cc)
+	// LINT.ThenChange(//intrinsic_sdk/intrinsic/util/grpc/auth.py, //intrinsic_sdk/intrinsic/util/grpc/auth.cc)
 
 	directoryMode  os.FileMode = 0o700
 	fileMode       os.FileMode = 0o600

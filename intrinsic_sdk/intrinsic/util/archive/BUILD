@@ -12,13 +12,23 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Forwarding definitions to intrinsic_sdk."""
+load("//bazel:go_macros.bzl", "go_library")
 
-# Forwarding definitions were added in support of go/intrinsic-ioc-transition-tdd.
+# This package contains the tools to handle tar archives.
 
-load(
-    "//intrinsic_sdk/intrinsic/util/proto/build_defs:proto_data.bzl",
-    _proto_data = "proto_data",
+package(default_visibility = [
+    "//intrinsic/util:__subpackages__",
+    "//intrinsic_sdk/intrinsic/util:__subpackages__",
+])
+
+go_library(
+    name = "tartooling",
+    srcs = ["tartooling.go"],
+    importpath = "intrinsic/util/archive/tartooling",
+    visibility = ["//intrinsic:intrinsic_internal"],
+    deps = [
+        "@com_github_google_safearchive//tar",
+        "@com_github_pkg_errors//:go_default_library",
+        "@org_golang_google_protobuf//proto",
+    ],
 )
-
-proto_data = _proto_data
