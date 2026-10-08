@@ -51,19 +51,21 @@
 
 namespace intrinsic {
 
-static const auto* const distance_cache_format = new absl::ParsedFormat<
-    'f', 'f', 'f', 'f', 'f', 'd', 'v', 'v', 'v', 'v'>(
-    "MotionPlanningRequestCacheKeyDistance(diff_in_m_for_all_related_frame_"
-    "poses = "
-    "%.3f. diff_in_m_for_all_object_poses = %.3f."
-    "max_diff_in_rad_for_starting_robot_configuration = %.3f. "
-    "max_diff_in_rad_for_kinematic_objects = %.3f. "
-    "max_diff_in_world_application_limits = %.3f. "
-    "num_of_objects_new_in_one_key = %d. "
-    "world_collision_settings_are_same = %v. "
-    "motion_segment_collision_settings_are_same "
-    "= "
-    "%v. attachment_parent_ids_are_same = %v. geometry_refs_are_same = %v.");
+static const auto* const distance_cache_format =
+    new absl::ParsedFormat<'f', 'f', 'f', 'f', 'f', 'd', 'v', 'v', 'v', 'v',
+                           'v'>(
+        "MotionPlanningRequestCacheKeyDistance(diff_in_m_for_all_related_frame_"
+        "poses = "
+        "%.3f. diff_in_m_for_all_object_poses = %.3f."
+        "max_diff_in_rad_for_starting_robot_configuration = %.3f. "
+        "max_diff_in_rad_for_kinematic_objects = %.3f. "
+        "max_diff_in_world_application_limits = %.3f. "
+        "num_of_objects_new_in_one_key = %d. "
+        "world_collision_settings_are_same = %v. "
+        "motion_segment_collision_settings_are_same "
+        "= "
+        "%v. robot_links_are_same = %v. tool_links_are_same = %v. "
+        "geometry_fingerprints_are_same = %v.)");
 
 // The key type used for caching results from MotionPlanner::PlanTrajectory.
 struct MotionPlanningRequestCacheKey {
@@ -216,11 +218,12 @@ struct MotionPlanningRequestCacheKeyDistance {
   bool world_collision_settings_are_same;
   // True if both keys have the same `motion_segment_collision_settings`.
   bool motion_segment_collision_settings_are_same;
-  // True if both keys have the same `attachment_parent_ids` and
-  // `attachment_child_to_parent_ids_robot_children_objects`.
-  bool attachment_parent_ids_are_same;
-  // True if both keys have the same `attachment_child_to_parent_ids_robot`.
-  bool attachment_child_to_parent_ids_robot_are_same;
+  // True if both feature sets have identical robot link `(normalized_name,
+  // normalized_parent_name)` attachment pairs.
+  bool robot_links_are_same;
+  // True if both feature sets have identical attached tool/workpiece link
+  // `(normalized_name, normalized_parent_name)` attachment pairs.
+  bool tool_links_are_same;
   // True if both keys have the same `geometry_fingerprints`.
   bool geometry_fingerprints_are_same;
   // True if both keys have the same `geometry_ref_t_shape_aff`.
@@ -238,7 +241,8 @@ struct MotionPlanningRequestCacheKeyDistance {
   // the other.
   static absl::StatusOr<MotionPlanningRequestCacheKeyDistance> GetDistance(
       const MotionPlanningRequestCacheKey& first_key,
-      const MotionPlanningRequestCacheKey& second_key);
+      const MotionPlanningRequestCacheKey& second_key,
+      double rotation_weight = 1.0);
 
   struct IsValidForCacheHitOptions {
     const double diff_in_m_for_all_related_frame_poses_threshold = 0.001;
@@ -247,6 +251,7 @@ struct MotionPlanningRequestCacheKeyDistance {
         0.001;
     const double max_diff_in_rad_for_kinematic_objects_threshold = 0.001;
     const double max_diff_in_world_application_limits_threshold = 0.0;
+    const double rotation_weight = 1.0;
     absl::Status Validate() const;
   };
 
@@ -254,8 +259,10 @@ struct MotionPlanningRequestCacheKeyDistance {
   // The distance is valid if all following are true:
   // * world_collision_settings_are_same
   // * motion_segment_collision_settings_are_same
-  // * attachment_parent_ids_are_same
-  // * geometry_refs_are_same
+  // * robot_links_are_same
+  // * tool_links_are_same
+  // * geometry_fingerprints_are_same
+  // * geometry_ref_t_shape_aff_are_same
   // * num_of_objects_new_in_one_key == 0
   // * diff_in_m_for_all_related_frame_poses <
   //    diff_in_m_for_all_related_frame_poses_threshold
@@ -268,17 +275,17 @@ struct MotionPlanningRequestCacheKeyDistance {
 
   // Return true if the distances is considered valid for fuzzy cache hit.
   // The distance is valid if all of the following are true:
-  // * attachment_child_to_parent_ids_robot_are_same is true
+  // * robot_links_are_same is true
   // * diff_in_m_for_robot_attachment_components is under a default threshold.
   bool IsValidForFuzzyCacheHit(const IsValidForCacheHitOptions& options) const;
 
  private:
-  // The difference between two poses are calculated by `(pose1 * kOffsetPose -
-  // pose2 * kOffsetPose).norm()`, where `kOffsetPose` is a fix vector. We do
-  // this to roughly convert difference in orintation to difference to
-  // translation.
+  // Computes the weighted pose distance between `first_pose` and `second_pose`
+  // using `rotation_weight` to scale the angular distance and add it to the
+  // norm of the translational distance.
   static double GetDiffOfPoses(const Pose3d& first_pose,
-                               const Pose3d& second_pose);
+                               const Pose3d& second_pose,
+                               double rotation_weight);
 };
 
 inline std::ostream& operator<<(
@@ -293,7 +300,7 @@ inline std::ostream& operator<<(
              distance.num_of_objects_new_in_one_key,
              distance.world_collision_settings_are_same,
              distance.motion_segment_collision_settings_are_same,
-             distance.attachment_parent_ids_are_same,
+             distance.robot_links_are_same, distance.tool_links_are_same,
              distance.geometry_fingerprints_are_same);
 }
 

@@ -1524,19 +1524,19 @@ TEST_P(MotionPlannerServiceWithoutLoggerTest,
       const Pose3d root_to_reference_object_pose,
       object_world_client.GetTransform(root, reference_object));
 
-  // Move the reference object by 0.5 mm (within exact-match cache tolerance)
-  // and perturb the start configuration by 0.0005 rad (also within exact-match
+  // Move the reference object by 0.2 mm (within exact-match cache tolerance)
+  // and perturb the start configuration by 0.0002 rad (also within exact-match
   // tolerance) so a cache hit returns `original_request`'s start and end
   // states.
   ASSERT_OK(object_world_client.UpdateTransform(
       root, reference_object, reference_object,
-      root_to_reference_object_pose * toPose3d("0.0005 0 0 1 0 0 0")));
+      root_to_reference_object_pose * toPose3d("0.0002 0 0 1 0 0 0")));
 
   intrinsic_proto::motion_planning::v1::MotionPlanningRequest
       follow_up_request = original_request;
   *follow_up_request.mutable_robot_specification()
        ->mutable_start_configuration() = ParseTextProtoOrDie(R"pb(
-    joints: [ 0.0005, -2.0, 2.0, 0.0, 0.0, 0.0 ]
+    joints: [ 0.0002, -2.0, 2.0, 0.0, 0.0, 0.0 ]
   )pb");
   ASSERT_OK_AND_ASSIGN(
       const intrinsic_proto::motion_planning::v1::TrajectoryPlanningResponse

@@ -85,9 +85,7 @@
 namespace intrinsic {
 
 static eigenmath::Vector3d kOffsetPose(1, 0, 0);
-static double kMaxDiffFramePoseInM = 0.001;
 static double kMaxDiffRobotAttachmentInM = 1e-6;
-static double kMaxDiffWorldApplicationLimits = 0.0;
 
 namespace {
 
@@ -362,14 +360,20 @@ std::vector<CacheEntryKinematicActor> KinematicActorsFromProto(
 }  // namespace
 
 double MotionPlanningRequestCacheKeyDistance::GetDiffOfPoses(
-    const Pose3d& first_pose, const Pose3d& second_pose) {
-  return (first_pose * kOffsetPose - second_pose * kOffsetPose).norm();
+    const Pose3d& first_pose, const Pose3d& second_pose,
+    const double rotation_weight) {
+  const double translation_distance =
+      (first_pose.translation() - second_pose.translation()).norm();
+  const double angular_distance =
+      first_pose.quaternion().angularDistance(second_pose.quaternion());
+  return translation_distance + rotation_weight * angular_distance;
 }
 
 absl::StatusOr<MotionPlanningRequestCacheKeyDistance>
 MotionPlanningRequestCacheKeyDistance::GetDistance(
     const MotionPlanningRequestCacheKey& first_key,
-    const MotionPlanningRequestCacheKey& second_key) {
+    const MotionPlanningRequestCacheKey& second_key,
+    const double rotation_weight) {
   intrinsic::pb_equals pb_equals{};
 
   double diff_in_m_for_all_related_frame_poses = 0.0;
@@ -385,7 +389,7 @@ MotionPlanningRequestCacheKeyDistance::GetDistance(
                                               " not found in first_key"));
     }
     diff_in_m_for_all_related_frame_poses +=
-        GetDiffOfPoses(second_key_entry.second, it->second);
+        GetDiffOfPoses(second_key_entry.second, it->second, rotation_weight);
   }
 
   double diff_in_m_for_all_object_poses = 0.0;
@@ -396,7 +400,8 @@ MotionPlanningRequestCacheKeyDistance::GetDistance(
     if (const auto it =
             first_key.poses_of_all_objects.find(second_key_entry.first);
         it != first_key.poses_of_all_objects.end()) {
-      float diff_in_m = GetDiffOfPoses(second_key_entry.second, it->second);
+      float diff_in_m =
+          GetDiffOfPoses(second_key_entry.second, it->second, rotation_weight);
       if (diff_in_m > 0.0) {
         VLOG(1) << "Object " << second_key_entry.first << " has diff pose of "
                 << diff_in_m;
@@ -422,7 +427,8 @@ MotionPlanningRequestCacheKeyDistance::GetDistance(
   for (const auto& [entity_id, pose] : second_key.rel_attachment_poses_robot) {
     if (const auto it = first_key.rel_attachment_poses_robot.find(entity_id);
         it != first_key.rel_attachment_poses_robot.end()) {
-      const double diff_in_m = GetDiffOfPoses(pose, it->second);
+      const double diff_in_m =
+          GetDiffOfPoses(pose, it->second, rotation_weight);
       diff_in_m_for_robot_attachment_components += diff_in_m;
       if (diff_in_m > 0.0) {
         LOG(INFO) << "Robot entity " << entity_id << " has diff pose of "
@@ -456,7 +462,8 @@ MotionPlanningRequestCacheKeyDistance::GetDistance(
             first_key.rel_attachment_poses_robot_children_objects.find(
                 entity_id);
         it != first_key.rel_attachment_poses_robot_children_objects.end()) {
-      const double diff_in_m = GetDiffOfPoses(pose, it->second);
+      const double diff_in_m =
+          GetDiffOfPoses(pose, it->second, rotation_weight);
       diff_in_m_for_attachment_poses_robot_offspring += diff_in_m;
       if (diff_in_m > 0.0) {
         LOG(INFO) << "Attached entity " << entity_id << " has diff pose of "
@@ -587,9 +594,8 @@ MotionPlanningRequestCacheKeyDistance::GetDistance(
                     second_key.world_collision_settings),
       .motion_segment_collision_settings_are_same =
           motion_segment_collision_settings_are_same,
-      .attachment_parent_ids_are_same = attachment_parent_ids_are_same,
-      .attachment_child_to_parent_ids_robot_are_same =
-          robot_attachment_components_are_same,
+      .robot_links_are_same = robot_attachment_components_are_same,
+      .tool_links_are_same = attachment_parent_ids_are_same,
       .geometry_fingerprints_are_same =
           first_key.geometry_fingerprints == second_key.geometry_fingerprints,
       .geometry_ref_t_shape_aff_are_same =
@@ -652,12 +658,11 @@ bool MotionPlanningRequestCacheKeyDistance::shorter_than(
       other.motion_segment_collision_settings_are_same) {
     return motion_segment_collision_settings_are_same;
   }
-  if (attachment_child_to_parent_ids_robot_are_same !=
-      other.attachment_child_to_parent_ids_robot_are_same) {
-    return attachment_child_to_parent_ids_robot_are_same;
+  if (robot_links_are_same != other.robot_links_are_same) {
+    return robot_links_are_same;
   }
-  if (attachment_parent_ids_are_same != other.attachment_parent_ids_are_same) {
-    return attachment_parent_ids_are_same;
+  if (tool_links_are_same != other.tool_links_are_same) {
+    return tool_links_are_same;
   }
   if (geometry_fingerprints_are_same != other.geometry_fingerprints_are_same) {
     return geometry_fingerprints_are_same;
@@ -704,14 +709,20 @@ bool MotionPlanningRequestCacheKeyDistance::IsValidForFuzzyCacheHit(
               << diff_in_m_for_robot_attachment_components;
     return false;
   }
-  if (!attachment_child_to_parent_ids_robot_are_same) {
-    LOG(INFO) << "attachment_child_to_parent_ids_robot_are_same is false";
+  if (!robot_links_are_same) {
+    LOG(INFO) << "robot_links_are_same is false";
     return false;
   }
   if (max_diff_in_world_application_limits >
       options.max_diff_in_world_application_limits_threshold) {
     LOG(INFO) << "max_diff_in_world_application_limits is "
               << max_diff_in_world_application_limits;
+    return false;
+  }
+  if (diff_in_m_for_all_related_frame_poses >=
+      options.diff_in_m_for_all_related_frame_poses_threshold) {
+    LOG(INFO) << "diff_in_m_for_all_related_frame_poses is "
+              << diff_in_m_for_all_related_frame_poses;
     return false;
   }
   return true;
@@ -727,12 +738,12 @@ bool MotionPlanningRequestCacheKeyDistance::IsValidForCacheHit(
     LOG(INFO) << "motion_segment_collision_settings_are_same is false";
     return false;
   }
-  if (!attachment_parent_ids_are_same) {
-    LOG(INFO) << "attachment_parent_ids_are_same is false";
+  if (!tool_links_are_same) {
+    LOG(INFO) << "tool_links_are_same is false";
     return false;
   }
-  if (!attachment_child_to_parent_ids_robot_are_same) {
-    LOG(INFO) << "attachment_child_to_parent_ids_robot_are_same is false";
+  if (!robot_links_are_same) {
+    LOG(INFO) << "robot_links_are_same is false";
     return false;
   }
   if (!geometry_fingerprints_are_same) {
@@ -1378,41 +1389,13 @@ absl::StatusOr<bool> PlanTrajectoryCache::LookupResult::HasValidTrajectory(
     return false;
   }
 
-  if (distance.max_diff_in_world_application_limits >
-      kMaxDiffWorldApplicationLimits) {
-    LOG(INFO) << "Not a valid trajectory due to larger than expected "
-                 "max_diff_in_world_application_limits. Actual: "
-              << distance.max_diff_in_world_application_limits
-              << " Expected: " << kMaxDiffWorldApplicationLimits;
-    return false;
-  }
-
-  if (distance.diff_in_m_for_all_related_frame_poses > kMaxDiffFramePoseInM) {
-    LOG(INFO) << "Not a valid trajectory due to larger than expected "
-                 "diff_in_m_for_all_related_frame_poses. Actual: "
-              << distance.diff_in_m_for_all_related_frame_poses
-              << " Expected: " << kMaxDiffFramePoseInM;
-    return false;
-  }
-
-  if (distance.diff_in_m_for_robot_attachment_components >
-      kMaxDiffRobotAttachmentInM) {
-    LOG(INFO) << "Not a valid trajectory due to larger than expected "
-                 "diff_in_m_for_robot_attachment_components. Actual: "
-              << distance.diff_in_m_for_robot_attachment_components
-              << " Expected: " << kMaxDiffRobotAttachmentInM;
-    return false;
-  }
-
   if (!distance.motion_segment_collision_settings_are_same) {
     LOG(INFO) << "Not a valid trajectory due to different motion segment "
                  "collision settings.";
     return false;
   }
 
-  if (!distance.attachment_child_to_parent_ids_robot_are_same) {
-    LOG(INFO) << "Not a valid trajectory due to different attachment parent "
-                 "ids in robot attachment components.";
+  if (!distance.IsValidForFuzzyCacheHit({})) {
     return false;
   }
 
@@ -1548,9 +1531,10 @@ absl::StatusOr<PlanTrajectoryCache::LookupResult> PlanTrajectoryCache::Lookup(
       .num_of_objects_new_in_one_key = std::numeric_limits<int>::max(),
       .world_collision_settings_are_same = false,
       .motion_segment_collision_settings_are_same = false,
-      .attachment_parent_ids_are_same = false,
-      .attachment_child_to_parent_ids_robot_are_same = false,
+      .robot_links_are_same = false,
+      .tool_links_are_same = false,
       .geometry_fingerprints_are_same = false,
+      .geometry_ref_t_shape_aff_are_same = false,
   };
   // This is used to track the entry with the shortest distance to the given
   // key.
@@ -1563,8 +1547,8 @@ absl::StatusOr<PlanTrajectoryCache::LookupResult> PlanTrajectoryCache::Lookup(
               << it->get()->key.uuid;
     INTR_ASSIGN_OR_RETURN(
         const MotionPlanningRequestCacheKeyDistance diff_key_distance,
-        MotionPlanningRequestCacheKeyDistance::GetDistance(key,
-                                                           it->get()->key));
+        MotionPlanningRequestCacheKeyDistance::GetDistance(
+            key, it->get()->key, distance_options_.rotation_weight));
 
     if (diff_key_distance.IsValidForCacheHit(distance_options_)) {
       // This is an exact match. No need to look for more.
