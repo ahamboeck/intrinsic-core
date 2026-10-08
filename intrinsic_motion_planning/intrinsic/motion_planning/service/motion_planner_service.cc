@@ -621,7 +621,7 @@ MotionPlannerService::ConvertPlanTrajectoryResultToTrajectoryPlanningResponse(
   INTR_ASSIGN_OR_RETURN_GRPC(
       MotionPlanningRequestCacheKey cache_key,
       MotionPlanningRequestCacheKey::Create(
-          initial_world_and_proto.world_proto, *object_world,
+          *object_world,
           *request
           )
   );

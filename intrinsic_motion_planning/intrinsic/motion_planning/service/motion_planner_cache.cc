@@ -28,9 +28,6 @@
 #include <vector>
 
 #include "absl/algorithm/container.h"
-#include "absl/container/flat_hash_map.h"
-#include "absl/container/flat_hash_set.h"
-#include "absl/log/check.h"
 #include "absl/log/log.h"
 #include "absl/memory/memory.h"
 #include "absl/status/status.h"
@@ -43,8 +40,6 @@
 #include "google/protobuf/map.h"
 #include "google/protobuf/repeated_ptr_field.h"
 #include "intrinsic/eigenmath/types.h"
-#include "intrinsic/geometry/api/affine_transform_of_geometry.h"
-#include "intrinsic/geometry/api/geometry_fingerprint.h"
 #include "intrinsic/icon/proto/joint_space.pb.h"
 #include "intrinsic/kinematics/types/joint_limits_xd.h"
 #include "intrinsic/logging/data_logger_client.h"
@@ -54,60 +49,28 @@
 #include "intrinsic/motion_planning/motion_planner/robot_specification.h"
 #include "intrinsic/motion_planning/path_planning/planners/validation.h"
 #include "intrinsic/motion_planning/proto/motion_planner_service_proto_utils.h"
-#include "intrinsic/motion_planning/proto/v1/geometric_constraints.pb.h"
 #include "intrinsic/motion_planning/proto/v1/motion_specification.pb.h"
 #include "intrinsic/motion_planning/proto/v1/robot_specification.pb.h"
 #include "intrinsic/motion_planning/service/motion_planner_cache.pb.h"
 #include "intrinsic/motion_planning/service/motion_planner_cache_entry_features.h"
 #include "intrinsic/motion_planning/service/motion_planner_cache_key_normalization.h"
-#include "intrinsic/motion_planning/service/motion_planner_cache_utils.h"
 #include "intrinsic/util/eigen.h"
 #include "intrinsic/util/proto/pb_hash.h"
 #include "intrinsic/util/status/ret_check.h"
 #include "intrinsic/util/status/status_macros.h"
-#include "intrinsic/world/collision/collision_context.pb.h"
-#include "intrinsic/world/collision/util/make_collision_settings.h"
-#include "intrinsic/world/component/attachment_component.h"
-#include "intrinsic/world/component/geometry_component.h"
-#include "intrinsic/world/component/kinematics_component.h"
-#include "intrinsic/world/entity_id.h"
-#include "intrinsic/world/geometry_types.h"
-#include "intrinsic/world/objects/kinematic_object_internal.h"
 #include "intrinsic/world/objects/object_world.h"
-#include "intrinsic/world/objects/object_world_ids.h"
-#include "intrinsic/world/objects/transform_node_internal.h"
-#include "intrinsic/world/objects/world_object_internal.h"
-#include "intrinsic/world/proto/attachment_component.pb.h"
 #include "intrinsic/world/proto/collision_settings.pb.h"
-#include "intrinsic/world/proto/object_world_refs.pb.h"
-#include "intrinsic/world/world.pb.h"
 
 namespace intrinsic {
 
-static eigenmath::Vector3d kOffsetPose(1, 0, 0);
 static double kMaxDiffRobotAttachmentInM = 1e-6;
 
 namespace {
 
-// Compute the distance between two joint values. Returns max double if the
-// joint values have different sizes. Returns 0 if the joint values are empty.
-// Returns cwiseAbs().maxCoeff() otherwise.
-double ComputeDistanceForKinematicObjects(
-    const eigenmath::VectorXd& first_joint_values,
-    const eigenmath::VectorXd& second_joint_values) {
-  if (first_joint_values.size() != second_joint_values.size()) {
-    return std::numeric_limits<double>::max();
-  }
-  if (first_joint_values.size() == 0) {
-    return 0.0;
-  }
-  return (first_joint_values - second_joint_values).cwiseAbs().maxCoeff();
-}
-
 // Compute the distance between two joint limit vectors. Returns max double if
 // the limit vectors have different sizes or one component is unlimited and the
 // other is limited. This is almost the same as
-// ComputeDistanceForKinematicObjects(), except it handles the case of values =
+// `ComputeJointConfigurationDistance()`, except it handles the case of values =
 // +/- inf. Note that this should never return inf, even if inputs have inf.
 double ComputeDistanceForJointLimitVec(
     const eigenmath::VectorXd& first_limit_vec,
@@ -172,6 +135,90 @@ double ComputeDistanceForJointLimits(const JointLimitsXd& first_joint_limits,
                                                second_joint_limits.max_torque));
 
   return max_diff_in_joint_limits;
+}
+
+// Computes a `MotionPlanningRequestCacheKeyDistance` comparing the query
+// request features (`query_features`) against the cached entry features
+// (`cached_features`), using `rotation_weight` to scale angular pose
+// differences (in radians) into meters.
+absl::StatusOr<MotionPlanningRequestCacheKeyDistance>
+ComputeCacheEntryFeaturesDistance(
+    const MotionPlanningCacheEntryFeatures& query_features,
+    const MotionPlanningCacheEntryFeatures& cached_features,
+    const double rotation_weight) {
+  const intrinsic::pb_equals pb_equals{};
+
+  INTR_ASSIGN_OR_RETURN(
+      const double diff_in_m_for_all_related_frame_poses,
+      ComputeRelatedFramePosesDistance(
+          query_features.poses_of_all_related_frames,
+          cached_features.poses_of_all_related_frames, rotation_weight));
+
+  const ObjectPosesDistanceResult object_poses_distance =
+      ComputeObjectPosesDistance(query_features.poses_of_all_objects,
+                                 cached_features.poses_of_all_objects,
+                                 rotation_weight);
+
+  const AttachmentPosesDistanceResult robot_links_distance =
+      ComputeAttachmentPosesDistance(query_features.robot_links,
+                                     cached_features.robot_links,
+                                     rotation_weight);
+
+  const AttachmentPosesDistanceResult tool_links_distance =
+      ComputeAttachmentPosesDistance(query_features.tool_links,
+                                     cached_features.tool_links,
+                                     rotation_weight);
+
+  const KinematicActorsDistanceResult kinematic_actors_distance =
+      ComputeKinematicActorsDistance(query_features.other_kinematic_actors,
+                                     cached_features.other_kinematic_actors);
+
+  const int total_num_objects_new_in_one_key =
+      object_poses_distance.num_objects_new_in_one_key +
+      kinematic_actors_distance.num_actors_new_in_one_key;
+
+  const double max_diff_in_rad_for_starting_robot_configuration =
+      ComputeJointConfigurationDistance(
+          query_features.starting_robot_configuration,
+          cached_features.starting_robot_configuration);
+
+  const double max_diff_in_world_application_limits =
+      ComputeDistanceForJointLimits(query_features.world_application_limits,
+                                    cached_features.world_application_limits);
+
+  const bool motion_segment_collision_settings_are_same = absl::c_equal(
+      query_features.motion_segment_collision_settings,
+      cached_features.motion_segment_collision_settings, pb_equals);
+
+  return MotionPlanningRequestCacheKeyDistance{
+      .diff_in_m_for_all_related_frame_poses =
+          diff_in_m_for_all_related_frame_poses,
+      .diff_in_m_for_all_object_poses =
+          object_poses_distance.max_pose_diff_in_meters,
+      .diff_in_m_for_robot_attachment_components =
+          robot_links_distance.max_pose_diff_in_meters,
+      .diff_in_m_for_robot_children_attachment_components =
+          tool_links_distance.max_pose_diff_in_meters,
+      .max_diff_in_rad_for_starting_robot_configuration =
+          max_diff_in_rad_for_starting_robot_configuration,
+      .max_diff_in_rad_for_kinematic_objects =
+          kinematic_actors_distance.max_joint_diff,
+      .max_diff_in_world_application_limits =
+          max_diff_in_world_application_limits,
+      .num_of_objects_new_in_one_key = total_num_objects_new_in_one_key,
+      .world_collision_settings_are_same =
+          pb_equals(query_features.world_collision_settings,
+                    cached_features.world_collision_settings),
+      .motion_segment_collision_settings_are_same =
+          motion_segment_collision_settings_are_same,
+      .robot_links_are_same = robot_links_distance.attachment_links_are_same,
+      .tool_links_are_same = tool_links_distance.attachment_links_are_same,
+      .geometry_fingerprints_are_same = query_features.geometry_fingerprints ==
+                                        cached_features.geometry_fingerprints,
+      .geometry_ref_t_shape_aff_are_same =
+          query_features.serialized_geometry_ref_t_shape_aff ==
+          cached_features.serialized_geometry_ref_t_shape_aff,
+  };
 }
 
 // Replaces `proto_links` with serialized `CacheEntryAttachmentPose` protos from
@@ -359,249 +406,17 @@ std::vector<CacheEntryKinematicActor> KinematicActorsFromProto(
 
 }  // namespace
 
-double MotionPlanningRequestCacheKeyDistance::GetDiffOfPoses(
-    const Pose3d& first_pose, const Pose3d& second_pose,
-    const double rotation_weight) {
-  const double translation_distance =
-      (first_pose.translation() - second_pose.translation()).norm();
-  const double angular_distance =
-      first_pose.quaternion().angularDistance(second_pose.quaternion());
-  return translation_distance + rotation_weight * angular_distance;
-}
-
 absl::StatusOr<MotionPlanningRequestCacheKeyDistance>
 MotionPlanningRequestCacheKeyDistance::GetDistance(
     const MotionPlanningRequestCacheKey& first_key,
     const MotionPlanningRequestCacheKey& second_key,
     const double rotation_weight) {
-  intrinsic::pb_equals pb_equals{};
+  INTR_ASSIGN_OR_RETURN(MotionPlanningRequestCacheKeyDistance distance,
+                        ComputeCacheEntryFeaturesDistance(
+                            first_key.cache_entry_features,
+                            second_key.cache_entry_features, rotation_weight));
 
-  double diff_in_m_for_all_related_frame_poses = 0.0;
-  for (const auto& second_key_entry : second_key.poses_of_all_related_frames) {
-    const auto it =
-        first_key.poses_of_all_related_frames.find(second_key_entry.first);
-    if (it == first_key.poses_of_all_related_frames.end()) {
-      // TODO(b/427267252): Remove this check. This seems inconsistent with the
-      // rest of the code. Below code takes care of the case by increasing the
-      // unattended num_of_objects_new_in_one_key.
-      return absl::NotFoundError(absl::StrCat("second_key contains an entry ",
-                                              second_key_entry.first.value(),
-                                              " not found in first_key"));
-    }
-    diff_in_m_for_all_related_frame_poses +=
-        GetDiffOfPoses(second_key_entry.second, it->second, rotation_weight);
-  }
-
-  double diff_in_m_for_all_object_poses = 0.0;
-  int num_of_objects_new_in_one_key = 0;
-  // Iterate through all objects in the second world and only calculate the
-  // difference in poses if the object also exists in the first world.
-  for (const auto& second_key_entry : second_key.poses_of_all_objects) {
-    if (const auto it =
-            first_key.poses_of_all_objects.find(second_key_entry.first);
-        it != first_key.poses_of_all_objects.end()) {
-      float diff_in_m =
-          GetDiffOfPoses(second_key_entry.second, it->second, rotation_weight);
-      if (diff_in_m > 0.0) {
-        VLOG(1) << "Object " << second_key_entry.first << " has diff pose of "
-                << diff_in_m;
-      }
-      diff_in_m_for_all_object_poses += diff_in_m;
-    } else {
-      // The object only exists in the second world.
-      num_of_objects_new_in_one_key += 1;
-    }
-  }
-  for (const auto& first_key_entry : first_key.poses_of_all_objects) {
-    if (auto it = second_key.poses_of_all_objects.find(first_key_entry.first);
-        it == second_key.poses_of_all_objects.end()) {
-      // The object only exists in the second world.
-      num_of_objects_new_in_one_key += 1;
-    }
-  }
-
-  // Distance between all relative positions in the robot and attached poses.
-  // This was added to handle cases where objects are moved or differently
-  // attached.
-  double diff_in_m_for_robot_attachment_components = 0.0;
-  for (const auto& [entity_id, pose] : second_key.rel_attachment_poses_robot) {
-    if (const auto it = first_key.rel_attachment_poses_robot.find(entity_id);
-        it != first_key.rel_attachment_poses_robot.end()) {
-      const double diff_in_m =
-          GetDiffOfPoses(pose, it->second, rotation_weight);
-      diff_in_m_for_robot_attachment_components += diff_in_m;
-      if (diff_in_m > 0.0) {
-        LOG(INFO) << "Robot entity " << entity_id << " has diff pose of "
-                  << diff_in_m;
-      }
-    } else {
-      // If the object only exist in the second world, we should not trigger
-      // exact cache hit.
-      num_of_objects_new_in_one_key += 1;
-    }
-  }
-
-  // Check if there is an object in the first key in all related attachment
-  // components that is not contained in the second.
-  for (const auto& [entity_id, pose] : first_key.rel_attachment_poses_robot) {
-    if (const auto it = second_key.rel_attachment_poses_robot.find(entity_id);
-        it == second_key.rel_attachment_poses_robot.end()) {
-      // If the object only exist in the first world, we should not trigger
-      // exact cache hit.
-      num_of_objects_new_in_one_key += 1;
-    }
-  }
-
-  // Distance between all relative positions in the robot and attached poses.
-  // This was added to handle cases where objects are moved or differently
-  // attached.
-  double diff_in_m_for_attachment_poses_robot_offspring = 0.0;
-  for (const auto& [entity_id, pose] :
-       second_key.rel_attachment_poses_robot_children_objects) {
-    if (const auto it =
-            first_key.rel_attachment_poses_robot_children_objects.find(
-                entity_id);
-        it != first_key.rel_attachment_poses_robot_children_objects.end()) {
-      const double diff_in_m =
-          GetDiffOfPoses(pose, it->second, rotation_weight);
-      diff_in_m_for_attachment_poses_robot_offspring += diff_in_m;
-      if (diff_in_m > 0.0) {
-        LOG(INFO) << "Attached entity " << entity_id << " has diff pose of "
-                  << diff_in_m;
-      }
-    } else {
-      // If the object only exist in the second world, we should not trigger
-      // exact cache hit.
-      num_of_objects_new_in_one_key += 1;
-    }
-  }
-
-  // Check if there is an object in the first key in all related attachment
-  // components that is not contained in the second.
-  for (const auto& [entity_id, pose] :
-       first_key.rel_attachment_poses_robot_children_objects) {
-    if (const auto it =
-            second_key.rel_attachment_poses_robot_children_objects.find(
-                entity_id);
-        it == second_key.rel_attachment_poses_robot_children_objects.end()) {
-      // If the object only exist in the first world, we should not trigger
-      // exact cache hit.
-      num_of_objects_new_in_one_key += 1;
-    }
-  }
-
-  double max_diff_in_rad_for_starting_robot_configuration =
-      ComputeDistanceForKinematicObjects(
-          first_key.starting_robot_configuration,
-          second_key.starting_robot_configuration);
-
-  // Iterate through all kinematic objects (except the robot) in two worlds
-  // and calculate the difference in joint values if the kinematic object
-  // exists in both worlds.
-  // If one of the kinematic object exists in only one world, we will not
-  // calculate the difference in joint values as this is handled by the
-  // `num_of_objects_new_in_one_key` attribute and geometry_refs_are_same.
-  double max_diff_in_rad_for_kinematic_objects = 0.0;
-  for (const auto& [object_id, joint_values] :
-       first_key.other_kinematic_object_ids) {
-    if (auto it = second_key.other_kinematic_object_ids.find(object_id);
-        it != second_key.other_kinematic_object_ids.end()) {
-      const double this_dist =
-          ComputeDistanceForKinematicObjects(joint_values, it->second);
-      max_diff_in_rad_for_kinematic_objects =
-          std::max(max_diff_in_rad_for_kinematic_objects, this_dist);
-    }
-  }
-
-  const double max_diff_in_world_application_limits =
-      ComputeDistanceForJointLimits(first_key.world_application_limits,
-                                    second_key.world_application_limits);
-
-  bool motion_segment_collision_settings_are_same = true;
-  if (first_key.motion_segment_collision_settings.size() !=
-      second_key.motion_segment_collision_settings.size()) {
-    motion_segment_collision_settings_are_same = false;
-  } else {
-    for (int i = 0; i < first_key.motion_segment_collision_settings.size();
-         ++i) {
-      if (!pb_equals(first_key.motion_segment_collision_settings[i],
-                     second_key.motion_segment_collision_settings[i])) {
-        motion_segment_collision_settings_are_same = false;
-        break;
-      }
-    }
-  }
-
-  // Don't need to account here for objects not accounted for in the other key
-  // because we account for that in
-  // `poses_of_all_related_attachment_components`.
-  bool robot_attachment_components_are_same = true;
-  for (const auto& second_key_entry :
-       second_key.attachment_child_to_parent_ids_robot) {
-    if (const auto it = first_key.attachment_child_to_parent_ids_robot.find(
-            second_key_entry.first);
-        it != first_key.attachment_child_to_parent_ids_robot.end()) {
-      if (it->second != second_key_entry.second) {
-        LOG(INFO) << "Attachment structure of the robot is different in the "
-                     "two keys.";
-        robot_attachment_components_are_same = false;
-        break;
-      }
-    }
-  }
-
-  // We separate changes in the structure of the robot kinematics from the
-  // changes in the structure of the robot's' offspring and the world. This is
-  // because changes in the robot kinematics will always require a new plan, so
-  // we don't trigger a cache (exact or fuzzy). Changes in the robot's'
-  // offspring and the world require additional validation checks but do not
-  // change the plan (with the exception of related frame which are handled
-  // differently).
-  bool attachment_parent_ids_are_same =
-      first_key.attachment_parent_ids == second_key.attachment_parent_ids;
-  for (const auto& second_key_entry :
-       second_key.attachment_child_to_parent_ids_robot_children_objects) {
-    if (const auto it =
-            first_key.attachment_child_to_parent_ids_robot_children_objects
-                .find(second_key_entry.first);
-        it !=
-        first_key.attachment_child_to_parent_ids_robot_children_objects.end()) {
-      if (it->second != second_key_entry.second) {
-        LOG(INFO) << "Attachment structure of the robot's' offspring is "
-                     "different in the two keys.";
-        attachment_parent_ids_are_same = false;
-        break;
-      }
-    }
-  }
-  return MotionPlanningRequestCacheKeyDistance{
-      .diff_in_m_for_all_related_frame_poses =
-          diff_in_m_for_all_related_frame_poses,
-      .diff_in_m_for_all_object_poses = diff_in_m_for_all_object_poses,
-      .diff_in_m_for_robot_attachment_components =
-          diff_in_m_for_robot_attachment_components,
-      .diff_in_m_for_robot_children_attachment_components =
-          diff_in_m_for_attachment_poses_robot_offspring,
-      .max_diff_in_rad_for_starting_robot_configuration =
-          max_diff_in_rad_for_starting_robot_configuration,
-      .max_diff_in_rad_for_kinematic_objects =
-          max_diff_in_rad_for_kinematic_objects,
-      .max_diff_in_world_application_limits =
-          max_diff_in_world_application_limits,
-      .num_of_objects_new_in_one_key = num_of_objects_new_in_one_key,
-      .world_collision_settings_are_same =
-          pb_equals(first_key.world_collision_settings,
-                    second_key.world_collision_settings),
-      .motion_segment_collision_settings_are_same =
-          motion_segment_collision_settings_are_same,
-      .robot_links_are_same = robot_attachment_components_are_same,
-      .tool_links_are_same = attachment_parent_ids_are_same,
-      .geometry_fingerprints_are_same =
-          first_key.geometry_fingerprints == second_key.geometry_fingerprints,
-      .geometry_ref_t_shape_aff_are_same =
-          first_key.serialized_geometry_ref_t_shape_aff ==
-          second_key.serialized_geometry_ref_t_shape_aff,
-  };
+  return distance;
 }
 
 bool MotionPlanningRequestCacheKeyDistance::shorter_than(
@@ -803,291 +618,34 @@ bool MotionPlanningRequestCacheKeyDistance::IsValidForCacheHit(
   return true;
 }
 
-namespace {
-
-// Get all offspring object IDs for the given parent object.
-absl::flat_hash_set<ObjectWorldResourceId> GetAllOffspringObjectIDs(
-    const object_world::WorldObject* parent_object) {
-  absl::flat_hash_set<ObjectWorldResourceId> offspring_ids;
-  std::deque<const object_world::WorldObject*> parents{parent_object};
-
-  while (!parents.empty()) {
-    const object_world::WorldObject* current_object = parents.front();
-    for (const object_world::WorldObject* child :
-         current_object->GetChildren()) {
-      offspring_ids.insert(child->GetId());
-      parents.push_back(child);
-    }
-    parents.pop_front();
-  }
-  return offspring_ids;
-}
-
-absl::Status GetAllObjectsAsIDWithPose(
-    const object_world::ObjectWorld& object_world,
-    const absl::flat_hash_set<ObjectWorldResourceId>& ignore_list,
-    absl::flat_hash_map<ObjectWorldResourceId, Pose3d>& poses_of_all_objects) {
-  INTR_ASSIGN_OR_RETURN(const object_world::TransformNode* root_node,
-                        object_world.GetObject(RootObjectId()));
-  for (const object_world::WorldObject* object :
-       object_world.GetObjectsSorted()) {
-    Pose3d root_to_this = Pose3d::Identity();
-    if (!ignore_list.contains(object->GetId()) &&
-        object->GetParent() != nullptr) {
-      INTR_ASSIGN_OR_RETURN(root_to_this, root_node->GetTransform(object));
-    }
-    poses_of_all_objects.insert({object->GetId(), root_to_this});
-  }
-  return absl::OkStatus();
-}
-}  // namespace
-
 absl::StatusOr<MotionPlanningRequestCacheKey>
 MotionPlanningRequestCacheKey::Create(
-    const intrinsic_proto::world::internal::World& world_proto,
     const object_world::ObjectWorld& object_world,
     const intrinsic_proto::motion_planning::v1::MotionPlanningRequest& request
 ) {
   INTR_ASSIGN_OR_RETURN(
-      const MotionPlanningCacheGroupSignature group_signature,
+      MotionPlanningCacheGroupSignature group_signature,
       CreateMotionPlanningCacheGroupSignature(object_world, request),
       _ << "Failed to create motion planning cache group signature.");
-
-  // The order of overwriting for collisions settings is
-  // collision settings in each segment -> collision settings in the world.
-  // For example, if there is no collision settings in motion segments we will
-  // only use the collision settings in the world. If all motion segments have
-  // collisions settings and they all have `disable_collision_checking` set to
-  // True. We will skip collision checking.
-
-  // Extract collision settings from each motion segment in the request.
-  std::vector<intrinsic_proto::world::CollisionSettings>
-      motion_segment_collision_settings;
-
-  // The default collision settings is empty.
-  const intrinsic_proto::world::CollisionSettings
-      default_collision_settings_from_request;
-
-  // Whether collision checking is disabled.
-  // Set `disable_collision_checking` to true first.
-  bool disable_collision_checking = true;
-  for (const intrinsic_proto::motion_planning::v1::MotionSegment& segment :
-       request.motion_specification().motion_segments()) {
-    if (segment.has_collision_settings()) {
-      // Use the collision settings in the path constraints if they are set.
-      motion_segment_collision_settings.push_back(segment.collision_settings());
-      // Set and keep it to false if the segment demands collision checking
-      // explicitly.
-      disable_collision_checking &=
-          segment.collision_settings().disable_collision_checking();
-    } else {
-      motion_segment_collision_settings.push_back(
-          default_collision_settings_from_request);
-      // Set and keep it to false if the segment does not require collision
-      // checking but the default one requires.
-      disable_collision_checking &=
-          default_collision_settings_from_request.disable_collision_checking();
-    }
-  }
-
-  INTR_ASSIGN_OR_RETURN(const intrinsic_proto::RuleSet rule_set,
-                        object_world.GetDefaultCollisionSettings());
-  intrinsic_proto::world::CollisionSettings world_collision_settings =
-      MakeCollisionSettings(rule_set);
-  if (disable_collision_checking) {
-    world_collision_settings.set_disable_collision_checking(true);
-  }
-
-  // Unpack the robot information from the request.
   INTR_ASSIGN_OR_RETURN(
-      const object_world::KinematicObject* robot,
-      GetRobot(request.robot_specification().robot_reference(), &object_world),
-      _.LogError());
-  INTR_ASSIGN_OR_RETURN(const eigenmath::VectorXd world_robot_configuration,
-                        robot->GetJointPositions(),
-                        _ << "Failed to get joint positions for robot.");
-  const eigenmath::VectorXd starting_robot_configuration =
-      request.robot_specification().has_start_configuration()
-          ? RepeatedDoubleToVectorXd(
-                request.robot_specification().start_configuration().joints())
-          : world_robot_configuration;
+      MotionPlanningCacheEntryFeatures features,
+      ExtractCacheEntryFeatures(object_world, request),
+      _ << "Failed to extract motion planning cache entry features.");
 
-  // Get robot application limits.
-  INTR_ASSIGN_OR_RETURN(const JointLimitsXd world_application_limits,
-                        robot->GetJointApplicationLimits());
-
-  // Get all kinematic objects in the world. If they are not identical to the
-  // robot, then we add them to the cache key as other kinematic objects. This
-  // is necessary as the kinematic changes are not captured in the
-  // poses_of_all_objects.
-  absl::flat_hash_map<std::string, eigenmath::VectorXd> kinematic_object_ids;
-  for (const object_world::WorldObject* object :
-       object_world.GetObjectsSorted()) {
-    if (object == nullptr) {
-      continue;
-    }
-
-    absl::StatusOr<const object_world::KinematicObject*>
-        kinematic_object_check_result =
-            object_world.GetKinematicObject(object->GetId());
-    if (kinematic_object_check_result.ok() &&
-        kinematic_object_check_result.value() != nullptr &&
-        kinematic_object_check_result.value()->GetId() != robot->GetId()) {
-      const eigenmath::VectorXd joint_positions =
-          kinematic_object_check_result.value()->GetJointPositions().value();
-      // If the kinematic object has no joint positions, we don't need to add
-      // it to the cache key.
-      if (joint_positions.size() > 0) {
-        kinematic_object_ids[object->GetId().value()] =
-            kinematic_object_check_result.value()->GetJointPositions().value();
-      }
-    }
-  }
-
-  // Extract the poses of all objects in the world. We separate the objects into
-  // four classes at the moment:
-  // 1) All objects that are not related to the robot. Object poses are with
-  // respect to the root (world origin). Note we consider here objects, not
-  // entities.
-  // 2) All frames that are related to the robot (but not its children). Poses
-  // are with respect to their attachment component parent.
-  // 3) All attachment components of the robot's offspring objects. Poses are
-  // with respect to their attachment component parent.
-  // 4) All object ids of the frames mentioned in the motion specification.
-  // Poses are with respect to the root (world origin).
-  // In addition to this we also extract the attachment structure for 2) and 3).
-  absl::flat_hash_map<ObjectWorldResourceId, Pose3d> poses_of_all_objects;
-  absl::flat_hash_map<ObjectWorldResourceId, Pose3d>
-      poses_of_all_related_frames;
-  absl::flat_hash_map<uint32_t, Pose3d> poses_of_attachment_components_robot;
-  absl::flat_hash_map<uint32_t, Pose3d>
-      poses_of_attachment_components_robot_children_objects;
-  absl::flat_hash_map<uint32_t, uint32_t> attachment_child_to_parent_ids_robot;
-  absl::flat_hash_map<uint32_t, uint32_t>
-      attachment_child_to_parent_ids_robot_offspring;
-
-  absl::flat_hash_set<ObjectWorldResourceId> robot_offspring =
-      GetAllOffspringObjectIDs(robot);
-  INTR_RETURN_IF_ERROR(GetAllObjectsAsIDWithPose(
-      object_world, /*ignore_list=*/robot_offspring, poses_of_all_objects));
-  INTR_RETURN_IF_ERROR(ExtractIdWithPoseFromMotionSpecification(
-      object_world, request.motion_specification(),
-      poses_of_all_related_frames));
-
-  // Extract attachment and geometry information in the world
-  absl::flat_hash_set<uint32_t> attachment_parent_ids;
-  for (const auto& [_, entity] : world_proto.entities()) {
-    if (entity.has_attachment_component()) {
-      attachment_parent_ids.insert(entity.attachment_component().parent_uid());
-    }
-  }
-
-  for (const auto& entity_id : robot->GetEntityIds()) {
-    INTR_ASSIGN_OR_RETURN(
-        const auto entity,
-        object_world.GetEntityWorld().GetEntityById(entity_id));
-    const auto status_or_attachment_component =
-        entity->GetComponent<AttachmentComponent>();
-    if (status_or_attachment_component.ok()) {
-      Pose3d parent_t_this =
-          status_or_attachment_component.value()->GetParentTThis();
-      const auto status_or_kinematics_component =
-          entity->GetComponent<KinematicsComponent>();
-      if (status_or_kinematics_component.ok()) {
-        parent_t_this =
-            status_or_kinematics_component.value()->GetParentTInboard();
-      }
-
-      poses_of_attachment_components_robot.insert(
-          {entity_id.value(), parent_t_this});
-      attachment_child_to_parent_ids_robot.insert(
-          {entity_id.value(),
-           status_or_attachment_component.value()->GetParentId().value()});
-    }
-  }
-  for (const auto& object_id : robot_offspring) {
-    INTR_ASSIGN_OR_RETURN(const auto object, object_world.GetObject(object_id));
-    for (const auto& entity_id : object->GetEntityIds()) {
-      INTR_ASSIGN_OR_RETURN(
-          const auto entity,
-          object_world.GetEntityWorld().GetEntityById(entity_id));
-      const auto status_or_attachment_component =
-          entity->GetComponent<AttachmentComponent>();
-      if (status_or_attachment_component.ok()) {
-        Pose3d parent_t_this =
-            status_or_attachment_component.value()->GetParentTThis();
-        const auto status_or_kinematics_component =
-            entity->GetComponent<KinematicsComponent>();
-        if (status_or_kinematics_component.ok()) {
-          parent_t_this =
-              status_or_kinematics_component.value()->GetParentTInboard();
-        }
-        poses_of_attachment_components_robot_children_objects.insert(
-            {entity_id.value(), parent_t_this});
-        attachment_child_to_parent_ids_robot_offspring.insert(
-            {entity_id.value(),
-             status_or_attachment_component.value()->GetParentId().value()});
-      }
-    }
-  }
-
-  absl::flat_hash_set<std::string> geometry_fingerprints;
-  absl::flat_hash_set<std::string> serialized_geometry_ref_t_shape_aff;
-  const World& world = object_world.GetEntityWorld();
-  // TODO(b/271299274): Ideally we should use the object world APIs.
-  auto geometry_entities = world.GetTypedEntityIds<GeometryComponentType>();
-
-  for (const auto& entity_id : geometry_entities) {
-    INTR_ASSIGN_OR_RETURN(
-        const GeometryComponent* geometry_component,
-        world.GetComponentByEntityId<GeometryComponent>(entity_id));
-    if (!geometry_component->GetGeometryNames().contains(
-            kKindCollisionGeometry)) {
-      continue;
-    }
-    INTR_ASSIGN_OR_RETURN(
-        NamedGeometrySet collision_geo,
-        geometry_component->GetGeometry(kKindCollisionGeometry));
-    for (const auto& [_, tg] : collision_geo) {
-      INTR_ASSIGN_OR_RETURN(std::string fingerprint,
-                            GenerateFingerprint(tg.shape()));
-      geometry_fingerprints.insert(std::move(fingerprint));
-      intrinsic_proto::Matrixd ref_t_shape_proto =
-          ::intrinsic::ToProto(tg.ref_t_shape());
-      serialized_geometry_ref_t_shape_aff.insert(
-          ref_t_shape_proto.SerializeAsString());
-    }
-  }
-
-  const std::string caller_id =
-      request.has_caller_id() ? request.caller_id() : "Anonymous";
+  constexpr absl::string_view kDefaultCallerId = "Anonymous";
+  const absl::string_view caller_id =
+      request.has_caller_id() ? absl::string_view(request.caller_id())
+                              : kDefaultCallerId;
 
   const size_t group_id = group_signature.ComputeGroupId();
 
   return MotionPlanningRequestCacheKey{
       .group_signature = std::move(group_signature),
       .group_id = group_id,
-      .poses_of_all_related_frames = std::move(poses_of_all_related_frames),
-      .poses_of_all_objects = std::move(poses_of_all_objects),
-      .rel_attachment_poses_robot =
-          std::move(poses_of_attachment_components_robot),
-      .rel_attachment_poses_robot_children_objects =
-          std::move(poses_of_attachment_components_robot_children_objects),
-      .starting_robot_configuration = std::move(starting_robot_configuration),
-      .world_application_limits = std::move(world_application_limits),
-      .world_collision_settings = std::move(world_collision_settings),
-      .motion_segment_collision_settings =
-          std::move(motion_segment_collision_settings),
-      .attachment_parent_ids = std::move(attachment_parent_ids),
-      .attachment_child_to_parent_ids_robot =
-          std::move(attachment_child_to_parent_ids_robot),
-      .attachment_child_to_parent_ids_robot_children_objects =
-          std::move(attachment_child_to_parent_ids_robot_offspring),
-      .geometry_fingerprints = std::move(geometry_fingerprints),
-      .serialized_geometry_ref_t_shape_aff =
-          std::move(serialized_geometry_ref_t_shape_aff),
-      .other_kinematic_object_ids = std::move(kinematic_object_ids),
-       .uuid = caller_id,
+      .cache_entry_features = std::move(features),
+      // clang-format off
+       .uuid = std::string(caller_id),
+      // clang-format on
   };
 }
 
@@ -1206,55 +764,7 @@ MotionPlanningRequestCacheKey::ToProto() const {
       group_signature.normalized_motion_specification;
   *key_proto.mutable_robot_specification() =
       group_signature.normalized_robot_specification;
-  for (const auto& [id, pose] : poses_of_all_related_frames) {
-    (*key_proto.mutable_poses_of_all_related_frames())[id.value()] =
-        intrinsic::ToProto(pose);
-  }
-  for (const auto& [id, pose] : poses_of_all_objects) {
-    (*key_proto.mutable_poses_of_all_objects())[id.value()] =
-        intrinsic::ToProto(pose);
-  }
-  for (const auto& [id, pose] : rel_attachment_poses_robot) {
-    (*key_proto.mutable_poses_of_attachment_components_robot())[id] =
-        intrinsic::ToProto(pose);
-  }
-  for (const auto& [id, pose] : rel_attachment_poses_robot_children_objects) {
-    (*key_proto.mutable_poses_of_attachment_components_robot_children_objects())
-        [id] = intrinsic::ToProto(pose);
-  }
-
-  for (const auto& [id, config] : other_kinematic_object_ids) {
-    intrinsic_proto::icon::JointVec joint_vec;
-    VectorXdToRepeatedDouble(config, joint_vec.mutable_joints());
-    (*key_proto.mutable_other_kinematic_object_configs())[id] = joint_vec;
-  }
-  for (const auto& [child_id, parent_id] :
-       attachment_child_to_parent_ids_robot) {
-    (*key_proto.mutable_attachment_child_to_parent_ids_robot())[child_id] =
-        parent_id;
-  }
-  for (const auto& [child_id, parent_id] :
-       attachment_child_to_parent_ids_robot_children_objects) {
-    (*key_proto.mutable_attachment_child_to_parent_ids_robot_children_objects())
-        [child_id] = parent_id;
-  }
-
-  VectorXdToRepeatedDouble(
-      starting_robot_configuration,
-      key_proto.mutable_starting_robot_configuration()->mutable_joints());
-  *key_proto.mutable_world_application_limits() =
-      intrinsic::ToProto(world_application_limits);
-  *key_proto.mutable_world_collision_settings() = world_collision_settings;
-  *key_proto.mutable_motion_segment_collision_settings() = {
-      motion_segment_collision_settings.begin(),
-      motion_segment_collision_settings.end()};
-  *key_proto.mutable_attachment_parent_ids() = {attachment_parent_ids.begin(),
-                                                attachment_parent_ids.end()};
-  *key_proto.mutable_geometry_fingerprints() = {geometry_fingerprints.begin(),
-                                                geometry_fingerprints.end()};
-  *key_proto.mutable_serialized_geometry_ref_t_shape_aff() = {
-      serialized_geometry_ref_t_shape_aff.begin(),
-      serialized_geometry_ref_t_shape_aff.end()};
+  PopulateProtoFromCacheEntryFeatures(cache_entry_features, &key_proto);
   key_proto.set_uuid(uuid);
   return key_proto;
 }
@@ -1263,90 +773,17 @@ absl::StatusOr<MotionPlanningRequestCacheKey>
 MotionPlanningRequestCacheKey::FromProto(
     const intrinsic_proto::motion_planning::MotionPlanningRequestCacheKey&
         key_proto) {
-  absl::flat_hash_map<ObjectWorldResourceId, Pose3d>
-      poses_of_all_related_frames;
-  for (const auto& [id, pose] : key_proto.poses_of_all_related_frames()) {
-    INTR_ASSIGN_OR_RETURN(
-        poses_of_all_related_frames[ObjectWorldResourceId(id)],
-        intrinsic_proto::FromProto(pose));
-  }
-  absl::flat_hash_map<ObjectWorldResourceId, Pose3d> poses_of_all_objects;
-  for (const auto& [id, pose] : key_proto.poses_of_all_objects()) {
-    INTR_ASSIGN_OR_RETURN(poses_of_all_objects[ObjectWorldResourceId(id)],
-                          intrinsic_proto::FromProto(pose));
-  }
-
-  absl::flat_hash_map<uint32_t, Pose3d> poses_of_attachment_components_robot;
-  for (const auto& [id, pose] :
-       key_proto.poses_of_attachment_components_robot()) {
-    INTR_ASSIGN_OR_RETURN(poses_of_attachment_components_robot[id],
-                          intrinsic_proto::FromProto(pose));
-  }
-
-  absl::flat_hash_map<uint32_t, Pose3d>
-      poses_of_attachment_components_robot_children_objects;
-  for (const auto& [id, pose] :
-       key_proto.poses_of_attachment_components_robot_children_objects()) {
-    INTR_ASSIGN_OR_RETURN(
-        poses_of_attachment_components_robot_children_objects[id],
-        intrinsic_proto::FromProto(pose));
-  }
-
-  absl::flat_hash_map<std::string, eigenmath::VectorXd>
-      kinematic_object_configs;
-  for (const auto& [id, config] : key_proto.other_kinematic_object_configs()) {
-    kinematic_object_configs[id] = RepeatedDoubleToVectorXd(config.joints());
-  }
-
-  absl::flat_hash_map<uint32_t, uint32_t> attachment_child_to_parent_ids_robot;
-  for (const auto& [child_id, parent_id] :
-       key_proto.attachment_child_to_parent_ids_robot()) {
-    attachment_child_to_parent_ids_robot[child_id] = parent_id;
-  }
-
-  absl::flat_hash_map<uint32_t, uint32_t>
-      attachment_child_to_parent_ids_robot_children_objects;
-  for (const auto& [child_id, parent_id] :
-       key_proto.attachment_child_to_parent_ids_robot_children_objects()) {
-    attachment_child_to_parent_ids_robot_children_objects[child_id] = parent_id;
-  }
-
-  INTR_ASSIGN_OR_RETURN(const JointLimitsXd world_application_limits,
-                        ToJointLimitsXd(key_proto.world_application_limits()));
-
+  INTR_ASSIGN_OR_RETURN(MotionPlanningCacheEntryFeatures cache_entry_features,
+                        ExtractCacheEntryFeaturesFromProto(key_proto));
   MotionPlanningCacheGroupSignature group_signature{
       .normalized_motion_specification = key_proto.motion_specification(),
       .normalized_robot_specification = key_proto.robot_specification(),
   };
   const size_t group_id = group_signature.ComputeGroupId();
-
   return MotionPlanningRequestCacheKey{
       .group_signature = std::move(group_signature),
       .group_id = group_id,
-      .poses_of_all_related_frames = poses_of_all_related_frames,
-      .poses_of_all_objects = poses_of_all_objects,
-      .rel_attachment_poses_robot = poses_of_attachment_components_robot,
-      .rel_attachment_poses_robot_children_objects =
-          poses_of_attachment_components_robot_children_objects,
-      .starting_robot_configuration = RepeatedDoubleToVectorXd(
-          key_proto.starting_robot_configuration().joints()),
-      .world_application_limits = world_application_limits,
-      .world_collision_settings = key_proto.world_collision_settings(),
-      .motion_segment_collision_settings =
-          {key_proto.motion_segment_collision_settings().begin(),
-           key_proto.motion_segment_collision_settings().end()},
-      .attachment_parent_ids = {key_proto.attachment_parent_ids().begin(),
-                                key_proto.attachment_parent_ids().end()},
-      .attachment_child_to_parent_ids_robot =
-          attachment_child_to_parent_ids_robot,
-      .attachment_child_to_parent_ids_robot_children_objects =
-          attachment_child_to_parent_ids_robot_children_objects,
-      .geometry_fingerprints = {key_proto.geometry_fingerprints().begin(),
-                                key_proto.geometry_fingerprints().end()},
-      .serialized_geometry_ref_t_shape_aff =
-          {key_proto.serialized_geometry_ref_t_shape_aff().begin(),
-           key_proto.serialized_geometry_ref_t_shape_aff().end()},
-      .other_kinematic_object_ids = kinematic_object_configs,
+      .cache_entry_features = std::move(cache_entry_features),
       .uuid = key_proto.uuid(),
   };
 }

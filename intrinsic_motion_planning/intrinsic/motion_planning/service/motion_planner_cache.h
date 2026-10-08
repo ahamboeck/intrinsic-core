@@ -14,11 +14,8 @@
 
 #ifndef INTRINSIC_MOTION_PLANNING_SERVICE_MOTION_PLANNER_CACHE_H_
 #define INTRINSIC_MOTION_PLANNING_SERVICE_MOTION_PLANNER_CACHE_H_
-#include <stdbool.h>
 
-#include <atomic>
 #include <cstddef>
-#include <cstdint>
 #include <deque>
 #include <memory>
 #include <ostream>
@@ -26,28 +23,20 @@
 #include <vector>
 
 #include "absl/base/thread_annotations.h"
-#include "absl/container/flat_hash_map.h"
-#include "absl/container/flat_hash_set.h"
 #include "absl/status/status.h"
 #include "absl/status/statusor.h"
 #include "absl/strings/str_format.h"
 #include "absl/strings/string_view.h"
 #include "absl/synchronization/mutex.h"
-#include "intrinsic/eigenmath/types.h"
-#include "intrinsic/kinematics/types/joint_limits_xd.h"
-#include "intrinsic/math/pose3.h"
 #include "intrinsic/motion_planning/motion_planner/motion_planner.h"
 #include "intrinsic/motion_planning/proto/v1/motion_planner_service.pb.h"
-#include "intrinsic/motion_planning/proto/v1/motion_specification.pb.h"
 #include "intrinsic/motion_planning/proto/v1/robot_specification.pb.h"
 #include "intrinsic/motion_planning/service/motion_planner_cache.pb.h"
 #include "intrinsic/motion_planning/service/motion_planner_cache_entry_features.h"
 #include "intrinsic/motion_planning/service/motion_planner_cache_key_normalization.h"
 #include "intrinsic/util/lru_cache.h"
 #include "intrinsic/world/objects/object_world.h"
-#include "intrinsic/world/objects/object_world_ids.h"
 #include "intrinsic/world/proto/collision_settings.pb.h"
-#include "intrinsic/world/world.pb.h"
 
 namespace intrinsic {
 
@@ -71,62 +60,21 @@ static const auto* const distance_cache_format =
 struct MotionPlanningRequestCacheKey {
   // Normalized input to the group ID hash computation, contains the normalized
   // motion specification and robot specification from the motion request.
-  const MotionPlanningCacheGroupSignature group_signature;
+  MotionPlanningCacheGroupSignature group_signature;
   // Precomputed group ID hash of `group_signature`. When `std::nullopt`
   // (e.g., in aggregate-initialized test keys), `GetGroupId()` falls back
   // to computing `group_signature.ComputeGroupId()`.
-  const std::optional<size_t> group_id;
-  // References and poses of all frames referred in the MotionSpecification with
-  // respect to the root.
-  const absl::flat_hash_map<ObjectWorldResourceId, Pose3d>
-      poses_of_all_related_frames;
-  // References and poses of all objects in the world with respect to the root.
-  // Does not include the robot or its offspring.
-  const absl::flat_hash_map<ObjectWorldResourceId, Pose3d> poses_of_all_objects;
-  // References and poses of all attachment components of the robot relative to
-  // their parent.  For kinematic objects, the parent_t_child is the inbound
-  // pose (unaffected by config). Changes in those attachment components are
-  // disallowed for exact and fuzzy match.
-  const absl::flat_hash_map<uint32_t, Pose3d> rel_attachment_poses_robot;
-  // References and poses of all attachment components of the children objects
-  // of the robot (i.e., all objects attached to the robot kinematics) relative
-  // to their parent.  For kinematic objects, the parent_t_child is the inbound
-  // (unaffected by config). These components are considered static.
-  const absl::flat_hash_map<uint32_t, Pose3d>
-      rel_attachment_poses_robot_children_objects;
-  // The starting robot configuration in the request.
-  const eigenmath::VectorXd starting_robot_configuration;
-  // The application joint limits of the robot.
-  const JointLimitsXd world_application_limits;
-  // Collision settings of the world.
-  const intrinsic_proto::world::CollisionSettings world_collision_settings;
-  // Collision settings for each motion segment.
-  const std::vector<intrinsic_proto::world::CollisionSettings>
-      motion_segment_collision_settings;
-  // All parent ids in attachment components in the world.
-  const absl::flat_hash_set<uint32_t> attachment_parent_ids;
-  // Captures the structure of the attachment components of the robot.
-  const absl::flat_hash_map<uint32_t, uint32_t>
-      attachment_child_to_parent_ids_robot;
-  // Captures the structure of the attachment components of the children objects
-  // of the robot.
-  const absl::flat_hash_map<uint32_t, uint32_t>
-      attachment_child_to_parent_ids_robot_children_objects;
-  // All geometry ids in geometry components in the world.
-  const absl::flat_hash_set<std::string> geometry_fingerprints;
-  // All geometry ref_t_shape_aff in geometry components in the world.
-  const absl::flat_hash_set<std::string> serialized_geometry_ref_t_shape_aff;
-  // All kinematic object ids in the world excluding the robot. This is used to
-  // check if the kinematic objects in the world have changed.
-  const absl::flat_hash_map<std::string, eigenmath::VectorXd>
-      other_kinematic_object_ids;
+  std::optional<size_t> group_id;
+  // The features of the key, describing the world and robot state at the time
+  // of the request. Used to compute the similarity between this key
+  // and the cache entries of the cache group matching the id of the key.
+  MotionPlanningCacheEntryFeatures cache_entry_features;
   // UUID used for logging only.
-  const std::string uuid;
+  std::string uuid;
 
   // Create a `MotionPlanningRequestCacheKey` from the given set of input
   // arguments.
   static absl::StatusOr<MotionPlanningRequestCacheKey> Create(
-      const intrinsic_proto::world::internal::World& world_proto,
       const object_world::ObjectWorld& object_world,
       const intrinsic_proto::motion_planning::v1::MotionPlanningRequest& request
   );
@@ -278,14 +226,6 @@ struct MotionPlanningRequestCacheKeyDistance {
   // * robot_links_are_same is true
   // * diff_in_m_for_robot_attachment_components is under a default threshold.
   bool IsValidForFuzzyCacheHit(const IsValidForCacheHitOptions& options) const;
-
- private:
-  // Computes the weighted pose distance between `first_pose` and `second_pose`
-  // using `rotation_weight` to scale the angular distance and add it to the
-  // norm of the translational distance.
-  static double GetDiffOfPoses(const Pose3d& first_pose,
-                               const Pose3d& second_pose,
-                               double rotation_weight);
 };
 
 inline std::ostream& operator<<(
