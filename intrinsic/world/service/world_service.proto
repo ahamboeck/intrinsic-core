@@ -32,15 +32,9 @@ option go_package = "intrinsic/world/service/world_service_go_proto";
 // object world service and the missing functionality has been added to the
 // object world service.
 service WorldService {
-  /// World management APIs
-
-  /// Robot APIs
-
   // Get IK solution for a specified segment of kinematic chain and target pose.
   rpc GetIkSolution(GetIkSolutionRequest) returns (SingleIKSolution) {}
 }
-
-/// World management API messages
 
 // World information for a single world managed by the service.
 message WorldWithMetadata {
@@ -89,8 +83,6 @@ message WorldServerUpdate {
 message WorldServerUpdates {
   repeated WorldServerUpdate updates = 1;
 }
-
-/// Entity API messages
 
 message EntityWithMetadata {
   // The id of the world that owns the entity.
