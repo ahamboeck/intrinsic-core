@@ -2702,27 +2702,6 @@ absl::StatusOr<const WorldObject*> GetBaselineObject(
 
 }  // namespace
 
-grpc::Status ObjectWorldService::GetWorldState(
-    grpc::ServerContext* context,
-    const intrinsic_proto::world::GetWorldStateRequest* request,
-    intrinsic_proto::world::GetWorldStateResponse* response) {
-  const stats::ScopedSpan span("ObjectWorldService/GetWorldState", context);
-
-  // Get access to objects and entities of given world.
-  INTR_ASSIGN_OR_RETURN_GRPC(std::shared_ptr<WorldAndMutex> world_ptr,
-                             WorldStore().GetWorld(request->world_id()));
-
-  absl::ReaderMutexLock lock(*world_ptr->mtx);
-
-  INTR_RETURN_IF_ERROR_GRPC(
-      PopulateGetWorldStateResponseExceptMetadata(world_ptr->world, response));
-
-  INTR_ASSIGN_OR_RETURN_GRPC(*response->mutable_world_metadata(),
-                             ToProtoLocked(*world_ptr, request->world_id()));
-
-  return grpc::Status::OK;
-}
-
 grpc::Status ObjectWorldService::GetCollisionSettings(
     grpc::ServerContext* context,
     const intrinsic_proto::world::GetCollisionSettingsRequest* request,

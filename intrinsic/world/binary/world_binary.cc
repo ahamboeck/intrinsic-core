@@ -21,7 +21,6 @@
 #include <utility>
 #include <vector>
 
-#include "absl/base/casts.h"
 #include "absl/base/log_severity.h"
 #include "absl/flags/flag.h"
 #include "absl/functional/any_invocable.h"
@@ -58,7 +57,6 @@
 #include "intrinsic/world/pubsub/world_tf_publisher.h"
 #include "intrinsic/world/service/object_world_service.h"
 #include "intrinsic/world/service/updater/world_updater.h"
-#include "intrinsic/world/service/world_compatibility_service.grpc.pb.h"
 #include "intrinsic/world/service/world_service.grpc.pb.h"
 #include "intrinsic/world/service/world_storage.h"
 #include "intrinsic/world/service/worldservice_impl.h"
@@ -255,14 +253,7 @@ int main(int argc, char** argv) {
   // blocks on the conductor server below.
   std::unique_ptr<grpc::Server> world_server = CreateAndStartServerOrDie(
       world_server_address,
-      {world_service.get(),
-       absl::implicit_cast<
-           intrinsic_proto::world::ObjectWorldService::Service*>(
-           object_world_service.get()),
-       absl::implicit_cast<
-           intrinsic_proto::world::WorldCompatibilityService::Service*>(
-           object_world_service.get()),
-       world_updater.get()});
+      {world_service.get(), object_world_service.get(), world_updater.get()});
 
   LOG(INFO) << "World Server listening on " << world_server_address;
 
