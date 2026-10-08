@@ -12,16 +12,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-load("//bazel:go_macros.bzl", "go_library")
-
 package(default_visibility = ["//intrinsic:internal_api_users"])
 
-go_library(
+alias(
     name = "behaviortree",
-    srcs = ["behavior_tree_visitor.go"],
-    importpath = "intrinsic/executive/go/behaviortree",
-    deps = [
-        "//intrinsic/executive/proto:behavior_tree_go_proto",
-        "@org_golang_google_protobuf//proto",
-    ],
+    actual = "//intrinsic_sdk/intrinsic/executive/go:behaviortree",
+    tags = ["go/intrinsic-ioc-transition-tdd"],
 )

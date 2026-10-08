@@ -213,7 +213,6 @@ go_library(
     visibility = [
         "//intrinsic/assets:__subpackages__",
         "//intrinsic/conductor:__subpackages__",
-        "//intrinsic/frontend/go:__pkg__",
         "//intrinsic/kubernetes/workcell_spec:__subpackages__",
         "//intrinsic/modified_solution:__subpackages__",
         "//intrinsic/skills/internal:__pkg__",

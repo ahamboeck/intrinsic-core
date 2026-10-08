@@ -194,6 +194,7 @@ cc_binary(
     visibility = [
         "//intrinsic/scene/build_defs:__subpackages__",
         "//intrinsic/scene/sdf:__pkg__",
+        "//intrinsic_sdk/intrinsic/scene/build_defs:__subpackages__",
     ],
     deps = [
         ":scene_object_from_sdf",

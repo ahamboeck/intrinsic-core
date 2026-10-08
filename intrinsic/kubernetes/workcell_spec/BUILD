@@ -381,17 +381,11 @@ go_library(
     ] + [],
 )
 
-go_library(
+alias(
     name = "imagetags",
-    srcs = [
-        "imagetags.go",
-    ],
-    importpath = "intrinsic/kubernetes/workcell_spec/imagetags",
+    actual = "//intrinsic_sdk/intrinsic/kubernetes/workcell_spec:imagetags",
+    tags = ["go/intrinsic-ioc-transition-tdd"],
     visibility = [
         "//visibility:public",
-    ],
-    deps = [
-        "@com_github_pborman_uuid//:go_default_library",
-        "@com_github_pkg_errors//:go_default_library",
     ],
 )

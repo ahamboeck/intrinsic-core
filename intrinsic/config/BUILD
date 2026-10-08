@@ -12,9 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-load("//bazel:cc_macros.bzl", "cc_library")
 load("//bazel:go_macros.bzl", "go_library")
-load("//bazel:python.bzl", "py_library")
 
 # Application, process and resource set describe all user-accessible configuration of a
 # solution.
@@ -50,34 +48,28 @@ go_library(
     ],
 )
 
-cc_library(
+alias(
     name = "environments_cc",
-    srcs = ["environments.cc"],
-    hdrs = ["environments.h"],
+    actual = "//intrinsic_sdk/intrinsic/config:environments_cc",
+    tags = ["go/intrinsic-ioc-transition-tdd"],
     visibility = [
         "//visibility:public",
     ],
-    deps = [
-        "@abseil-cpp//absl/status",
-        "@abseil-cpp//absl/status:statusor",
-        "@abseil-cpp//absl/strings",
-        "@abseil-cpp//absl/strings:string_view",
-        "@abseil-cpp//absl/types:span",
-    ],
 )
 
-py_library(
+alias(
     name = "environments_py",
-    srcs = ["environments.py"],
+    actual = "//intrinsic_sdk/intrinsic/config:environments_py",
+    tags = ["go/intrinsic-ioc-transition-tdd"],
     visibility = [
         "//visibility:public",
     ],
 )
 
-go_library(
+alias(
     name = "environments",
-    srcs = ["environments.go"],
-    importpath = "intrinsic/config/environments",
+    actual = "//intrinsic_sdk/intrinsic/config:environments",
+    tags = ["go/intrinsic-ioc-transition-tdd"],
     visibility = [
         "//visibility:public",
     ],
@@ -152,9 +144,8 @@ go_library(
     ],
 )
 
-go_library(
+alias(
     name = "operationmode",
-    srcs = ["operation_mode.go"],
-    importpath = "intrinsic/config/operationmode",
-    deps = ["@intrinsic_apis//intrinsic/config/proto:operation_mode_go_proto"],
+    actual = "//intrinsic_sdk/intrinsic/config:operationmode",
+    tags = ["go/intrinsic-ioc-transition-tdd"],
 )

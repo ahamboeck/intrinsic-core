@@ -114,7 +114,10 @@ go_proto_library(
     name = "move_robot_go_proto",
     importpath = "intrinsic/motion_planning/skills/move_robot_go_proto",
     proto = ":move_robot_proto",
-    visibility = ["//intrinsic/logging:__subpackages__"],
+    visibility = [
+        "//intrinsic/logging:__subpackages__",
+        "//intrinsic_sdk/intrinsic/logging:__subpackages__",
+    ],
     deps = [
         "@intrinsic_apis//intrinsic/assets/proto:field_metadata_go_proto",
         "@intrinsic_apis//intrinsic/assets/proto/v1:resolved_dependency_go_proto",
