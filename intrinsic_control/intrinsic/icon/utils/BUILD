@@ -438,6 +438,8 @@ cc_library(
         ":realtime_status_macro",
         "//intrinsic/util/status:status_macros",
         "//intrinsic_control/intrinsic/icon/testing:realtime_annotations",
+        "//intrinsic_sdk/intrinsic/util/time",
+        "@abseil-cpp//absl/base:core_headers",
         "@abseil-cpp//absl/status:statusor",
         "@abseil-cpp//absl/strings",
         "@abseil-cpp//absl/strings:str_format",
