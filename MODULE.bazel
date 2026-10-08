@@ -507,7 +507,7 @@ bazel_dep(name = "libmodbus", version = "3.1.12")
 bazel_dep(name = "libxml2-go", version = "0.0.0-20250331-c934e3f.bcr.1")
 bazel_dep(name = "libxml2", version = "2.14.4.bcr.1")  # TODO(b/441702501): Remove when aravis updates this transitive dependency to 2.14 to support clang 21
 bazel_dep(name = "libyuv", version = "1787")  
-bazel_dep(name = "libzip", version = "1.11.4.bcr.3")
+bazel_dep(name = "libzip", version = "1.12")
 bazel_dep(name = "llvm-project", version = "17.0.3", repo_name = "com_github_llvm_llvm-project")  
 bazel_dep(name = "magic_enum", version = "0.9.8")  
 bazel_dep(name = "mcap", version = "2.1.3")  
