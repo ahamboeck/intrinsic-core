@@ -196,7 +196,6 @@ cc_binary(
 
 cc_oci_image(
     name = "camera-server-image",
-    base = "//intrinsic/kubernetes:base-image-cc-oci",
     binary = ":camera_server",
     cmd = [
         "/intrinsic_perception/intrinsic/perception/cameras/services/v1/camera_server",
@@ -216,7 +215,6 @@ cc_binary(
 
 cc_oci_image(
     name = "ros_camera_service_image",
-    base = "//intrinsic/kubernetes:base-image-cc-oci",
     binary = ":ros_camera_server",
     cmd = [
         "/intrinsic_perception/intrinsic/perception/cameras/services/v1/ros_camera_server",

@@ -378,6 +378,7 @@ use_repo(
 ########
 
 bazel_dep(name = "rules_rs", version = "0.1.0")
+
 rules_rs_toolchains = use_extension("@rules_rs//rs/toolchains:module_extension.bzl", "toolchains")
 rules_rs_toolchains.toolchain(
     name = "rust_1_89_toolchains",
@@ -385,6 +386,7 @@ rules_rs_toolchains.toolchain(
     version = "1.89.0",
 )
 use_repo(rules_rs_toolchains, "rust_1_89_toolchains")
+
 register_toolchains("@rust_1_89_toolchains//...")
 
 
@@ -773,6 +775,9 @@ oci.pull(
     platforms = ["linux/amd64"],
     tag = "bookworm",
 )
+
+# Prefer using distroless_base over this. distroless_base works for the vast
+# majority of C++ images built with Bazel and is smaller and less exposed.
 oci.pull(
     name = "distroless_cc",
     digest = "sha256:159783207c2cd44c2aa5715961d13c8612368ac9bd450f887e3f08fc8ea461e3",
@@ -873,7 +878,6 @@ http_jar(
 # Others #
 ##########
 
-
 bazel_dep(name = "rules_distroless", version = "0.8.0")
 
 apt = use_extension("@rules_distroless//apt:extensions.bzl", "apt")
@@ -935,7 +939,6 @@ use_repo(
     "ros2_rosbag2",
     "ros2_rosidl",
 )
-
 
 
 

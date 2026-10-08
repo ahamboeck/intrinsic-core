@@ -63,22 +63,6 @@ container_image(
 )
 
 container_image(
-    name = "base-image-cc-oci",
-    base = "@distroless_cc",
-    entrypoint = [
-        "/dumb-init",
-        "--",
-    ],
-    files = ["@dumb-init"],
-    visibility = [
-        ":intrinsic_kubernetes_users",
-        "//third_party/abb_hardware_module/abb_hwm:__pkg__",
-        "//third_party/chromium:__pkg__",
-        "//third_party/toybox:__pkg__",
-    ],
-)
-
-container_image(
     name = "python3-image-oci",
     base = "@distroless_python3",
     visibility = [
