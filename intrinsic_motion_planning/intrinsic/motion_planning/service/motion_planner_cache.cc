@@ -21,6 +21,7 @@
 #include <deque>
 #include <limits>
 #include <memory>
+#include <optional>
 #include <string>
 #include <tuple>
 #include <utility>
@@ -37,6 +38,10 @@
 #include "absl/strings/str_cat.h"
 #include "absl/strings/str_format.h"
 #include "absl/strings/string_view.h"
+#include "absl/synchronization/mutex.h"
+#include "absl/types/span.h"
+#include "google/protobuf/map.h"
+#include "google/protobuf/repeated_ptr_field.h"
 #include "intrinsic/eigenmath/types.h"
 #include "intrinsic/geometry/api/affine_transform_of_geometry.h"
 #include "intrinsic/geometry/api/geometry_fingerprint.h"
@@ -53,6 +58,7 @@
 #include "intrinsic/motion_planning/proto/v1/motion_specification.pb.h"
 #include "intrinsic/motion_planning/proto/v1/robot_specification.pb.h"
 #include "intrinsic/motion_planning/service/motion_planner_cache.pb.h"
+#include "intrinsic/motion_planning/service/motion_planner_cache_entry_features.h"
 #include "intrinsic/motion_planning/service/motion_planner_cache_key_normalization.h"
 #include "intrinsic/motion_planning/service/motion_planner_cache_utils.h"
 #include "intrinsic/util/eigen.h"
@@ -168,6 +174,189 @@ double ComputeDistanceForJointLimits(const JointLimitsXd& first_joint_limits,
                                                second_joint_limits.max_torque));
 
   return max_diff_in_joint_limits;
+}
+
+// Replaces `proto_links` with serialized `CacheEntryAttachmentPose` protos from
+// `links`.
+void AttachmentPosesToProto(
+    absl::Span<const CacheEntryAttachmentPose> links,
+    google::protobuf::RepeatedPtrField<
+        intrinsic_proto::motion_planning::CacheEntryAttachmentPose>&
+        proto_links) {
+  proto_links.Clear();
+  proto_links.Reserve(links.size());
+  for (const CacheEntryAttachmentPose& link : links) {
+    intrinsic_proto::motion_planning::CacheEntryAttachmentPose* const
+        proto_link = proto_links.Add();
+    proto_link->set_normalized_name(link.normalized_name);
+    proto_link->set_normalized_parent_name(link.normalized_parent_name);
+    *proto_link->mutable_parent_t_child() =
+        intrinsic::ToProto(link.parent_t_child);
+  }
+}
+
+// Deserializes sorted `CacheEntryFramePose` entries from `key_proto`, falling
+// back to the deprecated `poses_of_all_related_frames` map when empty.
+absl::StatusOr<std::vector<CacheEntryFramePose>> RelatedFramePosesFromProto(
+    const intrinsic_proto::motion_planning::MotionPlanningRequestCacheKey&
+        key_proto) {
+  std::vector<CacheEntryFramePose> related_frame_poses;
+  if (!key_proto.related_frame_poses().empty()) {
+    related_frame_poses.reserve(key_proto.related_frame_poses_size());
+    for (const intrinsic_proto::motion_planning::CacheEntryFramePose&
+             proto_pose : key_proto.related_frame_poses()) {
+      INTR_ASSIGN_OR_RETURN(const Pose3d pose,
+                            intrinsic_proto::FromProto(proto_pose.pose()),
+                            _ << "Failed to deserialize related frame pose.");
+      related_frame_poses.push_back(CacheEntryFramePose{
+          .normalized_frame_name = proto_pose.normalized_frame_name(),
+          .pose = pose,
+      });
+    }
+    return related_frame_poses;
+  }
+
+  // Fall back to deprecated map fields and sort deterministically.
+  related_frame_poses.reserve(key_proto.poses_of_all_related_frames_size());
+  for (const auto& [frame_name, pose_proto] :
+       key_proto.poses_of_all_related_frames()) {
+    INTR_ASSIGN_OR_RETURN(
+        const Pose3d pose, intrinsic_proto::FromProto(pose_proto),
+        _ << "Failed to deserialize legacy related frame pose.");
+    related_frame_poses.push_back(CacheEntryFramePose{
+        .normalized_frame_name = frame_name,
+        .pose = pose,
+    });
+  }
+  absl::c_sort(related_frame_poses, IsFramePoseKeyLessThan);
+  return related_frame_poses;
+}
+
+// Deserializes sorted `CacheEntryObjectPose` entries from `key_proto`, falling
+// back to the deprecated `poses_of_all_objects` map when empty.
+absl::StatusOr<std::vector<CacheEntryObjectPose>> ObjectPosesFromProto(
+    const intrinsic_proto::motion_planning::MotionPlanningRequestCacheKey&
+        key_proto) {
+  std::vector<CacheEntryObjectPose> object_poses;
+  if (!key_proto.object_poses().empty()) {
+    object_poses.reserve(key_proto.object_poses_size());
+    for (const intrinsic_proto::motion_planning::CacheEntryObjectPose&
+             proto_pose : key_proto.object_poses()) {
+      INTR_ASSIGN_OR_RETURN(const Pose3d pose,
+                            intrinsic_proto::FromProto(proto_pose.pose()),
+                            _ << "Failed to deserialize object pose.");
+      object_poses.push_back(CacheEntryObjectPose{
+          .normalized_object_name = proto_pose.normalized_object_name(),
+          .pose = pose,
+      });
+    }
+    return object_poses;
+  }
+
+  // Fall back to deprecated map fields and sort deterministically.
+  object_poses.reserve(key_proto.poses_of_all_objects_size());
+  for (const auto& [object_name, pose_proto] :
+       key_proto.poses_of_all_objects()) {
+    INTR_ASSIGN_OR_RETURN(const Pose3d pose,
+                          intrinsic_proto::FromProto(pose_proto),
+                          _ << "Failed to deserialize legacy object pose.");
+    object_poses.push_back(CacheEntryObjectPose{
+        .normalized_object_name = object_name,
+        .pose = pose,
+    });
+  }
+  absl::c_sort(object_poses, [](const CacheEntryObjectPose& first_object,
+                                const CacheEntryObjectPose& second_object) {
+    return first_object.normalized_object_name <
+           second_object.normalized_object_name;
+  });
+  return object_poses;
+}
+
+// Deserializes sorted `CacheEntryAttachmentPose` entries from `proto_links`,
+// falling back to `legacy_poses_map` and `legacy_child_to_parent_map` when
+// `proto_links` is empty.
+absl::StatusOr<std::vector<CacheEntryAttachmentPose>> AttachmentPosesFromProto(
+    const google::protobuf::RepeatedPtrField<
+        intrinsic_proto::motion_planning::CacheEntryAttachmentPose>&
+        proto_links,
+    const google::protobuf::Map<uint32_t, intrinsic_proto::Pose>&
+        legacy_poses_map,
+    const google::protobuf::Map<uint32_t, uint32_t>&
+        legacy_child_to_parent_map) {
+  std::vector<CacheEntryAttachmentPose> attachment_links;
+  if (!proto_links.empty()) {
+    attachment_links.reserve(proto_links.size());
+    for (const intrinsic_proto::motion_planning::CacheEntryAttachmentPose&
+             proto_link : proto_links) {
+      INTR_ASSIGN_OR_RETURN(
+          const Pose3d pose,
+          intrinsic_proto::FromProto(proto_link.parent_t_child()),
+          _ << "Failed to deserialize attachment parent_t_child pose.");
+      attachment_links.push_back(CacheEntryAttachmentPose{
+          .normalized_name = proto_link.normalized_name(),
+          .normalized_parent_name = proto_link.normalized_parent_name(),
+          .parent_t_child = pose,
+      });
+    }
+    return attachment_links;
+  }
+
+  // Fall back to deprecated map fields and sort deterministically.
+  attachment_links.reserve(legacy_poses_map.size());
+  for (const auto& [child_id, pose_proto] : legacy_poses_map) {
+    INTR_ASSIGN_OR_RETURN(const Pose3d pose,
+                          intrinsic_proto::FromProto(pose_proto),
+                          _ << "Failed to deserialize legacy attachment pose.");
+    const auto parent_it = legacy_child_to_parent_map.find(child_id);
+    const bool has_parent = parent_it != legacy_child_to_parent_map.end();
+    attachment_links.push_back(CacheEntryAttachmentPose{
+        .normalized_name = absl::StrCat(child_id),
+        .normalized_parent_name =
+            has_parent ? absl::StrCat(parent_it->second) : "",
+        .parent_t_child = pose,
+    });
+  }
+  absl::c_sort(attachment_links, IsAttachmentLinkKeyLessThan);
+  return attachment_links;
+}
+
+// Deserializes sorted `CacheEntryKinematicActor` entries from `key_proto`,
+// falling back to the deprecated `other_kinematic_object_configs` map when
+// empty.
+std::vector<CacheEntryKinematicActor> KinematicActorsFromProto(
+    const intrinsic_proto::motion_planning::MotionPlanningRequestCacheKey&
+        key_proto) {
+  std::vector<CacheEntryKinematicActor> other_kinematic_actors;
+  if (!key_proto.other_kinematic_actors().empty()) {
+    other_kinematic_actors.reserve(key_proto.other_kinematic_actors_size());
+    for (const intrinsic_proto::motion_planning::CacheEntryKinematicActor&
+             proto_actor : key_proto.other_kinematic_actors()) {
+      other_kinematic_actors.push_back(CacheEntryKinematicActor{
+          .normalized_name = proto_actor.normalized_name(),
+          .joint_positions =
+              RepeatedDoubleToVectorXd(proto_actor.joint_positions().joints()),
+      });
+    }
+    return other_kinematic_actors;
+  }
+
+  // Fall back to deprecated map fields and sort deterministically.
+  other_kinematic_actors.reserve(
+      key_proto.other_kinematic_object_configs_size());
+  for (const auto& [actor_name, config_proto] :
+       key_proto.other_kinematic_object_configs()) {
+    other_kinematic_actors.push_back(CacheEntryKinematicActor{
+        .normalized_name = actor_name,
+        .joint_positions = RepeatedDoubleToVectorXd(config_proto.joints()),
+    });
+  }
+  absl::c_sort(
+      other_kinematic_actors, [](const CacheEntryKinematicActor& first_actor,
+                                 const CacheEntryKinematicActor& second_actor) {
+        return first_actor.normalized_name < second_actor.normalized_name;
+      });
+  return other_kinematic_actors;
 }
 
 }  // namespace
@@ -888,6 +1077,114 @@ MotionPlanningRequestCacheKey::Create(
           std::move(serialized_geometry_ref_t_shape_aff),
       .other_kinematic_object_ids = std::move(kinematic_object_ids),
        .uuid = caller_id,
+  };
+}
+
+void MotionPlanningRequestCacheKey::PopulateProtoFromCacheEntryFeatures(
+    const MotionPlanningCacheEntryFeatures& features,
+    intrinsic_proto::motion_planning::MotionPlanningRequestCacheKey* const
+        key_proto) {
+  key_proto->clear_related_frame_poses();
+  key_proto->mutable_related_frame_poses()->Reserve(
+      features.poses_of_all_related_frames.size());
+  for (const CacheEntryFramePose& frame_pose :
+       features.poses_of_all_related_frames) {
+    intrinsic_proto::motion_planning::CacheEntryFramePose* const proto_pose =
+        key_proto->add_related_frame_poses();
+    proto_pose->set_normalized_frame_name(frame_pose.normalized_frame_name);
+    *proto_pose->mutable_pose() = intrinsic::ToProto(frame_pose.pose);
+  }
+
+  key_proto->clear_object_poses();
+  key_proto->mutable_object_poses()->Reserve(
+      features.poses_of_all_objects.size());
+  for (const CacheEntryObjectPose& object_pose :
+       features.poses_of_all_objects) {
+    intrinsic_proto::motion_planning::CacheEntryObjectPose* const proto_pose =
+        key_proto->add_object_poses();
+    proto_pose->set_normalized_object_name(object_pose.normalized_object_name);
+    *proto_pose->mutable_pose() = intrinsic::ToProto(object_pose.pose);
+  }
+
+  AttachmentPosesToProto(features.robot_links,
+                         *key_proto->mutable_robot_links());
+  AttachmentPosesToProto(features.tool_links, *key_proto->mutable_tool_links());
+
+  key_proto->clear_other_kinematic_actors();
+  key_proto->mutable_other_kinematic_actors()->Reserve(
+      features.other_kinematic_actors.size());
+  for (const CacheEntryKinematicActor& actor :
+       features.other_kinematic_actors) {
+    intrinsic_proto::motion_planning::CacheEntryKinematicActor* const
+        proto_actor = key_proto->add_other_kinematic_actors();
+    proto_actor->set_normalized_name(actor.normalized_name);
+    VectorXdToRepeatedDouble(
+        actor.joint_positions,
+        proto_actor->mutable_joint_positions()->mutable_joints());
+  }
+
+  VectorXdToRepeatedDouble(
+      features.starting_robot_configuration,
+      key_proto->mutable_starting_robot_configuration()->mutable_joints());
+  *key_proto->mutable_world_application_limits() =
+      intrinsic::ToProto(features.world_application_limits);
+  *key_proto->mutable_world_collision_settings() =
+      features.world_collision_settings;
+  *key_proto->mutable_motion_segment_collision_settings() = {
+      features.motion_segment_collision_settings.begin(),
+      features.motion_segment_collision_settings.end()};
+  *key_proto->mutable_geometry_fingerprints() = {
+      features.geometry_fingerprints.begin(),
+      features.geometry_fingerprints.end()};
+  *key_proto->mutable_serialized_geometry_ref_t_shape_aff() = {
+      features.serialized_geometry_ref_t_shape_aff.begin(),
+      features.serialized_geometry_ref_t_shape_aff.end()};
+}
+
+absl::StatusOr<MotionPlanningCacheEntryFeatures>
+MotionPlanningRequestCacheKey::ExtractCacheEntryFeaturesFromProto(
+    const intrinsic_proto::motion_planning::MotionPlanningRequestCacheKey&
+        key_proto) {
+  INTR_ASSIGN_OR_RETURN(std::vector<CacheEntryFramePose> related_frame_poses,
+                        RelatedFramePosesFromProto(key_proto));
+  INTR_ASSIGN_OR_RETURN(std::vector<CacheEntryObjectPose> object_poses,
+                        ObjectPosesFromProto(key_proto));
+  INTR_ASSIGN_OR_RETURN(std::vector<CacheEntryAttachmentPose> robot_links,
+                        AttachmentPosesFromProto(
+                            key_proto.robot_links(),
+                            key_proto.poses_of_attachment_components_robot(),
+                            key_proto.attachment_child_to_parent_ids_robot()));
+  INTR_ASSIGN_OR_RETURN(
+      std::vector<CacheEntryAttachmentPose> tool_links,
+      AttachmentPosesFromProto(
+          key_proto.tool_links(),
+          key_proto.poses_of_attachment_components_robot_children_objects(),
+          key_proto.attachment_child_to_parent_ids_robot_children_objects()));
+  std::vector<CacheEntryKinematicActor> other_kinematic_actors =
+      KinematicActorsFromProto(key_proto);
+
+  INTR_ASSIGN_OR_RETURN(JointLimitsXd world_application_limits,
+                        ToJointLimitsXd(key_proto.world_application_limits()),
+                        _ << "Failed to deserialize world application limits.");
+
+  return MotionPlanningCacheEntryFeatures{
+      .poses_of_all_related_frames = std::move(related_frame_poses),
+      .poses_of_all_objects = std::move(object_poses),
+      .robot_links = std::move(robot_links),
+      .tool_links = std::move(tool_links),
+      .other_kinematic_actors = std::move(other_kinematic_actors),
+      .geometry_fingerprints = {key_proto.geometry_fingerprints().begin(),
+                                key_proto.geometry_fingerprints().end()},
+      .serialized_geometry_ref_t_shape_aff =
+          {key_proto.serialized_geometry_ref_t_shape_aff().begin(),
+           key_proto.serialized_geometry_ref_t_shape_aff().end()},
+      .starting_robot_configuration = RepeatedDoubleToVectorXd(
+          key_proto.starting_robot_configuration().joints()),
+      .world_application_limits = std::move(world_application_limits),
+      .world_collision_settings = key_proto.world_collision_settings(),
+      .motion_segment_collision_settings =
+          {key_proto.motion_segment_collision_settings().begin(),
+           key_proto.motion_segment_collision_settings().end()},
   };
 }
 

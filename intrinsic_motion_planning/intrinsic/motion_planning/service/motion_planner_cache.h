@@ -41,6 +41,7 @@
 #include "intrinsic/motion_planning/proto/v1/motion_specification.pb.h"
 #include "intrinsic/motion_planning/proto/v1/robot_specification.pb.h"
 #include "intrinsic/motion_planning/service/motion_planner_cache.pb.h"
+#include "intrinsic/motion_planning/service/motion_planner_cache_entry_features.h"
 #include "intrinsic/motion_planning/service/motion_planner_cache_key_normalization.h"
 #include "intrinsic/util/lru_cache.h"
 #include "intrinsic/world/objects/object_world.h"
@@ -132,6 +133,19 @@ struct MotionPlanningRequestCacheKey {
       const;
 
   static absl::StatusOr<MotionPlanningRequestCacheKey> FromProto(
+      const intrinsic_proto::motion_planning::MotionPlanningRequestCacheKey&
+          key_proto);
+
+  // Populates `key_proto` with serialized scene features from `features`.
+  static void PopulateProtoFromCacheEntryFeatures(
+      const MotionPlanningCacheEntryFeatures& features,
+      intrinsic_proto::motion_planning::MotionPlanningRequestCacheKey*
+          key_proto);
+
+  // Deserializes `MotionPlanningCacheEntryFeatures` from `key_proto`, falling
+  // back to deprecated map fields when the repeated feature fields are empty.
+  static absl::StatusOr<MotionPlanningCacheEntryFeatures>
+  ExtractCacheEntryFeaturesFromProto(
       const intrinsic_proto::motion_planning::MotionPlanningRequestCacheKey&
           key_proto);
 
