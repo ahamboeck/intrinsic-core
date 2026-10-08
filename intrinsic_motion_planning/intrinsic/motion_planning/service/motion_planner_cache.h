@@ -221,12 +221,10 @@ struct MotionPlanningRequestCacheKeyDistance {
   //    max_diff_in_world_application_limits_threshold
   bool IsValidForCacheHit(const IsValidForCacheHitOptions& options) const;
 
-  // Returns true if this distance qualifies as a fuzzy cache hit candidate
-  // under `options`. Requires `motion_segment_collision_settings_are_same` and
-  // `robot_links_are_same` to be true,
-  // `diff_in_m_for_robot_attachment_components` to be within tolerance, and
-  // `max_diff_in_world_application_limits` to be within
-  // `options.max_diff_in_world_application_limits_threshold`.
+  // Return true if the distances is considered valid for fuzzy cache hit.
+  // The distance is valid if all of the following are true:
+  // * robot_links_are_same is true
+  // * diff_in_m_for_robot_attachment_components is under a default threshold.
   bool IsValidForFuzzyCacheHit(const IsValidForCacheHitOptions& options) const;
 };
 
@@ -264,27 +262,12 @@ inline std::ostream& operator<<(
 // See `Insert` and `Lookup` for more details.
 class PlanTrajectoryCache {
  public:
-  // An entry in the cache holding the group identifier (`group_id`), logging
-  // identifier (`uuid`), extracted scene features (`features`), and planned
-  // trajectory (`result`) of `MotionPlannerService::PlanTrajectory()`.
+  // An entry in the cache holds the input (key) and output (result) of
+  // MotionPlannerService::PlanTrajectory.
   struct CacheEntry {
-    std::string uuid;
-    size_t group_id = 0;
-    MotionPlanningCacheEntryFeatures features;
+    MotionPlanningRequestCacheKey key;
     MotionPlanner::PlanTrajectoryResult result;
-
-    CacheEntry() = default;
-    // Constructs a `CacheEntry` by extracting `uuid`, `group_id`, and
-    // `features` from `cache_key` along with `plan_result`.
-    explicit CacheEntry(const MotionPlanningRequestCacheKey& cache_key,
-                        MotionPlanner::PlanTrajectoryResult plan_result = {})
-        : uuid(cache_key.uuid),
-          group_id(cache_key.GetGroupId()),
-          features(cache_key.cache_entry_features),
-          result(std::move(plan_result)) {}
   };
-  using CacheGroupEntries = std::deque<std::unique_ptr<CacheEntry>>;
-
   // Perform input validation and create a cache.
   static absl::StatusOr<std::unique_ptr<PlanTrajectoryCache>> Create(
       int max_num_of_groups, int max_num_of_entries_per_group,
@@ -292,20 +275,21 @@ class PlanTrajectoryCache {
           distance_options = MotionPlanningRequestCacheKeyDistance::
               IsValidForCacheHitOptions{});
 
-  // The return type of `Lookup()`.
-  // If `exact_match` is true, `cached_entry` is an exact cache hit for the
-  // given `key`. If `exact_match` is false, `cached_entry` is the closest
-  // fuzzy cache hit candidate in the group. See `Lookup()` for more details.
+  // The return type of the `Lookup` function.
+  // If `exact_match` is true, then `cached_entry` is a valid match to
+  // the given key.
+  // If `exact_match` is false, then `cached_entry` is the newest
+  // entry in the group. See the doc of `Lookup` for more information.
   struct LookupResult {
-    // True if the returned cached entry is an exact match to the given cache
-    // key.
+    // True if the returned cached entry key is an exact match to the given
+    // cache key.
     const bool exact_match;
     // The uuid of the given cache key for look up.
     const std::string given_cache_key_uuid;
     // The returned cached entry.
     const PlanTrajectoryCache::CacheEntry cached_entry;
-    // The difference between the given cache key to `Lookup()` and the returned
-    // cached entry.
+    // The difference between the given cache key to `Lookup` and the returned
+    // cached entry key.
     const MotionPlanningRequestCacheKeyDistance distance;
 
     // Return true if this LookupResult has a valid trajectory.
@@ -353,14 +337,14 @@ class PlanTrajectoryCache {
   // reached). The oldest entry of that group will be removed.
   absl::Status Insert(std::unique_ptr<CacheEntry> entry);
 
-  // Looks up `key` in the cache. Cannot be marked `const` since `LruCache`
-  // lookup updates LRU ordering.
-  // First looks up the group matching `key.GetGroupId()`, returning
-  // `absl::NotFoundError` if the group does not exist.
-  // Then searches the group for the first exact match (`IsValidForCacheHit()`),
-  // or the closest fuzzy match candidate (`IsValidForFuzzyCacheHit()`).
-  // Returns `absl::NotFoundError` if no entry in the group is a valid exact or
-  // fuzzy hit.
+  // Lookup a key in the cache. This cannot be marked const since it requires
+  // reservations.
+  // First we try to find the group based on the key's group_id.
+  // Return `absl::NotFoundError` if such group does not exist in the cache.
+  // Then we iterate through all entries in the group and find a matching one
+  // based on `IsValidForCacheHit`. Return (true, matched_entry) if one is
+  // found.
+  // If no matching entry is found, return (false, newest_entry_in_group).
   absl::StatusOr<LookupResult> Lookup(const MotionPlanningRequestCacheKey& key);
 
  private:
@@ -377,7 +361,7 @@ class PlanTrajectoryCache {
               IsValidForCacheHitOptions{});
 
   const int max_num_of_entries_per_group_;
-  using GroupCache = LruCache<size_t, CacheGroupEntries>;
+  using GroupCache = LruCache<size_t, std::deque<std::unique_ptr<CacheEntry>>>;
   GroupCache group_id_to_entries_ ABSL_GUARDED_BY(mutex_);
   mutable absl::Mutex mutex_;
   const MotionPlanningRequestCacheKeyDistance::IsValidForCacheHitOptions

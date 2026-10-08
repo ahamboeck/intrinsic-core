@@ -683,11 +683,12 @@ MotionPlannerService::ConvertPlanTrajectoryResultToTrajectoryPlanningResponse(
       if (valid_trajectory) {
         // Log the cache hit and increase the cache hit count.
         LOG(INFO) << absl::StrFormat(
-            *return_cache_format_string, lookup_result.cached_entry.uuid,
+            *return_cache_format_string, lookup_result.cached_entry.key.uuid,
             cache_key.uuid, plan_trajectory_cache_->GetNumOfEntries());
         cache_hit = lookup_result.exact_match ? "exact" : "fuzzy";
         logger.Attach("cache_hit_type", cache_hit);
-        logger.Attach("matched_cache_key_id", lookup_result.cached_entry.uuid);
+        logger.Attach("matched_cache_key_id",
+                      lookup_result.cached_entry.key.uuid);
 
         INTR_RETURN_IF_ERROR_GRPC(
             ConvertPlanTrajectoryResultToTrajectoryPlanningResponse(

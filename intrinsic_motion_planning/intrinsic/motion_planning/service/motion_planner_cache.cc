@@ -404,72 +404,6 @@ std::vector<CacheEntryKinematicActor> KinematicActorsFromProto(
   return other_kinematic_actors;
 }
 
-using CacheGroupEntries = PlanTrajectoryCache::CacheGroupEntries;
-
-// Helper struct for searching for the matching cache entry.
-struct CacheEntrySearchResult {
-  CacheGroupEntries::iterator entry_it;
-  MotionPlanningRequestCacheKeyDistance distance;
-  bool is_exact_match = false;
-};
-
-// Finds the best matching entry in `entries` for `key` under `options`.
-// Returns immediately with `is_exact_match = true` on the first exact hit, or
-// returns the closest valid fuzzy hit (`is_exact_match = false`). Returns
-// `absl::NotFoundError` if no entry in `entries` qualifies as an exact or
-// fuzzy hit.
-absl::StatusOr<CacheEntrySearchResult> FindClosestEntryInGroup(
-    const MotionPlanningRequestCacheKey& key,
-    const MotionPlanningRequestCacheKeyDistance::IsValidForCacheHitOptions&
-        options,
-    CacheGroupEntries& entries) {
-  std::optional<MotionPlanningRequestCacheKeyDistance> min_distance;
-  CacheGroupEntries::iterator closest_entry_it = entries.end();
-
-  // Iterate through the cache entries and track the entry with the shortest
-  // distance to the given `key`.
-  for (CacheGroupEntries::iterator entry_it = entries.begin();
-       entry_it != entries.end(); ++entry_it) {
-    const PlanTrajectoryCache::CacheEntry& cached_entry = **entry_it;
-    LOG(INFO) << "Checking distance between " << key.uuid << " and "
-              << cached_entry.uuid;
-    INTR_ASSIGN_OR_RETURN(
-        const MotionPlanningRequestCacheKeyDistance entry_distance,
-        ComputeCacheEntryFeaturesDistance(key.cache_entry_features,
-                                          cached_entry.features,
-                                          options.rotation_weight));
-
-    // Check if within hit thresholds.
-    if (entry_distance.IsValidForCacheHit(options)) {
-      // This is an exact match. No need to look for more.
-      return CacheEntrySearchResult{
-          .entry_it = entry_it,
-          .distance = entry_distance,
-          .is_exact_match = true,
-      };
-    }
-    if (!entry_distance.IsValidForFuzzyCacheHit(options)) {
-      continue;
-    }
-
-    // This is a valid fuzzy hit, check if closer than the current closest hit.
-    if (!min_distance.has_value() ||
-        entry_distance.shorter_than(*min_distance)) {
-      min_distance = entry_distance;
-      closest_entry_it = entry_it;
-    }
-  }
-
-  if (!min_distance.has_value()) {
-    return absl::NotFoundError("No valid cache entry found.");
-  }
-  return CacheEntrySearchResult{
-      .entry_it = closest_entry_it,
-      .distance = *min_distance,
-      .is_exact_match = false,
-  };
-}
-
 }  // namespace
 
 absl::StatusOr<MotionPlanningRequestCacheKeyDistance>
@@ -585,10 +519,6 @@ MotionPlanningRequestCacheKeyDistance::IsValidForCacheHitOptions::Validate()
 
 bool MotionPlanningRequestCacheKeyDistance::IsValidForFuzzyCacheHit(
     const IsValidForCacheHitOptions& options) const {
-  if (!motion_segment_collision_settings_are_same) {
-    LOG(INFO) << "motion_segment_collision_settings_are_same is false";
-    return false;
-  }
   if (diff_in_m_for_robot_attachment_components >= kMaxDiffRobotAttachmentInM) {
     LOG(INFO) << "diff_in_m_for_robot_attachment_components is "
               << diff_in_m_for_robot_attachment_components;
@@ -896,6 +826,12 @@ absl::StatusOr<bool> PlanTrajectoryCache::LookupResult::HasValidTrajectory(
     return false;
   }
 
+  if (!distance.motion_segment_collision_settings_are_same) {
+    LOG(INFO) << "Not a valid trajectory due to different motion segment "
+                 "collision settings.";
+    return false;
+  }
+
   if (!distance.IsValidForFuzzyCacheHit({})) {
     return false;
   }
@@ -958,7 +894,7 @@ std::vector<std::string> PlanTrajectoryCache::GetUUIDsOfGroup(size_t group_id) {
   if (lookup.found()) {
     uuids.reserve(lookup.value()->size());
     for (const auto& entry : *lookup.value()) {
-      uuids.push_back(entry->uuid);
+      uuids.push_back(entry->key.uuid);
     }
   }
 
@@ -966,7 +902,7 @@ std::vector<std::string> PlanTrajectoryCache::GetUUIDsOfGroup(size_t group_id) {
 }
 
 absl::Status PlanTrajectoryCache::Insert(std::unique_ptr<CacheEntry> entry) {
-  const size_t group_id = entry->group_id;
+  const size_t group_id = entry->key.GetGroupId();
 
   absl::MutexLock lock(mutex_);
 
@@ -977,8 +913,8 @@ absl::Status PlanTrajectoryCache::Insert(std::unique_ptr<CacheEntry> entry) {
   std::optional<GroupCache::ScopedLookup> lookup;
   lookup.emplace(&group_id_to_entries_, group_id);
   if (!lookup->found()) {
-    group_id_to_entries_.insert(group_id, new CacheGroupEntries(),
-                                /*units=*/1);
+    group_id_to_entries_.insert(
+        group_id, new std::deque<std::unique_ptr<CacheEntry>>(), /*units=*/1);
     lookup.emplace(&group_id_to_entries_, group_id);
     if (!lookup->found()) {
       return absl::InternalError("Failed to find newly created group");
@@ -987,7 +923,7 @@ absl::Status PlanTrajectoryCache::Insert(std::unique_ptr<CacheEntry> entry) {
   }
 
   INTR_RET_CHECK(lookup.has_value());
-  CacheGroupEntries& entries = *lookup->value();
+  std::deque<std::unique_ptr<CacheEntry>>& entries = *lookup->value();
 
   if (entries.size() >= max_num_of_entries_per_group_) {
     LOG(INFO) << "Group " << group_id << " is full. Removing the oldest entry.";
@@ -1012,35 +948,83 @@ absl::StatusOr<PlanTrajectoryCache::LookupResult> PlanTrajectoryCache::Lookup(
     return absl::NotFoundError(
         absl::StrFormat("Cannot find group %u of the given key.", group_id));
   }
-  CacheGroupEntries& group_entries = *lookup.value();
+  std::deque<std::unique_ptr<CacheEntry>>& group_entries = *lookup.value();
 
-  INTR_ASSIGN_OR_RETURN(
-      const CacheEntrySearchResult search_result,
-      FindClosestEntryInGroup(key, distance_options_, group_entries));
+  // Initialize min_distance to the largest possible distance.
+  MotionPlanningRequestCacheKeyDistance min_distance{
+      .diff_in_m_for_all_related_frame_poses =
+          std::numeric_limits<double>::max(),
+      .diff_in_m_for_all_object_poses = std::numeric_limits<double>::max(),
+      .diff_in_m_for_robot_attachment_components =
+          std::numeric_limits<double>::max(),
+      .diff_in_m_for_robot_children_attachment_components =
+          std::numeric_limits<double>::max(),
+      .max_diff_in_rad_for_starting_robot_configuration =
+          std::numeric_limits<double>::max(),
+      .max_diff_in_rad_for_kinematic_objects =
+          std::numeric_limits<double>::max(),
+      .max_diff_in_world_application_limits =
+          std::numeric_limits<double>::max(),
+      .num_of_objects_new_in_one_key = std::numeric_limits<int>::max(),
+      .world_collision_settings_are_same = false,
+      .motion_segment_collision_settings_are_same = false,
+      .robot_links_are_same = false,
+      .tool_links_are_same = false,
+      .geometry_fingerprints_are_same = false,
+      .geometry_ref_t_shape_aff_are_same = false,
+  };
+  // This is used to track the entry with the shortest distance to the given
+  // key.
+  std::deque<std::unique_ptr<CacheEntry>>::iterator closest_entry_it =
+      group_entries.begin();
+  bool exact_match = false;
 
-  // Put the matched entry at the front of the queue to make this cache LRU
-  // without reallocating or copying `CacheEntry`.
-  const bool need_to_put_entry_at_front =
-      group_entries.size() > 1 &&
-      search_result.entry_it != group_entries.begin();
-  if (need_to_put_entry_at_front) {
-    std::unique_ptr<CacheEntry> entry = std::move(*search_result.entry_it);
-    group_entries.erase(search_result.entry_it);
-    group_entries.push_front(std::move(entry));
+  for (auto it = group_entries.begin(); it != group_entries.end(); ++it) {
+    LOG(INFO) << "Checking distance between " << key.uuid << " and "
+              << it->get()->key.uuid;
+    INTR_ASSIGN_OR_RETURN(
+        const MotionPlanningRequestCacheKeyDistance diff_key_distance,
+        MotionPlanningRequestCacheKeyDistance::GetDistance(
+            key, it->get()->key, distance_options_.rotation_weight));
+
+    if (diff_key_distance.IsValidForCacheHit(distance_options_)) {
+      // This is an exact match. No need to look for more.
+      min_distance = diff_key_distance;
+      closest_entry_it = it;
+      exact_match = true;
+      break;
+    }
+
+    // If this entry misses the exact cache hit, check if it is the closest one
+    // to the given key.
+    if (diff_key_distance.IsValidForFuzzyCacheHit(distance_options_) &&
+        diff_key_distance.shorter_than(min_distance)) {
+      min_distance = diff_key_distance;
+      closest_entry_it = it;
+    }
   }
-  const CacheEntry& matched_entry = *group_entries.front();
 
-  if (search_result.is_exact_match) {
-    LOG(INFO) << "Return the exact cache entry " << matched_entry.uuid;
+  // Pop the entry and put it at the front of the queue to make this cache LRU.
+  PlanTrajectoryCache::CacheEntry closest_entry(**closest_entry_it);
+  if (group_entries.size() > 1) {
+    group_entries.erase(closest_entry_it);
+    group_entries.push_front(std::make_unique<CacheEntry>(closest_entry));
+  }
+
+  if (exact_match) {
+    // Return an exact match entry.
+    LOG(INFO) << "Return the exact cache entry " << closest_entry.key.uuid;
   } else {
-    LOG(INFO) << "Return the closest cache entry " << matched_entry.uuid;
+    // If no matching entry is found. Return the closest entry in the
+    // group. The group is guaranteed to have at least one element.
+    LOG(INFO) << "Return the closest cache entry " << closest_entry.key.uuid;
   }
 
   return PlanTrajectoryCache::LookupResult{
-      .exact_match = search_result.is_exact_match,
+      .exact_match = exact_match,
       .given_cache_key_uuid = key.uuid,
-      .cached_entry = matched_entry,
-      .distance = search_result.distance};
+      .cached_entry = std::move(closest_entry),
+      .distance = min_distance};
 }
 
 }  // namespace intrinsic
