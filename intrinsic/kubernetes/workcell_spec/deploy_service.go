@@ -23,8 +23,7 @@ import (
 	"slices"
 	"time"
 
-	"intrinsic/assets/conversion/applicationasset"
-	"intrinsic/assets/conversion/runtime"
+	"intrinsic/assets/conversion/solutionconversion"
 	"intrinsic/assets/dependencies/graph"
 	"intrinsic/assets/dependencies/platform"
 	"intrinsic/assets/dependencies/runtimegraph"
@@ -660,18 +659,12 @@ func (s *DeployService) deployApplication(
 	}
 
 	log.InfoContextf(ctx, "DeployApplication done")
-	solution, err := asSolution(app, rts)
+	sd, err := solutionconversion.AsSolutionDeployment(app, rts)
 	if err != nil {
-		log.ErrorContextf(ctx, "asSolution(app, rts) failed: %v", err)
+		log.ErrorContextf(ctx, "solutionconversion.AsSolutionDeployment(app, rts) failed: %v", err)
 		return nil, status.Errorf(codes.Internal, "failed to convert local state to a solution: %v", err)
 	}
-	return &solutiondeploymentpb.SolutionDeployment{
-		Name:          app.GetMetadata().GetSolutionDeploymentId(),
-		DisplayName:   app.GetMetadata().GetDisplayName(),
-		SolutionId:    app.GetMetadata().GetName(),
-		OperationMode: app.GetOperationMode(),
-		Solution:      solution,
-	}, nil
+	return sd, nil
 }
 
 func (s *DeployService) StopApplication(ctx context.Context, req *deploypb.StopApplicationRequest) (*deploypb.StopApplicationResponse, error) {
@@ -1091,11 +1084,15 @@ func (s *DeployService) UpdateSolutionDeployment(ctx context.Context, req *solut
 		if solutionDeploymentID == "" {
 			solutionDeploymentID = newSolutionDeploymentID()
 		}
+		if req.SolutionDeployment == nil {
+			req.SolutionDeployment = &solutiondeploymentpb.SolutionDeployment{}
+		}
+		req.SolutionDeployment.Name = solutionDeploymentID
 
-		app, err := asApplication(req.GetSolutionDeployment().GetSolution())
+		app, err := solutionconversion.AsApplication(req.GetSolutionDeployment())
 		if err != nil {
-			log.ErrorContextf(ctx, "failed to convert solution to application: %v", err)
-			return nil, status.Errorf(codes.InvalidArgument, "failed to convert solution to application: %v", err)
+			log.ErrorContextf(ctx, "failed to convert solution deployment to application: %v", err)
+			return nil, status.Errorf(codes.InvalidArgument, "failed to convert solution deployment to application: %v", err)
 		}
 
 		if email, err := userEmailFromContext(ctx); err != nil {
@@ -1103,12 +1100,6 @@ func (s *DeployService) UpdateSolutionDeployment(ctx context.Context, req *solut
 		} else if email != "" {
 			app.Metadata.LastUpdatedBy = email
 		}
-		if solutionID := req.GetSolutionDeployment().GetSolutionId(); solutionID != "" {
-			app.Metadata.Name = solutionID
-		}
-		app.Metadata.SolutionDeploymentId = solutionDeploymentID
-		app.Metadata.DisplayName = req.GetSolutionDeployment().GetDisplayName()
-		app.OperationMode = req.GetSolutionDeployment().GetOperationMode()
 
 		var validateDependencies deployValidator = func(ctx context.Context, app *apb.Application, rts map[string]*rtrpb.ResourceTypeRuntime) error {
 			es, err := s.validateDependencies(ctx, app, rts)
@@ -1170,88 +1161,14 @@ func (s *DeployService) GetSolutionDeployment(ctx context.Context, req *solution
 		return nil, status.Errorf(codes.Internal, "failed to retrieve asset information: %v", err)
 	}
 
-	solution, err := asSolution(app, rts)
+	sd, err := solutionconversion.AsSolutionDeployment(app, rts)
 	if err != nil {
-		log.ErrorContextf(ctx, "asSolution failed: %v", err)
+		log.ErrorContextf(ctx, "solutionconversion.AsSolutionDeployment failed: %v", err)
 		return nil, status.Errorf(codes.Internal, "failed to convert to solution: %v", err)
 	}
 
 	log.InfoContext(ctx, "Returning solution deployment")
-	sd := &solutiondeploymentpb.SolutionDeployment{
-		Name:          app.GetMetadata().GetSolutionDeploymentId(),
-		DisplayName:   app.GetMetadata().GetDisplayName(),
-		SolutionId:    app.GetMetadata().GetName(),
-		OperationMode: app.GetOperationMode(),
-		Solution:      solution,
-	}
 	return asView(sd, req.GetView()), nil
-}
-
-func asApplication(sol *solutionpb.Solution) (*apb.Application, error) {
-	assets := make(map[string]*apb.Application_Asset)
-	for id, asset := range sol.GetAssets() {
-		appAsset, err := applicationasset.AssetToApplicationAsset(asset)
-		if err != nil {
-			return nil, fmt.Errorf("failed to convert asset %q: %w", id, err)
-		}
-		assets[id] = appAsset
-	}
-
-	instances := make(map[string]*apb.Application_Instance)
-	for name, inst := range sol.GetInstances() {
-		instances[name] = &apb.Application_Instance{
-			Asset:  inst.GetAsset(),
-			Config: inst.GetConfig(),
-		}
-	}
-
-	return &apb.Application{
-		Metadata:           &commonpb.Metadata{},
-		Process:            &processpb.Process{},
-		Assets:             assets,
-		Instances:          instances,
-		ObjectWorldUpdates: sol.GetObjectWorldUpdates(),
-	}, nil
-}
-
-func asSolution(app *apb.Application, rts map[string]*rtrpb.ResourceTypeRuntime) (*solutionpb.Solution, error) {
-	rtsByID := map[string]*rtrpb.ResourceTypeRuntime{}
-	for _, rt := range rts {
-		id := idutils.IDFromProtoUnchecked(rt.GetMetadata().GetIdVersion().GetId())
-		rtsByID[id] = rt
-	}
-
-	assets := make(map[string]*assetpb.Asset)
-	for id, rtr := range rtsByID {
-		asset, err := runtime.RuntimeToAsset(rtr)
-		if err != nil {
-			// TODO: b/517345754: Remove when all old-style pose estimators and
-			// resources using world fragments have been removed from all solutions
-			// and we can enforce this conversion.
-			log.Warningf("Omitting %q from solution because runtime.RuntimeToAsset failed: %v", id, err)
-		} else {
-			assets[id] = asset
-		}
-	}
-
-	instances := make(map[string]*aigrpcpb.AssetInstance)
-	for _, ri := range app.GetResources().GetResourceInstances() {
-		id, err := idutils.RemoveVersionFrom(ri.GetTypeIdVersion())
-		if err != nil {
-			return nil, fmt.Errorf("invalid type_id_version for instance %q: %w", ri.GetName(), err)
-		}
-		rtr, ok := rtsByID[id]
-		if !ok {
-			return nil, fmt.Errorf("missing runtime for instance %q (type %q)", ri.GetName(), id)
-		}
-		instances[ri.GetName()] = instanceconversion.ConvertResourceInstanceToAssetInstance(ri, rtr)
-	}
-
-	return &solutionpb.Solution{
-		Assets:             assets,
-		Instances:          instances,
-		ObjectWorldUpdates: app.GetResources().GetObjectWorldUpdates().GetUpdates(),
-	}, nil
 }
 
 func viewOrDefault(view solutiondeploymentpb.SolutionDeploymentView, defaultView solutiondeploymentpb.SolutionDeploymentView) (solutiondeploymentpb.SolutionDeploymentView, error) {

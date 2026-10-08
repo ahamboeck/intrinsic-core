@@ -80,6 +80,30 @@ go_library(
 )
 
 go_library(
+    name = "solutionconversion",
+    srcs = [
+        "solution_conversion.go",
+    ],
+    importpath = "intrinsic/assets/conversion/solutionconversion",
+    visibility = ["//intrinsic:public_api_users"],
+    deps = [
+        ":applicationasset",
+        ":runtime",
+        "//intrinsic/assets:idutils",
+        "//intrinsic/assets/instances:instanceconversion",
+        "//intrinsic/assets/proto/v1:asset_go_proto",
+        "//intrinsic/config/proto:application_go_proto",
+        "//intrinsic/config/proto:common_go_proto",
+        "//intrinsic/config/proto:process_go_proto",
+        "//intrinsic/resources/proto:resource_type_runtime_go_proto",
+        "//intrinsic_sdk/intrinsic/assets/proto/v1:solution_deployment_go_proto",
+        "//intrinsic_sdk/intrinsic/assets/proto/v1:solution_go_proto",
+        "@com_github_golang_glog//:go_default_library",
+        "@intrinsic_apis//intrinsic/assets/proto/v1:asset_instances_go_proto",
+    ],
+)
+
+go_library(
     name = "metadata",
     srcs = [
         "metadata.go",
