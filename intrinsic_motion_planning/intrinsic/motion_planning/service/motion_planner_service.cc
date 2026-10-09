@@ -14,6 +14,8 @@
 
 #include "intrinsic/motion_planning/service/motion_planner_service.h"
 
+#include <algorithm>
+#include <array>
 #include <cstddef>
 #include <memory>
 #include <optional>
@@ -118,7 +120,9 @@
 #include "intrinsic/world/proto/object_world_updates.pb.h"
 #include "intrinsic/world/service/objects/object_world_converter.h"
 #include "intrinsic/world/world.h"
-#include "opencensus/stats/stats.h"
+#include "opentelemetry/common/attribute_value.h"
+#include "opentelemetry/context/runtime_context.h"
+#include "opentelemetry/metrics/sync_instruments.h"
 
 namespace intrinsic {
 namespace {

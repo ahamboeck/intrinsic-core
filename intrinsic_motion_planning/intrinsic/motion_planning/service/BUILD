@@ -137,7 +137,7 @@ cc_library(
         "@intrinsic_apis//intrinsic/motion_planning/proto/v1:motion_planning_error_cc_proto",
         "@intrinsic_apis//intrinsic/motion_planning/proto/v1:robot_specification_cc_proto",
         "@intrinsic_apis//intrinsic/world/proto:collision_checker_config_cc_proto",
-        "@io_opencensus_cpp//opencensus/stats",
+        "@io_opentelemetry_cpp//api",
     ] + [],
 )
 
