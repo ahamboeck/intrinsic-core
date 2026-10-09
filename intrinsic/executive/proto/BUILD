@@ -27,12 +27,6 @@ alias(
     tags = ["go/intrinsic-ioc-transition-tdd"],
 )
 
-alias(
-    name = "behavior_call_cc_proto",
-    actual = "//intrinsic_sdk/intrinsic/executive/proto:behavior_call_cc_proto",
-    tags = ["go/intrinsic-ioc-transition-tdd"],
-)
-
 # code_execution_service
 proto_library(
     name = "code_execution_service_proto",
@@ -175,18 +169,6 @@ alias(
 )
 
 alias(
-    name = "executive_service_cc_grpc_proto",
-    actual = "//intrinsic_sdk/intrinsic/executive/proto:executive_service_cc_grpc_proto",
-    tags = ["go/intrinsic-ioc-transition-tdd"],
-)
-
-alias(
-    name = "executive_service_cc_proto",
-    actual = "//intrinsic_sdk/intrinsic/executive/proto:executive_service_cc_proto",
-    tags = ["go/intrinsic-ioc-transition-tdd"],
-)
-
-alias(
     name = "executive_service_go_proto",
     actual = "//intrinsic_sdk/intrinsic/executive/proto:executive_service_go_proto",
     tags = ["go/intrinsic-ioc-transition-tdd"],
@@ -195,12 +177,6 @@ alias(
 alias(
     name = "run_metadata_py_pb2",
     actual = "//intrinsic_sdk/intrinsic/executive/proto:run_metadata_py_pb2",
-    tags = ["go/intrinsic-ioc-transition-tdd"],
-)
-
-alias(
-    name = "run_metadata_cc_proto",
-    actual = "//intrinsic_sdk/intrinsic/executive/proto:run_metadata_cc_proto",
     tags = ["go/intrinsic-ioc-transition-tdd"],
 )
 
@@ -217,20 +193,8 @@ alias(
 )
 
 alias(
-    name = "executive_events_cc_proto",
-    actual = "//intrinsic_sdk/intrinsic/executive/proto:executive_events_cc_proto",
-    tags = ["go/intrinsic-ioc-transition-tdd"],
-)
-
-alias(
     name = "behavior_tree_proto",
     actual = "//intrinsic_sdk/intrinsic/executive/proto:behavior_tree_proto",
-    tags = ["go/intrinsic-ioc-transition-tdd"],
-)
-
-alias(
-    name = "behavior_tree_cc_proto",
-    actual = "//intrinsic_sdk/intrinsic/executive/proto:behavior_tree_cc_proto",
     tags = ["go/intrinsic-ioc-transition-tdd"],
 )
 
@@ -243,12 +207,6 @@ alias(
 alias(
     name = "behavior_tree_go_proto",
     actual = "//intrinsic_sdk/intrinsic/executive/proto:behavior_tree_go_proto",
-    tags = ["go/intrinsic-ioc-transition-tdd"],
-)
-
-alias(
-    name = "world_query_proto_descriptor_set",
-    actual = "//intrinsic_sdk/intrinsic/executive/proto:world_query_proto_descriptor_set",
     tags = ["go/intrinsic-ioc-transition-tdd"],
 )
 

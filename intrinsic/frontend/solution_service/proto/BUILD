@@ -21,18 +21,6 @@ alias(
 )
 
 alias(
-    name = "solution_service_cc_proto",
-    actual = "//intrinsic_sdk/intrinsic/frontend/solution_service/proto:solution_service_cc_proto",
-    tags = ["go/intrinsic-ioc-transition-tdd"],
-)
-
-alias(
-    name = "solution_service_cc_grpc_proto",
-    actual = "//intrinsic_sdk/intrinsic/frontend/solution_service/proto:solution_service_cc_grpc_proto",
-    tags = ["go/intrinsic-ioc-transition-tdd"],
-)
-
-alias(
     name = "solution_service_py_pb2",
     actual = "//intrinsic_sdk/intrinsic/frontend/solution_service/proto:solution_service_py_pb2",
     tags = ["go/intrinsic-ioc-transition-tdd"],
