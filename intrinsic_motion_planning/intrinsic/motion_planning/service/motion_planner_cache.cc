@@ -218,6 +218,9 @@ ComputeCacheEntryFeaturesDistance(
       .geometry_ref_t_shape_aff_are_same =
           query_features.serialized_geometry_ref_t_shape_aff ==
           cached_features.serialized_geometry_ref_t_shape_aff,
+
+      .motion_segment_events_are_same = true,
+
   };
 }
 
@@ -482,6 +485,23 @@ MotionPlanningRequestCacheKeyDistance::GetDistance(
                             first_key.cache_entry_features,
                             second_key.cache_entry_features, rotation_weight));
 
+
+  const intrinsic::pb_equals pb_equals{};
+  // Motion events are expected to maintain their order.
+  distance.motion_segment_events_are_same = absl::c_equal(
+      first_key.group_signature.normalized_motion_specification
+          .motion_segments(),
+      second_key.group_signature.normalized_motion_specification
+          .motion_segments(),
+      [&pb_equals](const intrinsic_proto::motion_planning::v1::MotionSegment&
+                       first_segment,
+                   const intrinsic_proto::motion_planning::v1::MotionSegment&
+                       second_segment) {
+        return absl::c_equal(first_segment.motion_segment_events(),
+                             second_segment.motion_segment_events(), pb_equals);
+      });
+
+
   return distance;
 }
 
@@ -552,6 +572,11 @@ bool MotionPlanningRequestCacheKeyDistance::shorter_than(
       other.geometry_ref_t_shape_aff_are_same) {
     return geometry_ref_t_shape_aff_are_same;
   }
+
+  if (motion_segment_events_are_same != other.motion_segment_events_are_same) {
+    return motion_segment_events_are_same;
+  }
+
   // If all values are identical, return False.
   return false;
 }
@@ -623,6 +648,12 @@ bool MotionPlanningRequestCacheKeyDistance::IsValidForCacheHit(
     LOG(INFO) << "motion_segment_collision_settings_are_same is false";
     return false;
   }
+
+  if (!motion_segment_events_are_same) {
+    LOG(INFO) << "motion_segment_events_are_same is false";
+    return false;
+  }
+
   if (!tool_links_are_same) {
     LOG(INFO) << "tool_links_are_same is false";
     return false;

@@ -556,6 +556,11 @@ MotionPlannerService::ConvertPlanTrajectoryResultToTrajectoryPlanningResponse(
       ToProto(plan_trajectory_result.trajectory)
   );
   *response.mutable_discretized() = trajectory_proto;
+
+  *response.mutable_motion_events() = {
+      plan_trajectory_result.motion_events.begin(),
+      plan_trajectory_result.motion_events.end()};
+
   INTR_LOG_IF_ERROR(absl::LogSeverity::kError,
                     planned_trajectory_publisher_.Publish(trajectory_proto));
 

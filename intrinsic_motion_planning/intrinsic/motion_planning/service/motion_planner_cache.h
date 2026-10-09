@@ -176,6 +176,11 @@ struct MotionPlanningRequestCacheKeyDistance {
   bool geometry_fingerprints_are_same;
   // True if both keys have the same `geometry_ref_t_shape_aff`.
   bool geometry_ref_t_shape_aff_are_same;
+
+  // True if all motion segment events are identical.
+  bool motion_segment_events_are_same;
+
+
   // Return True if `this` distance is considered shorter than the `other`
   // distance. Two caches with a shorter distance is more likely to match each
   // other. Instead of overriding the < operator, we use a custom function. The
@@ -211,6 +216,9 @@ struct MotionPlanningRequestCacheKeyDistance {
   // * tool_links_are_same
   // * geometry_fingerprints_are_same
   // * geometry_ref_t_shape_aff_are_same
+
+  // * motion_segment_events_are_same
+
   // * num_of_objects_new_in_one_key == 0
   // * diff_in_m_for_all_related_frame_poses <
   //    diff_in_m_for_all_related_frame_poses_threshold

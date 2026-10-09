@@ -81,6 +81,8 @@ proto_library(
         "//intrinsic/skills/apps/icon2:__pkg__",
     ],
     deps = [
+        "//intrinsic_control/intrinsic/icon/proto/v1:motion_event_types_proto",
+        "//intrinsic_motion_planning/intrinsic/motion_planning/proto/v1:motion_events_proto",
         "@intrinsic_apis//intrinsic/assets/proto:field_metadata_proto",
         "@intrinsic_apis//intrinsic/assets/proto/v1:resolved_dependency_proto",
         "@intrinsic_apis//intrinsic/icon/proto:joint_space_proto",
@@ -119,6 +121,8 @@ go_proto_library(
         "//intrinsic_sdk/intrinsic/logging:__subpackages__",
     ],
     deps = [
+        "//intrinsic_control/intrinsic/icon/proto/v1:motion_event_types_go_proto",
+        "//intrinsic_motion_planning/intrinsic/motion_planning/proto/v1:motion_events_go_proto",
         "@intrinsic_apis//intrinsic/assets/proto:field_metadata_go_proto",
         "@intrinsic_apis//intrinsic/assets/proto/v1:resolved_dependency_go_proto",
         "@intrinsic_apis//intrinsic/icon/proto:joint_space_go_proto",

@@ -301,6 +301,12 @@ ToProto(const MotionPlannerNonvolatileCacheValue& value) {
     *proto.add_path_segments() = ToProto(path_segment);
   }
   INTR_ASSIGN_OR_RETURN(*proto.mutable_trajectory(), ToProto(value.trajectory));
+
+  for (const intrinsic_proto::motion_planning::v1::MotionEvent& event :
+       value.motion_events) {
+    *proto.add_motion_events() = event;
+  }
+
   return proto;
 }
 
@@ -315,9 +321,18 @@ absl::StatusOr<MotionPlannerNonvolatileCacheValue> FromProto(
   }
   INTR_ASSIGN_OR_RETURN(const JointTrajectoryPVA trajectory,
                         FromProto(value_proto.trajectory()));
+
+  std::vector<intrinsic_proto::motion_planning::v1::MotionEvent> motion_events;
+  for (const auto& motion_event : value_proto.motion_events()) {
+    motion_events.push_back(motion_event);
+  }
+
   return MotionPlannerNonvolatileCacheValue{
       .trajectory = trajectory,
       .path_segments = path_segments,
+
+      .motion_events = motion_events,
+
   };
 }
 

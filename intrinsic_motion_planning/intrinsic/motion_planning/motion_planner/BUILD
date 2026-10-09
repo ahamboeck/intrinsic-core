@@ -196,6 +196,7 @@ cc_library(
         "//intrinsic_motion_planning/intrinsic/motion_planning/path_planning/planners:rrt_configs_cc_proto",
         "//intrinsic_motion_planning/intrinsic/motion_planning/path_planning/planners:shortcutter_configs_cc_proto",
         "//intrinsic_motion_planning/intrinsic/motion_planning/proto:motion_specification_proto_utils",
+        "//intrinsic_motion_planning/intrinsic/motion_planning/proto/v1:motion_events_cc_proto",
         "//intrinsic_motion_planning/intrinsic/motion_planning/proto/v1:motion_specification_cc_proto",
         "//intrinsic_sdk/intrinsic/eigenmath",
         "//intrinsic_sdk/intrinsic/math:pose3",
@@ -210,7 +211,7 @@ cc_library(
         "@intrinsic_apis//intrinsic/motion_planning/proto/v1:motion_planning_limits_cc_proto",
         "@intrinsic_apis//intrinsic/world/proto:collision_checker_config_cc_proto",
         "@intrinsic_apis//intrinsic/world/proto:collision_settings_cc_proto",
-    ] + [],
+    ],
 )
 
 cc_library(
@@ -471,6 +472,7 @@ cc_test(
         "//intrinsic_motion_planning/intrinsic/motion_planning/path_planning:kinematics_system_proxy_util",
         "//intrinsic_motion_planning/intrinsic/motion_planning/path_planning:path_segment",
         "//intrinsic_motion_planning/intrinsic/motion_planning/proto:motion_specification_proto_utils",
+        "//intrinsic_motion_planning/intrinsic/motion_planning/proto/v1:motion_events_cc_proto",
         "//intrinsic_motion_planning/intrinsic/motion_planning/proto/v1:motion_specification_cc_proto",
         "//intrinsic_motion_planning/intrinsic/motion_planning/testing:constrained_motion_test_utils",
         "//intrinsic_motion_planning/intrinsic/motion_planning/trajectory_planning/topp:path_sample",
@@ -495,7 +497,7 @@ cc_test(
         "@intrinsic_apis//intrinsic/motion_planning/proto/v1:motion_blending_parameter_cc_proto",
         "@intrinsic_apis//intrinsic/motion_planning/proto/v1:motion_planner_config_cc_proto",
         "@intrinsic_apis//intrinsic/world/proto:collision_settings_cc_proto",
-    ] + [],
+    ],
 )
 
 alias(

@@ -154,6 +154,10 @@ LoadMotionFromNonvolatileCacheIfRequested(
     MotionPlanner::PlanTrajectoryResult result{
         .trajectory = found_entry.value().value.trajectory,
         .path_segments = found_entry.value().value.path_segments
+
+        ,
+        .motion_events = found_entry.value().value.motion_events
+
     };
     const int num_motion_segments =
         request.motion_specification().motion_segments_size();
@@ -206,6 +210,10 @@ SaveMotionToNonvolatileCacheIfRequested(
   MotionPlannerNonvolatileCacheValue cache_value{
       .trajectory = plan_trajectory_result.trajectory,
       .path_segments = plan_trajectory_result.path_segments
+
+      ,
+      .motion_events = plan_trajectory_result.motion_events
+
   };
 
   INTR_ASSIGN_OR_RETURN(const std::string uuid,
