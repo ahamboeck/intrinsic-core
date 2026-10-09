@@ -33,7 +33,8 @@ import trimesh
 
 from intrinsic_perception.intrinsic.perception.service.ioc_pose_estimator.proto import ioc_service_config_pb2
 from intrinsic_perception.intrinsic.perception.service.ioc_pose_estimator.service import pose_estimator_model
-from intrinsic_perception.intrinsic.perception.service.ioc_pose_estimator.service import segmentation_model
+from intrinsic_perception.intrinsic.perception.service.ioc_pose_estimator.service import segmenter
+from intrinsic_perception.intrinsic.perception.service.ioc_pose_estimator.service import segmenter_factory
 from intrinsic_perception.intrinsic.perception.service.ioc_train_service.proto import ioc_pose_estimator_params_pb2
 from intrinsic.assets.install import installed_assets_client
 from intrinsic.assets.proto import id_pb2
@@ -345,9 +346,11 @@ class IocPoseEstimatorService(
           " config."
       )
 
-    self.segmentation_model = segmentation_model.SegmentationModel(
-        ml_service_stub=self._ml_service_stub,
-        model_dependency=self._config.segmentation_model,
+    self.segmentation_model: segmenter.Segmenter = (
+        segmenter_factory.create_segmenter(
+            ml_service_stub=self._ml_service_stub,
+            model_dependency=self._config.segmentation_model,
+        )
     )
     self.pose_estimator_model = pose_estimator_model.PoseEstimationModel(
         ml_service_stub=self._ml_service_stub,
@@ -551,19 +554,17 @@ class IocPoseEstimatorService(
       visibility_threshold: float,
   ) -> tuple[np.ndarray, np.ndarray]:
     logging.info("Processing RGB image through segmentation...")
-    img_for_triton = rgb_img.astype(np.uint8)
-    img_for_triton = np.transpose(img_for_triton, (2, 0, 1))
-    img_for_triton = np.expand_dims(img_for_triton, axis=0)
-
-    boxes, _, masks, _, vis_img = self.segmentation_model.run_inference(
-        img_for_triton,
+    result = self.segmentation_model.segment(
+        rgb_img,
         confidence_threshold=confidence_threshold,
         visibility_threshold=visibility_threshold,
         return_vis=True,
     )
 
-    logging.info("Found %d objects from Segmentor!", len(boxes))
-    return masks, vis_img
+    logging.info("Found %d objects from Segmentor!", len(result.boxes))
+    if result.visualization is None:
+      raise ValueError("Segmenter did not return the requested visualization.")
+    return result.masks, result.visualization
 
   def _run_pose_model(
       self,

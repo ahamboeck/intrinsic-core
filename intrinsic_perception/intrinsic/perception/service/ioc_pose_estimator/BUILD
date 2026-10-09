@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-load("@rules_python//python:defs.bzl", "py_binary", "py_library")
+load("@rules_python//python:defs.bzl", "py_binary", "py_library", "py_test")
 load("//bazel:python_oci_image.bzl", "python_oci_image")
 load("//intrinsic_sdk/intrinsic/assets/services/build_defs:services.bzl", "intrinsic_service")
 
@@ -24,8 +24,32 @@ package(default_visibility = [
 py_library(
     name = "segmentation_model",
     srcs = ["service/segmentation_model.py"],
+    deps = [":rfdetr_segmenter"],
+)
+
+py_library(
+    name = "segmenter",
+    srcs = ["service/segmenter.py"],
+    deps = ["@ai_intrinsic_sdks_pip_deps//numpy"],
+)
+
+py_library(
+    name = "segmenter_factory",
+    srcs = ["service/segmenter_factory.py"],
+    deps = [
+        ":rfdetr_segmenter",
+        ":segmenter",
+        "@intrinsic_apis//intrinsic/assets/proto/v1:resolved_dependency_py_pb2",
+        "@open_inference_protocol//:open_inference_grpc_py_pb2_grpc",
+    ],
+)
+
+py_library(
+    name = "rfdetr_segmenter",
+    srcs = ["service/rfdetr_segmenter.py"],
     data = ["model_files/segmentation/config.pbtxt"],
     deps = [
+        ":segmenter",
         "//intrinsic_inference/core/utils:oip_mappings",
         "//intrinsic_inference/core/utils:oip_utils",
         "//intrinsic_sdk/intrinsic/assets:id_utils_py",
@@ -69,7 +93,8 @@ py_library(
     srcs = ["service/ioc_pose_estimator_service.py"],
     deps = [
         ":pose_estimator_model",
-        ":segmentation_model",
+        ":segmenter",
+        ":segmenter_factory",
         "//intrinsic/storage/content_addressable_storage/python:client_helpers",
         "//intrinsic/util/grpc:interceptor",
         "//intrinsic_perception/intrinsic/perception/client/v1/python:image_utils",
@@ -96,6 +121,22 @@ py_library(
         "@intrinsic_apis//intrinsic/perception/proto/v1:pose_estimation_service_py_pb2_grpc",
         "@intrinsic_apis//intrinsic/storage/content_addressable_storage/proto:cas_service_py_pb2_grpc",
         "@open_inference_protocol//:open_inference_grpc_py_pb2_grpc",
+    ],
+)
+
+py_test(
+    name = "segmenter_test",
+    srcs = ["service/segmenter_test.py"],
+    deps = [
+        ":ioc_pose_estimator_service",
+        ":rfdetr_segmenter",
+        ":segmentation_model",
+        ":segmenter",
+        ":segmenter_factory",
+        "@ai_intrinsic_sdks_pip_deps//numpy",
+        "@intrinsic_apis//intrinsic/assets/proto/v1:resolved_dependency_py_pb2",
+        "@open_inference_protocol//:open_inference_grpc_py_pb2",
+        "@triton-inference-server-common//protobuf:common_py_pb2",
     ],
 )
 
