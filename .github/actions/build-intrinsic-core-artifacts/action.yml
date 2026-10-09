@@ -57,7 +57,7 @@ runs:
         unset -v ANDROID_HOME ANDROID_SDK_HOME
         bazel build \
           //intrinsic_runtime:intrinsic_base \
-          //intrinsic/tools/inctl:inctl_external
+          //intrinsic_sdk/intrinsic/tools/inctl:inctl_external
 
         if [[ "${{ inputs.upload-artifacts }}" == "true" ]]; then
           mkdir -p release
