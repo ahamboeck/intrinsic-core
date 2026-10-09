@@ -1653,9 +1653,14 @@ absl::Status CalibrationServiceImpl::ValidateCameraToRobot(
     }
 
     INTR_ASSIGN_OR_RETURN(
-        *response->mutable_camera_to_robot_validation_results()->Add(),
+        intrinsic_proto::perception::v1::CameraToRobotValidationResult
+            validation_result,
         ::intrinsic::perception::ComputeCameraToRobotValidationMetrics(
             requests[i], result_pose));
+    validation_result.set_camera_name(
+        camera_info_[i].camera_resource_handle.name());
+    *response->add_camera_to_robot_validation_results() =
+        std::move(validation_result);
   }
   return absl::OkStatus();
 }
