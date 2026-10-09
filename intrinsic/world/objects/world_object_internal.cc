@@ -219,6 +219,17 @@ absl::StatusOr<SplitSceneObjectConfigResult> SplitSceneObjectConfig(
   return result;
 }
 
+// Returns true if `filter` is unset or specifies only the base/root entity of
+// an object.
+bool FilterMatchesOnlyBaseEntity(const world::ObjectEntityFilter& filter) {
+  if (filter == world::ObjectEntityFilter()) {
+    return true;
+  }
+  return filter.IncludesBaseEntity() && !filter.IncludesAllEntities() &&
+         !filter.IncludesFinalEntity() && filter.EntityIds().empty() &&
+         filter.EntityNames().empty();
+}
+
 }  // namespace
 
 WorldObject::WorldObject(ObjectWorldResourceId id, WorldObjectName name,
@@ -227,16 +238,80 @@ WorldObject::WorldObject(ObjectWorldResourceId id, WorldObjectName name,
     // 'parent' can be set later after all objects in a world have been created.
     : TransformNode(id, /*parent=*/nullptr, data),
       name_(name),
-      entity_ids_(std::move(entity_ids)) {}
+      entity_ids_(std::move(entity_ids)) {
+  const World& world = GetEntityWorld();
+  if (absl::StatusOr<AttachmentEntityId> root_id =
+          world.GetRootEntity({entity_ids_.begin(), entity_ids_.end()});
+      root_id.ok()) {
+    root_entity_id_ = *root_id;
+  }
+  for (const AttachmentEntityId entity_id : entity_ids_) {
+    if (absl::StatusOr<const WorldEntity*> entity =
+            world.GetEntityById(entity_id);
+        entity.ok()) {
+      const_cast<WorldHashMap<std::string, std::vector<AttachmentEntityId>>&>(
+          entity_ids_by_local_name_)[(*entity)->GetLocalName()]
+          .push_back(entity_id);
+    }
+  }
+}
 
 void WorldObject::RegisterFrameEntity(AttachmentEntityId frame_id) {
-  const_cast<WorldHashSet<AttachmentEntityId>&>(entity_ids_).insert(frame_id);
+  if (const_cast<WorldHashSet<AttachmentEntityId>&>(entity_ids_)
+          .insert(frame_id)
+          .second) {
+    if (absl::StatusOr<const WorldEntity*> entity =
+            GetEntityWorld().GetEntityById(frame_id);
+        entity.ok()) {
+      auto& mutable_entity_ids_by_local_name = const_cast<
+          WorldHashMap<std::string, std::vector<AttachmentEntityId>>&>(
+          entity_ids_by_local_name_);
+      mutable_entity_ids_by_local_name[(*entity)->GetLocalName()].push_back(
+          frame_id);
+    }
+  }
   GetObjectWorldData().RegisterEntity(frame_id, this);
 }
 
 void WorldObject::UnregisterFrameEntity(AttachmentEntityId frame_id) {
-  const_cast<WorldHashSet<AttachmentEntityId>&>(entity_ids_).erase(frame_id);
+  if (const_cast<WorldHashSet<AttachmentEntityId>&>(entity_ids_)
+          .erase(frame_id) > 0) {
+    if (absl::StatusOr<const WorldEntity*> entity =
+            GetEntityWorld().GetEntityById(frame_id);
+        entity.ok()) {
+      auto& mutable_entity_ids_by_local_name = const_cast<
+          WorldHashMap<std::string, std::vector<AttachmentEntityId>>&>(
+          entity_ids_by_local_name_);
+      auto it =
+          mutable_entity_ids_by_local_name.find((*entity)->GetLocalName());
+      if (it != mutable_entity_ids_by_local_name.end()) {
+        std::erase(it->second, frame_id);
+        if (it->second.empty()) {
+          mutable_entity_ids_by_local_name.erase(it);
+        }
+      }
+    }
+  }
   GetObjectWorldData().UnregisterEntity(frame_id);
+}
+
+void WorldObject::UpdateFrameEntityLocalName(AttachmentEntityId frame_id,
+                                             absl::string_view old_name,
+                                             absl::string_view new_name) {
+  if (!entity_ids_.contains(frame_id) || old_name == new_name) {
+    return;
+  }
+  auto& mutable_entity_ids_by_local_name =
+      const_cast<WorldHashMap<std::string, std::vector<AttachmentEntityId>>&>(
+          entity_ids_by_local_name_);
+  if (auto it = mutable_entity_ids_by_local_name.find(old_name);
+      it != mutable_entity_ids_by_local_name.end()) {
+    std::erase(it->second, frame_id);
+    if (it->second.empty()) {
+      mutable_entity_ids_by_local_name.erase(it);
+    }
+  }
+  mutable_entity_ids_by_local_name[std::string(new_name)].push_back(frame_id);
 }
 
 absl::StatusOr<WorldObjectNameType> WorldObject::GetNameType() const {
@@ -2691,6 +2766,9 @@ absl::StatusOr<std::unique_ptr<Frame>> WorldObject::RemoveFrameAsymmetric(
 }
 
 absl::StatusOr<AttachmentEntityId> WorldObject::GetRootEntityId() const {
+  if (root_entity_id_ != kInvalidEntityId) {
+    return root_entity_id_;
+  }
   // This cannot fail by construction (see ObjectWorld::CreateView).
   return GetEntityWorld().GetRootEntity(
       {entity_ids_.begin(), entity_ids_.end()});
@@ -2701,21 +2779,44 @@ absl::StatusOr<AttachmentEntityId> WorldObject::GetTransformOriginEntityId()
   return GetRootEntityId();
 }
 
-absl::StatusOr<AttachmentEntityId> WorldObject::GetTransformEntityId(
+absl::StatusOr<AttachmentEntityId> WorldObject::ResolveSingleEntityIdFromFilter(
     const world::ObjectEntityFilter& filter) const {
+  if (FilterMatchesOnlyBaseEntity(filter)) {
+    return GetRootEntityId();
+  }
+  if (!filter.IncludesAllEntities() && !filter.IncludesBaseEntity() &&
+      !filter.IncludesFinalEntity() && filter.EntityIds().empty() &&
+      filter.EntityNames().size() == 1) {
+    const auto it =
+        entity_ids_by_local_name_.find(*filter.EntityNames().begin());
+    if (it != entity_ids_by_local_name_.end()) {
+      if (it->second.size() == 1) {
+        return it->second.front();
+      }
+      if (it->second.size() > 1) {
+        return absl::InvalidArgumentError(
+            "Found more than one entity matching given filter.");
+      }
+    }
+  }
   INTR_ASSIGN_OR_RETURN(
-      WorldHashSet<AttachmentEntityId> entities,
+      const WorldHashSet<AttachmentEntityId> entities,
       object_world_object_entity_filter_details::
           GetObjectEntitiesMatchingEntityFilter(*this, filter,
                                                 /*expanded_list=*/false));
   if (entities.empty()) {
     return absl::NotFoundError("No matching entities found for given filter");
-  } else if (entities.size() != 1) {
+  }
+  if (entities.size() != 1) {
     return absl::InvalidArgumentError(
         "Found more than one entity matching given filter.");
   }
-
   return *entities.begin();
+}
+
+absl::StatusOr<AttachmentEntityId> WorldObject::GetTransformEntityId(
+    const world::ObjectEntityFilter& filter) const {
+  return ResolveSingleEntityIdFromFilter(filter);
 }
 
 absl::StatusOr<bool> WorldObject::IsCollisionExcluded(
@@ -2805,6 +2906,60 @@ absl::StatusOr<WorldHashSet<AttachmentEntityId>> WorldObject::FinalEntities()
 }
 
 namespace object_world_object_entity_filter_details {
+namespace {
+
+absl::Status MatchEntityNamesInFilter(
+    const WorldObject& object, const World& world,
+    const WorldHashSet<AttachmentEntityId>& all_object_entities,
+    const world::ObjectEntityFilter& entity_filter,
+    WorldHashSet<AttachmentEntityId>& result) {
+  bool all_matched = false;
+  if (entity_filter.EntityNames().size() == 1) {
+    const std::string& expected_name = *entity_filter.EntityNames().begin();
+    for (const AttachmentEntityId entity_id : all_object_entities) {
+      INTR_ASSIGN_OR_RETURN(const WorldEntity* entity,
+                            world.GetEntityById(entity_id));
+      if (entity->GetLocalName() == expected_name) {
+        result.insert(entity_id);
+        all_matched = true;
+      }
+    }
+  } else {
+    absl::flat_hash_set<std::string_view> matched_expected_names;
+    for (const AttachmentEntityId entity_id : all_object_entities) {
+      INTR_ASSIGN_OR_RETURN(const WorldEntity* entity,
+                            world.GetEntityById(entity_id));
+      const auto it = entity_filter.EntityNames().find(entity->GetLocalName());
+      if (it != entity_filter.EntityNames().end()) {
+        result.insert(entity_id);
+        matched_expected_names.insert(*it);
+      }
+    }
+    all_matched =
+        (matched_expected_names.size() == entity_filter.EntityNames().size());
+  }
+
+  if (!all_matched) {
+    WorldHashSet<std::string> existing_entity_names;
+    for (const AttachmentEntityId entity_id : all_object_entities) {
+      INTR_ASSIGN_OR_RETURN(const WorldEntity* entity,
+                            world.GetEntityById(entity_id));
+      existing_entity_names.insert(entity->GetLocalName());
+    }
+
+    for (const std::string& expected_name : entity_filter.EntityNames()) {
+      if (!existing_entity_names.contains(expected_name)) {
+        return absl::NotFoundError(absl::StrCat(
+            "Entity name \"", expected_name, "\" not found in object \"",
+            object.GetName().value(), "\" which has entities [",
+            absl::StrJoin(existing_entity_names, ", "), "]"));
+      }
+    }
+  }
+  return absl::OkStatus();
+}
+
+}  // namespace
 
 absl::StatusOr<WorldHashSet<AttachmentEntityId>>
 GetObjectEntitiesMatchingEntityFilter(
@@ -2812,8 +2967,9 @@ GetObjectEntitiesMatchingEntityFilter(
     bool expanded_list) {
   WorldHashSet<AttachmentEntityId> result;
 
-  // If no filter was set, just return the base entity.
-  if (entity_filter == world::ObjectEntityFilter()) {
+  // If no filter was set, or if only the base entity was requested without
+  // expansion, just return the base entity.
+  if (!expanded_list && FilterMatchesOnlyBaseEntity(entity_filter)) {
     INTR_ASSIGN_OR_RETURN(AttachmentEntityId object_root_id,
                           object.GetRootEntityId());
     result.insert(object_root_id);
@@ -2895,23 +3051,9 @@ GetObjectEntitiesMatchingEntityFilter(
     }
   }
 
-  WorldHashSet<std::string> existing_entity_names;
-  for (const AttachmentEntityId entity_id : all_object_entities) {
-    INTR_ASSIGN_OR_RETURN(const WorldEntity* entity,
-                          world.GetEntityById(entity_id));
-    if (entity_filter.EntityNames().count(entity->GetLocalName()) != 0) {
-      result.insert(entity_id);
-    }
-    existing_entity_names.insert(entity->GetLocalName());
-  }
-
-  for (const std::string& expected_name : entity_filter.EntityNames()) {
-    if (!existing_entity_names.contains(expected_name)) {
-      return absl::NotFoundError(absl::StrCat(
-          "Entity name \"", expected_name, "\" not found in object \"",
-          object.GetName().value(), "\" which has entities [",
-          absl::StrJoin(existing_entity_names, ", "), "]"));
-    }
+  if (!entity_filter.EntityNames().empty()) {
+    INTR_RETURN_IF_ERROR(MatchEntityNamesInFilter(
+        object, world, all_object_entities, entity_filter, result));
   }
 
   return result;
@@ -2941,18 +3083,9 @@ absl::Status WorldObject::CheckIsMovable(
     return absl::OkStatus();
   }
 
-  INTR_ASSIGN_OR_RETURN(
-      WorldHashSet<AttachmentEntityId> attachment_ids,
-      object_world_object_entity_filter_details::
-          GetObjectEntitiesMatchingEntityFilter(*this, *filter,
-                                                /*expanded_list=*/false));
-
-  if (attachment_ids.size() != 1) {
-    return absl::InvalidArgumentError(
-        "Cannot specify multiple entities of an object to move.");
-  }
-
-  AttachmentEntityId entity_to_move_id = *attachment_ids.begin();
+  INTR_ASSIGN_OR_RETURN(const AttachmentEntityId entity_to_move_id,
+                        ResolveSingleEntityIdFromFilter(*filter),
+                        _ << "Cannot resolve entity of an object to move.");
 
   INTR_ASSIGN_OR_RETURN(AttachmentEntityId root_entity_id, GetRootEntityId());
   if (entity_to_move_id == root_entity_id) {

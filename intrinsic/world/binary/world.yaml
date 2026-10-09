@@ -261,8 +261,6 @@ spec:
         - uri:
             prefix: /intrinsic_proto.world.ObjectWorldService/
         - uri:
-            prefix: /intrinsic_proto.world.WorldCompatibilityService/
-        - uri:
             prefix: /intrinsic_proto.world.WorldUpdater/
       route:
         - destination:

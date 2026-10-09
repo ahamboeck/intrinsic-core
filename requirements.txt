@@ -38,6 +38,7 @@ absl-py==2.1.0 \
     #   dm-tree
     #   etils
     #   google-antigravity
+    #   grain
     #   keras
     #   ml-collections
     #   mujoco
@@ -315,7 +316,9 @@ array-record==0.8.3 \
     --hash=sha256:dada305fa0dfa3fd6f5f263c43ed37546f815e4f33ce30b066175384dead752e \
     --hash=sha256:f4004fcceb7961a2cc0090028e68a3eeb91d3f5b38c00d60b533f7004d1d3f7b \
     --hash=sha256:fa94fa053c1afaecc183a1c31463fd89d1b7b148cc526095bfc50ab58967e47c
-    # via tensorflow-datasets
+    # via
+    #   grain
+    #   tensorflow-datasets
 arrow==1.4.0 \
     --hash=sha256:749f0769958ebdc79c173ff0b0670d59051a535fa26e8eba02953dc19eb43205 \
     --hash=sha256:ed0cc050e98001b8779e84d461b0098c4ac597e88704a655582b21d116e526d7
@@ -800,6 +803,7 @@ cloudpickle==3.1.2 \
     --hash=sha256:7fda9eb655c9c230dab534f1983763de5835249750e85fbcef43aaa30a9a2414 \
     --hash=sha256:9acb47f6afd73f60dc1df93bb801b472f05ff42fa6c84167d25cb206be1fbf4a
     # via
+    #   grain
     #   mlflow-skinny
     #   tensorflow-probability
 clu==0.0.12 \
@@ -1144,6 +1148,7 @@ etils[epath, epy]==1.14.0 \
     # via
     #   array-record
     #   clu
+    #   grain
     #   mujoco
     #   orbax-checkpoint
     #   tensorflow-datasets
@@ -1968,6 +1973,24 @@ googleapis-common-protos[grpc]==1.73.1 \
 grafana-client==4.3.2 \
     --hash=sha256:2477a47b923fd0637947e620b0b777c641af18a3025464fa4505783dbf05dfcc \
     --hash=sha256:8cb61bb2a87ec07bca10974df276b9a1a95bfdb63f3a696f065692ffc9b8c389
+    # via -r requirements.in
+grain==0.2.18 \
+    --hash=sha256:08a80a029f8b9c84af9424540d91cf8e4e91fe092e0fb7e0bb460dcf0042f659 \
+    --hash=sha256:09bef4e8290d06e79cfddc71e777d0b5f60316e5a43af61f8a3d0e6a2d9feccc \
+    --hash=sha256:1bcff4c0ec71cee0b8c26076e3b60d83897cd7586b8f182291969743fd79a7b9 \
+    --hash=sha256:1eb8f8424d3844944d1c37248b0430a5598b21f7ec5141119e0a70069edbd943 \
+    --hash=sha256:1ecd87427b4050b695f9b9b5a41d8058208586d3f90a2e56f14a64f920aa47f8 \
+    --hash=sha256:229683c7714c3275cc4fee6cbc7356d47769eeaa286fbdc6af7a9542dcb468e5 \
+    --hash=sha256:5986e756a0803012a74af4d34a506ed2877f6a86b8d1164227e8a67e09af1688 \
+    --hash=sha256:61290a4af38fbddac41d6da1d19129df498dece53c3de4cc02e7ec557a0b0024 \
+    --hash=sha256:8d74e3f33403146fb9da0b101d7d18148e3979f5adc8d625237524cc144c0d24 \
+    --hash=sha256:bec1c551574d3a1885ea0d1481586b4c2490a1332120bf626b459e2f9a6f1d06 \
+    --hash=sha256:c16f4001983bee52a5a08e43569f46343815697d12da344ba6509af898fbca79 \
+    --hash=sha256:c8a29696d98b2e84d8531df211006b2187475af7cebc45408023da6aa3ac1494 \
+    --hash=sha256:cf9b9cfc59180b549c74307fd2ef5bc6f545ab78538b7661a5cfad71177d8418 \
+    --hash=sha256:dda2c25d2590e8aae180d58a92525945b31f71e59637a8fe37c2d1e4e502beb5 \
+    --hash=sha256:fc7204490aff21620fbdbd69e088991a4ae1ebc31586456191c11f9f61a8c0e6 \
+    --hash=sha256:fe83461d55e81c9c9cdba3d9d9ed0185db7b41cddb8e28223aa495ca3516877c
     # via -r requirements.in
 graphene==3.4.3 \
     --hash=sha256:2a3786948ce75fe7e078443d37f609cbe5bb36ad8d6b828740ad3b95ed1a0aaa \
@@ -4110,6 +4133,7 @@ numpy==1.26.4 \
     #   etils
     #   faiss-cpu
     #   flax
+    #   grain
     #   h5py
     #   imageio
     #   jax
@@ -5021,6 +5045,7 @@ portpicker==1.6.0 \
     # via
     #   -r requirements.in
     #   ai-edge-model-explorer
+    #   grain
 posthog==7.18.0 \
     --hash=sha256:560230cf9616ac1fde5e3bfba1c666ab69e8488e5417005f86f91f7c6ef74252 \
     --hash=sha256:9913586a958e5e81dbb1cdc4d4bedc8f95a268807b17ad03b5c55d2adff55dd7
@@ -5213,6 +5238,7 @@ protobuf==6.32.1 \
     #   google-cloud-secret-manager
     #   google-cloud-trace
     #   googleapis-common-protos
+    #   grain
     #   grpc-google-iam-v1
     #   grpcio-reflection
     #   grpcio-status

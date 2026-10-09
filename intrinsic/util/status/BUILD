@@ -33,12 +33,6 @@ alias(
 )
 
 alias(
-    name = "status_conversion_proto",
-    actual = "//intrinsic_sdk/intrinsic/util/status:status_conversion_proto",
-    tags = ["go/intrinsic-ioc-transition-tdd"],
-)
-
-alias(
     name = "status_conversion_rpc",
     actual = "//intrinsic_sdk/intrinsic/util/status:status_conversion_rpc",
     tags = ["go/intrinsic-ioc-transition-tdd"],

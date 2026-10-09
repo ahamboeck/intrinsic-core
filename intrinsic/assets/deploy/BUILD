@@ -65,7 +65,7 @@ go_library(
         "//intrinsic/util/path_resolver:pathresolver",
         "//intrinsic/util/proto:names",
         "@com_github_golang_glog//:go_default_library",
-        "@com_github_googlecloudrobotics_core_src//go/pkg/apis/apps/v1alpha1:go_default_library",
+        "@com_github_googlecloudrobotics_core//src/go/pkg/apis/apps/v1alpha1:go_default_library",
         "@com_github_pkg_errors//:go_default_library",
         "@intrinsic_apis//intrinsic/assets/proto:id_go_proto",
         "@intrinsic_apis//intrinsic/assets/services/proto:service_permissions_go_proto",

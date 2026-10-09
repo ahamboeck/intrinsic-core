@@ -36,6 +36,7 @@ cc_library(
         "//intrinsic_kinematics/intrinsic/kinematics/types:joint_limits",
         "//intrinsic_kinematics/intrinsic/kinematics/types:joint_trajectories",
         "//intrinsic_motion_planning/intrinsic/motion_planning/path_planning:path_segment",
+        "//intrinsic_motion_planning/intrinsic/motion_planning/proto/v1:motion_events_cc_proto",
         "//intrinsic_motion_planning/intrinsic/motion_planning/trajectory_planning/topp:path_sample",
         "//intrinsic_motion_planning/intrinsic/motion_planning/trajectory_planning/topp:topp_trajectory_result",
         "//intrinsic_sdk/intrinsic/eigenmath",
@@ -48,7 +49,7 @@ cc_library(
         "@abseil-cpp//absl/strings",
         "@abseil-cpp//absl/time",
         "@abseil-cpp//absl/types:span",
-    ] + [],
+    ],
 )
 
 cc_library(
@@ -68,6 +69,7 @@ cc_library(
         "//intrinsic/math/spline:spline_parameter_transform_function",
         "//intrinsic/util/status:status_macros",
         "//intrinsic_motion_planning/intrinsic/motion_planning/path_planning:path_segment",
+        "//intrinsic_motion_planning/intrinsic/motion_planning/proto/v1:motion_events_cc_proto",
         "//intrinsic_motion_planning/intrinsic/motion_planning/trajectory_planning/topp:path_sample",
         "//intrinsic_sdk/intrinsic/eigenmath",
         "//intrinsic_sdk/intrinsic/math:almost_equals",
@@ -77,7 +79,7 @@ cc_library(
         "@abseil-cpp//absl/status:statusor",
         "@abseil-cpp//absl/strings",
         "@abseil-cpp//absl/types:span",
-    ] + [],
+    ],
 )
 
 cc_library(
@@ -95,6 +97,7 @@ cc_library(
         "//intrinsic_kinematics/intrinsic/kinematics/types:check_joint_limits",
         "//intrinsic_kinematics/intrinsic/kinematics/types:joint_limits",
         "//intrinsic_motion_planning/intrinsic/motion_planning/path_planning:path_segment",
+        "//intrinsic_motion_planning/intrinsic/motion_planning/proto/v1:motion_events_cc_proto",
         "//intrinsic_motion_planning/intrinsic/motion_planning/trajectory_planning/topp:path_sample",
         "//intrinsic_sdk/intrinsic/eigenmath",
         "//intrinsic_sdk/intrinsic/math:almost_equals",
@@ -106,5 +109,5 @@ cc_library(
         "@abseil-cpp//absl/status:statusor",
         "@abseil-cpp//absl/strings",
         "@abseil-cpp//absl/types:span",
-    ] + [],
+    ],
 )

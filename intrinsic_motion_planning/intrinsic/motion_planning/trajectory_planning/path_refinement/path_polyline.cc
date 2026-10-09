@@ -411,6 +411,9 @@ absl::StatusOr<bool> IsCornerBlendingSegmentEnd(
 // - Verifies that the input path segments list is not empty.
 // - Validates the structure and limits of each path segment.
 // - Checks that consecutive path segments are compatible and continuous.
+
+// - Ensures all indexed motion event indices are within valid bounds.
+
 // - Deduplicates consecutive coincident points (both within and between
 //   segments) by:
 //      - Keeping the largest (least restrictive) blending deviation.
@@ -445,6 +448,36 @@ absl::StatusOr<std::vector<PathPolylinePoint>> CreatePathPolylinePoints(
           ValidateSegmentCompatibility(segment, path_segments[segment_idx - 1]))
           << " (at segment " << segment_idx << ")";
     }
+
+
+    // For convenience we put the motion events into a map with the path segment
+    // joint configuration indices as keys. In this way we can efficiently
+    // access the motion events for a given sample index without searching the
+    // vector. We also check here to make sure that the indices are valid.
+    absl::flat_hash_map<
+        int, std::vector<intrinsic_proto::motion_planning::v1::MotionEvent>>
+        joint_configuration_index_to_motion_event;
+    for (const auto& motion_event_and_joint_configuration_index :
+         segment.indexed_motion_events) {
+      if (motion_event_and_joint_configuration_index.joint_configuration_index <
+              0 ||
+          motion_event_and_joint_configuration_index
+                  .joint_configuration_index >=
+              segment.joint_configurations.size()) {
+        return absl::InvalidArgumentError(
+            absl::StrCat("Joint configuration index ",
+                         motion_event_and_joint_configuration_index
+                             .joint_configuration_index,
+                         " is out of bounds [0, ",
+                         segment.joint_configurations.size() - 1, "]."));
+      }
+      joint_configuration_index_to_motion_event
+          [motion_event_and_joint_configuration_index.joint_configuration_index]
+              .push_back(
+                  motion_event_and_joint_configuration_index.motion_event);
+    }
+
+
     for (int i_wp = 0; i_wp < segment.joint_configurations.size(); ++i_wp) {
       // Deduplicate coincident consecutive points within the segment and at
       // segments connection.
@@ -490,6 +523,17 @@ absl::StatusOr<std::vector<PathPolylinePoint>> CreatePathPolylinePoints(
         };
         polyline_points.push_back(std::move(point));
       }
+
+      // Regardless of whether a new point was added or not, we need to add the
+      // motion events to the last added path polyline point. This accounts for
+      // the deduplication above.
+      if (joint_configuration_index_to_motion_event.contains(i_wp)) {
+        for (const auto& motion_event :
+             joint_configuration_index_to_motion_event[i_wp]) {
+          polyline_points.back().motion_events.push_back(motion_event);
+        }
+      }
+
     }
   }
 

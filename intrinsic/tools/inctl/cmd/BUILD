@@ -55,7 +55,7 @@ go_library(
         "//intrinsic/util/go:set",
         "//intrinsic/util/path_resolver:pathresolver",
         "@cat_dario_mergo//:go_default_library",
-        "@com_github_googlecloudrobotics_core_src//go/pkg/apis/apps/v1alpha1:go_default_library",
+        "@com_github_googlecloudrobotics_core//src/go/pkg/apis/apps/v1alpha1:go_default_library",
         "@com_github_pkg_errors//:go_default_library",
         "@io_k8s_sigs_yaml//:go_default_library",
         "@io_opencensus_go//trace:go_default_library",

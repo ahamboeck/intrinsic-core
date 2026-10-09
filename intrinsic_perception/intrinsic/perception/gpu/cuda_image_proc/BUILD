@@ -34,10 +34,19 @@ cuda_library(
     srcs = ["color_conversion.cu.cc"],
     hdrs = ["color_conversion.h"],
     deps = [
+        ":color_conversion_device",
         "//intrinsic/util/status:status_macros",
         "//intrinsic_perception/intrinsic/perception/core:image_traits",
         "//intrinsic_perception/intrinsic/perception/gpu/cuda_utils",
         "@abseil-cpp//absl/status:statusor",
+    ],
+)
+
+cuda_library(
+    name = "color_conversion_device",
+    hdrs = ["color_conversion_device.h"],
+    deps = [
+        "@cuda//:cuda_headers",
     ],
 )
 
@@ -47,10 +56,19 @@ cuda_library(
     hdrs = ["laplacian.h"],
     deps = [
         ":border_extrapolation",
+        ":laplacian_device",
         "//intrinsic/util/status:status_macros",
         "//intrinsic_perception/intrinsic/perception/core:image_traits",
         "//intrinsic_perception/intrinsic/perception/gpu/cuda_utils",
         "@abseil-cpp//absl/status:statusor",
+        "@cuda//:cuda_headers",
+    ],
+)
+
+cuda_library(
+    name = "laplacian_device",
+    hdrs = ["laplacian_device.h"],
+    deps = [
         "@cuda//:cuda_headers",
     ],
 )
@@ -65,6 +83,7 @@ cuda_library(
         "//intrinsic_perception/intrinsic/perception/gpu/cuda_utils",
         "@abseil-cpp//absl/status",
         "@abseil-cpp//absl/status:statusor",
+        "@abseil-cpp//absl/strings",
         "@cuda//:cuda_headers",
     ],
 )
@@ -112,10 +131,19 @@ cuda_library(
     hdrs = ["smooth.h"],
     deps = [
         ":border_extrapolation",
+        ":smooth_device",
         "//intrinsic/util/status:status_macros",
         "//intrinsic_perception/intrinsic/perception/core:image_traits",
         "//intrinsic_perception/intrinsic/perception/gpu/cuda_utils",
         "@abseil-cpp//absl/status:statusor",
+        "@cuda//:cuda_headers",
+    ],
+)
+
+cuda_library(
+    name = "smooth_device",
+    hdrs = ["smooth_device.h"],
+    deps = [
         "@cuda//:cuda_headers",
     ],
 )

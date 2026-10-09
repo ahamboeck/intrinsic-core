@@ -285,10 +285,11 @@ proto_library(
     # keep
     strip_import_prefix = "/intrinsic_motion_planning",
     deps = [
+        "//intrinsic_motion_planning/intrinsic/motion_planning/proto/v1:motion_events_proto",
         "//intrinsic_motion_planning/intrinsic/motion_planning/trajectory_planning/topp:bspline_squared_path_velocity_proto",
         "//intrinsic_motion_planning/intrinsic/motion_planning/trajectory_planning/topp:piecewise_linear_squared_path_velocity_proto",
         "@intrinsic_apis//intrinsic/icon/proto:joint_space_proto",
-    ] + [],
+    ],
 )
 
 cc_proto_library(
@@ -328,8 +329,9 @@ cc_library(
         "//intrinsic/util/status:status_macros",
         "//intrinsic_control/intrinsic/icon/proto:joint_trajectory_conversion",
         "//intrinsic_kinematics/intrinsic/kinematics/types:joint_trajectories",
+        "//intrinsic_motion_planning/intrinsic/motion_planning/proto/v1:motion_events_cc_proto",
         "@abseil-cpp//absl/status:statusor",
-    ] + [],
+    ],
 )
 
 cc_library(
@@ -466,6 +468,7 @@ go_proto_library(
     deps = [
         ":bspline_squared_path_velocity_go_proto",
         ":piecewise_linear_squared_path_velocity_go_proto",
+        "//intrinsic_motion_planning/intrinsic/motion_planning/proto/v1:motion_events_go_proto",
         "@intrinsic_apis//intrinsic/icon/proto:joint_space_go_proto",
-    ] + [],
+    ],
 )

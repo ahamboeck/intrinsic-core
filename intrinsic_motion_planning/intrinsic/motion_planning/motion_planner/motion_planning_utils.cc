@@ -54,6 +54,9 @@
 #include "intrinsic/motion_planning/path_planning/validators.h"
 #include "intrinsic/motion_planning/proto/motion_specification_proto_utils.h"
 #include "intrinsic/motion_planning/proto/v1/motion_blending_parameter.pb.h"
+
+#include "intrinsic/motion_planning/proto/v1/motion_events.pb.h"
+
 #include "intrinsic/motion_planning/proto/v1/motion_planner_config.pb.h"
 #include "intrinsic/motion_planning/proto/v1/motion_planning_limits.pb.h"
 #include "intrinsic/motion_planning/proto/v1/motion_specification.pb.h"
@@ -523,6 +526,42 @@ ParseTrajectorySegmentsFromMotionSpecification(
        motion_segment_number < motion_segments_size; ++motion_segment_number) {
     const auto& motion_segment =
         motion_specification.motion_segments(motion_segment_number);
+
+
+    for (const auto& event : motion_segment.motion_segment_events()) {
+      // Return a series of informational errors if the events are not
+      // correctly specified.
+      //
+      // If we have multiple segments then the first segment should only have
+      // events which are defined relative to the segment start. Similarly
+      // below, if we have multiple segments then the last segment should only
+      // have events which are defined relative to the segment target.
+      if (motion_segment_number == 0 && motion_segments_size != 1 &&
+          event.event_location().relative_to() !=
+              intrinsic_proto::motion_planning::v1::MotionEventSegmentLocation::
+                  SEGMENT_START) {
+        return absl::InvalidArgumentError(
+            "Motion events in the first segment must be relative to the "
+            "segment start.");
+      }
+      if (motion_segment_number == motion_segments_size - 1 &&
+          motion_segments_size != 1 &&
+          event.event_location().relative_to() !=
+              intrinsic_proto::motion_planning::v1::MotionEventSegmentLocation::
+                  SEGMENT_TARGET) {
+        return absl::InvalidArgumentError(
+            "Motion events in the last segment must be relative to the "
+            "segment target.");
+      }
+      if (motion_segment_number > 0 &&
+          motion_segment_number < motion_segments_size - 1) {
+        return absl::InvalidArgumentError(
+            "Motion events are currently only supported in the first and last "
+            "segment.");
+      }
+    }
+
+
     INTR_ASSIGN_OR_RETURN(
         const TrajectorySegment::Type traj_type,
         TrajectorySegment::ValidatePathConstraintsAndReturnTrajectoryType(

@@ -210,11 +210,12 @@ proto_library(
     strip_import_prefix = "/intrinsic_motion_planning",
     deps = [
         "//intrinsic/world/collision:collision_context_proto",
+        "//intrinsic_motion_planning/intrinsic/motion_planning/proto/v1:motion_events_proto",
         "@intrinsic_apis//intrinsic/icon/proto:cart_space_proto",
         "@intrinsic_apis//intrinsic/icon/proto:joint_space_proto",
         "@intrinsic_apis//intrinsic/kinematics/types:joint_limits_proto",
         "@intrinsic_apis//intrinsic/math/proto:pose_proto",
-    ] + [],
+    ],
 )
 
 cc_proto_library(
@@ -228,11 +229,12 @@ go_proto_library(
     proto = ":path_segment_proto",
     deps = [
         "//intrinsic/world/collision:collision_context_go_proto",
+        "//intrinsic_motion_planning/intrinsic/motion_planning/proto/v1:motion_events_go_proto",
         "@intrinsic_apis//intrinsic/icon/proto:cart_space_go_proto",
         "@intrinsic_apis//intrinsic/icon/proto:joint_space_go_proto",
         "@intrinsic_apis//intrinsic/kinematics/types:joint_limits_go_proto",
         "@intrinsic_apis//intrinsic/math/proto:pose_go_proto",
-    ] + [],
+    ],
 )
 
 cc_library(
@@ -398,6 +400,7 @@ cc_library(
         "//intrinsic_control/intrinsic/icon/proto:eigen_conversion",
         "//intrinsic_kinematics/intrinsic/kinematics/types:cartesian_limits",
         "//intrinsic_kinematics/intrinsic/kinematics/types:joint_limits",
+        "//intrinsic_motion_planning/intrinsic/motion_planning/proto/v1:motion_events_cc_proto",
         "//intrinsic_sdk/intrinsic/eigenmath",
         "//intrinsic_sdk/intrinsic/math:pose3",
         "//intrinsic_sdk/intrinsic/math:proto_conversion",
@@ -406,7 +409,7 @@ cc_library(
         "@com_google_protobuf//:protobuf",
         "@intrinsic_apis//intrinsic/icon/proto:joint_space_cc_proto",
         "@intrinsic_apis//intrinsic/world/proto:collision_action_cc_proto",
-    ] + [],
+    ],
 )
 
 cc_library(

@@ -69,6 +69,9 @@
 #include "intrinsic/motion_planning/proto/v1/motion_blending_parameter.pb.h"
 #include "intrinsic/motion_planning/service/debug/timing_debug_logger.h"
 #include "intrinsic/motion_planning/service/motion_planner_service_asset_utils.h"
+
+#include "intrinsic/motion_planning/proto/v1/motion_events.pb.h"
+
 #include "intrinsic/motion_planning/proto/v1/motion_planner_service.grpc.pb.h"
 #include "intrinsic/motion_planning/proto/v1/motion_planner_service.pb.h"
 #include "intrinsic/motion_planning/proto/v1/motion_planning_limits.pb.h"
@@ -614,6 +617,11 @@ MoveRobot::InternalComputePlan(
       trajectory_result.trajectory;
   *execution_plan_result.mutable_robot_specifications() =
       robot_specification_proto;
+
+  *execution_plan_result.mutable_motion_events() = {
+      trajectory_result.motion_events.begin(),
+      trajectory_result.motion_events.end()};
+
   intrinsic_proto::skills::MoveRobotInternalData internal_data;
   *internal_data.mutable_execution_plan() = execution_plan_result;
   if (trajectory_result.lock_motion_id.has_value()) {
@@ -855,6 +863,10 @@ absl::StatusOr<std::unique_ptr<google::protobuf::Message>> MoveRobot::Execute(
 
   logger.Start("get preplanned solution");
   std::optional<intrinsic_proto::icon::JointTrajectoryPVA> preplanned_solution;
+
+  std::vector<intrinsic_proto::motion_planning::v1::MotionEvent>
+      preplanned_motion_events;
+
   INTR_ASSIGN_OR_RETURN(RobotParameters icon_arm_params,
                         ReadICONArmParams(arm_part_info.name, icon_client));
   if (internal_data_proto.has_value()) {
@@ -865,6 +877,13 @@ absl::StatusOr<std::unique_ptr<google::protobuf::Message>> MoveRobot::Execute(
             internal_data_proto.value().execution_plan(),
             JointLimitsXd::Create(icon_arm_params.application_limits),
             icon_arm_params.default_cartesian_limits));
+
+
+    preplanned_motion_events = {
+        internal_data_proto.value().execution_plan().motion_events().begin(),
+        internal_data_proto.value().execution_plan().motion_events().end()};
+
+
     if (internal_data_proto.value().has_lock_motion_id()) {
       return_value->set_lock_motion_id(
           internal_data_proto.value().lock_motion_id());
@@ -919,6 +938,9 @@ absl::StatusOr<std::unique_ptr<google::protobuf::Message>> MoveRobot::Execute(
       return_value->clear_lock_motion_id();
     }
     preplanned_solution.emplace(trajectory_result.trajectory);
+
+    preplanned_motion_events = std::move(trajectory_result.motion_events);
+
   }
 
   if (preplanned_solution.value().state_size() == 0) {
@@ -959,6 +981,10 @@ absl::StatusOr<std::unique_ptr<google::protobuf::Message>> MoveRobot::Execute(
           !parameters.execution_parameters().ignore_is_settled_condition(),
           context.canceller(), move_until_signal_condition,
           &stopped_on_signal
+
+          ,
+          preplanned_motion_events
+
           ))
       .LogError();
   const double execute_joint_trajectory_duration_seconds =

@@ -221,6 +221,7 @@ cc_library(
         "//intrinsic_kinematics/intrinsic/kinematics/types:to_string",
         "//intrinsic_motion_planning/intrinsic/motion_planning:trajectory_execution_utils",
         "//intrinsic_motion_planning/intrinsic/motion_planning/path_planning:path_planner_definitions",
+        "//intrinsic_motion_planning/intrinsic/motion_planning/proto/v1:motion_events_cc_proto",
         "//intrinsic_motion_planning/intrinsic/motion_planning/proto/v1:motion_planner_service_cc_grpc_proto",
         "//intrinsic_motion_planning/intrinsic/motion_planning/proto/v1:motion_planner_service_cc_proto",
         "//intrinsic_motion_planning/intrinsic/motion_planning/proto/v1:motion_specification_cc_proto",
@@ -311,11 +312,13 @@ cc_test(
         "//intrinsic_control/intrinsic/icon/equipment/testing:equipment_test_utils",
         "//intrinsic_control/intrinsic/icon/equipment/testing:fake_channel_factory",
         "//intrinsic_control/intrinsic/icon/proto:cart_space_conversion",
+        "//intrinsic_control/intrinsic/icon/proto/v1:motion_event_types_cc_proto",
         "//intrinsic_control/intrinsic/icon/skills:update_robot_joint_positions_cc_proto",
         "//intrinsic_kinematics/intrinsic/kinematics/types:cartesian_limits",
         "//intrinsic_kinematics/intrinsic/kinematics/types:joint_limits",
         "//intrinsic_kinematics/intrinsic/kinematics/types:joint_limits_matcher",
         "//intrinsic_kinematics/intrinsic/kinematics/types:joint_limits_xd",
+        "//intrinsic_motion_planning/intrinsic/motion_planning/proto/v1:motion_events_cc_proto",
         "//intrinsic_motion_planning/intrinsic/motion_planning/service:motion_planner_service",
         "//intrinsic_motion_planning/intrinsic/motion_planning/service:motion_planner_service_asset_utils",
         "//intrinsic_motion_planning/intrinsic/motion_planning/service:motion_planner_service_in_process",
@@ -381,6 +384,7 @@ cc_library(
         "//intrinsic/util/status:status_macros",
         "//intrinsic_control/intrinsic/icon/cc_client:state_variable_path",
         "//intrinsic_control/intrinsic/icon/equipment:equipment_utils",
+        "//intrinsic_motion_planning/intrinsic/motion_planning/proto/v1:motion_events_cc_proto",
         "//intrinsic_motion_planning/intrinsic/motion_planning/proto/v1:motion_specification_cc_proto",
         "//intrinsic_motion_planning/intrinsic/motion_planning/skills:move_robot_cc_proto",
         "//intrinsic_sdk/intrinsic/skills/cc:equipment_pack",
@@ -395,7 +399,7 @@ cc_library(
         "@intrinsic_apis//intrinsic/motion_planning/proto/v1:motion_blending_parameter_cc_proto",
         "@intrinsic_apis//intrinsic/motion_planning/proto/v1:motion_planning_limits_cc_proto",
         "@intrinsic_apis//intrinsic/world/proto:collision_settings_cc_proto",
-    ] + [],
+    ],
 )
 
 skill_manifest(

@@ -558,6 +558,18 @@ class WorldObject : public TransformNode {
   void RegisterFrameEntity(AttachmentEntityId frame_id);
   // Unregisters a frame entity and syncs with ObjectWorldData.
   void UnregisterFrameEntity(AttachmentEntityId frame_id);
+  // Updates the local-name index when a frame entity is renamed.
+  void UpdateFrameEntityLocalName(AttachmentEntityId frame_id,
+                                  absl::string_view old_name,
+                                  absl::string_view new_name);
+  // Returns the single entity of this object that matches `filter`. Resolves
+  // base-entity filters with GetRootEntityId() and single-name filters with
+  // `entity_ids_by_local_name_`. All other filters, and names that are not in
+  // the index, go through GetObjectEntitiesMatchingEntityFilter(). Returns a
+  // NotFoundError if no entity matches and an InvalidArgumentError if more
+  // than one entity matches.
+  absl::StatusOr<AttachmentEntityId> ResolveSingleEntityIdFromFilter(
+      const world::ObjectEntityFilter& filter) const;
 
   std::vector<WorldObject*> children_;
   // The set of entities that belong to this object.
@@ -565,6 +577,13 @@ class WorldObject : public TransformNode {
   // UnregisterFrameEntity() instead to keep the ObjectWorldData in sync.
   const WorldHashSet<AttachmentEntityId> entity_ids_;
   WorldHashMap<ObjectWorldResourceId, std::unique_ptr<Frame>> frames_by_id_;
+  AttachmentEntityId root_entity_id_{kInvalidEntityId};
+  // Entities of this object grouped by their local name.
+  // CAUTION: Do not modify this map directly! Use RegisterFrameEntity(),
+  // UnregisterFrameEntity(), and UpdateFrameEntityLocalName() instead to keep
+  // this index in sync.
+  const WorldHashMap<std::string, std::vector<AttachmentEntityId>>
+      entity_ids_by_local_name_;
 };
 
 namespace object_world_object_entity_filter_details {

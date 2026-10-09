@@ -12,33 +12,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-load("//bazel:cc_macros.bzl", "cc_library")
-load("//bazel:go_macros.bzl", "go_library")
-
 package(default_visibility = ["//visibility:public"])
 
-cc_library(
-    name = "scene_object_validation_c",
-    srcs = ["scene_object_validation_c.cc"],
-    hdrs = ["scene_object_validation_c.h"],
-    deps = [
-        "//intrinsic_sdk/intrinsic/scene/validate:scene_object_validation",
-        "@abseil-cpp//absl/base:core_headers",
-        "@abseil-cpp//absl/status",
-        "@intrinsic_apis//intrinsic/scene/proto/v1:scene_object_cc_proto",
-    ],
-)
-
-go_library(
+alias(
     name = "sceneobjectvalidation",
-    srcs = ["scene_object_validation.go"],
-    cdeps = [
-        ":scene_object_validation_c",
-    ],
-    cgo = 1,
-    importpath = "intrinsic/scene/validate/go/sceneobjectvalidation",
-    deps = [
-        "@intrinsic_apis//intrinsic/scene/proto/v1:scene_object_go_proto",
-        "@org_golang_google_protobuf//proto",
-    ],
+    actual = "//intrinsic_sdk/intrinsic/scene/validate/go:sceneobjectvalidation",
+    tags = ["go/intrinsic-ioc-transition-tdd"],
 )

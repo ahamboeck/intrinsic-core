@@ -14,11 +14,8 @@
 
 #ifndef INTRINSIC_MOTION_PLANNING_SERVICE_MOTION_PLANNER_CACHE_H_
 #define INTRINSIC_MOTION_PLANNING_SERVICE_MOTION_PLANNER_CACHE_H_
-#include <stdbool.h>
 
-#include <atomic>
 #include <cstddef>
-#include <cstdint>
 #include <deque>
 #include <memory>
 #include <ostream>
@@ -26,104 +23,58 @@
 #include <vector>
 
 #include "absl/base/thread_annotations.h"
-#include "absl/container/flat_hash_map.h"
-#include "absl/container/flat_hash_set.h"
 #include "absl/status/status.h"
 #include "absl/status/statusor.h"
 #include "absl/strings/str_format.h"
 #include "absl/strings/string_view.h"
 #include "absl/synchronization/mutex.h"
-#include "intrinsic/eigenmath/types.h"
-#include "intrinsic/kinematics/types/joint_limits_xd.h"
-#include "intrinsic/math/pose3.h"
 #include "intrinsic/motion_planning/motion_planner/motion_planner.h"
 #include "intrinsic/motion_planning/proto/v1/motion_planner_service.pb.h"
-#include "intrinsic/motion_planning/proto/v1/motion_specification.pb.h"
 #include "intrinsic/motion_planning/proto/v1/robot_specification.pb.h"
 #include "intrinsic/motion_planning/service/motion_planner_cache.pb.h"
+#include "intrinsic/motion_planning/service/motion_planner_cache_entry_features.h"
 #include "intrinsic/motion_planning/service/motion_planner_cache_key_normalization.h"
 #include "intrinsic/util/lru_cache.h"
 #include "intrinsic/world/objects/object_world.h"
-#include "intrinsic/world/objects/object_world_ids.h"
 #include "intrinsic/world/proto/collision_settings.pb.h"
-#include "intrinsic/world/world.pb.h"
 
 namespace intrinsic {
 
-static const auto* const distance_cache_format = new absl::ParsedFormat<
-    'f', 'f', 'f', 'f', 'f', 'd', 'v', 'v', 'v', 'v'>(
-    "MotionPlanningRequestCacheKeyDistance(diff_in_m_for_all_related_frame_"
-    "poses = "
-    "%.3f. diff_in_m_for_all_object_poses = %.3f."
-    "max_diff_in_rad_for_starting_robot_configuration = %.3f. "
-    "max_diff_in_rad_for_kinematic_objects = %.3f. "
-    "max_diff_in_world_application_limits = %.3f. "
-    "num_of_objects_new_in_one_key = %d. "
-    "world_collision_settings_are_same = %v. "
-    "motion_segment_collision_settings_are_same "
-    "= "
-    "%v. attachment_parent_ids_are_same = %v. geometry_refs_are_same = %v.");
+static const auto* const distance_cache_format =
+    new absl::ParsedFormat<'f', 'f', 'f', 'f', 'f', 'd', 'v', 'v', 'v', 'v',
+                           'v'>(
+        "MotionPlanningRequestCacheKeyDistance(diff_in_m_for_all_related_frame_"
+        "poses = "
+        "%.3f. diff_in_m_for_all_object_poses = %.3f."
+        "max_diff_in_rad_for_starting_robot_configuration = %.3f. "
+        "max_diff_in_rad_for_kinematic_objects = %.3f. "
+        "max_diff_in_world_application_limits = %.3f. "
+        "num_of_objects_new_in_one_key = %d. "
+        "world_collision_settings_are_same = %v. "
+        "motion_segment_collision_settings_are_same "
+        "= "
+        "%v. robot_links_are_same = %v. tool_links_are_same = %v. "
+        "geometry_fingerprints_are_same = %v.)");
 
 // The key type used for caching results from MotionPlanner::PlanTrajectory.
 struct MotionPlanningRequestCacheKey {
   // Normalized input to the group ID hash computation, contains the normalized
   // motion specification and robot specification from the motion request.
-  const MotionPlanningCacheGroupSignature group_signature;
+  MotionPlanningCacheGroupSignature group_signature;
   // Precomputed group ID hash of `group_signature`. When `std::nullopt`
   // (e.g., in aggregate-initialized test keys), `GetGroupId()` falls back
   // to computing `group_signature.ComputeGroupId()`.
-  const std::optional<size_t> group_id;
-  // References and poses of all frames referred in the MotionSpecification with
-  // respect to the root.
-  const absl::flat_hash_map<ObjectWorldResourceId, Pose3d>
-      poses_of_all_related_frames;
-  // References and poses of all objects in the world with respect to the root.
-  // Does not include the robot or its offspring.
-  const absl::flat_hash_map<ObjectWorldResourceId, Pose3d> poses_of_all_objects;
-  // References and poses of all attachment components of the robot relative to
-  // their parent.  For kinematic objects, the parent_t_child is the inbound
-  // pose (unaffected by config). Changes in those attachment components are
-  // disallowed for exact and fuzzy match.
-  const absl::flat_hash_map<uint32_t, Pose3d> rel_attachment_poses_robot;
-  // References and poses of all attachment components of the children objects
-  // of the robot (i.e., all objects attached to the robot kinematics) relative
-  // to their parent.  For kinematic objects, the parent_t_child is the inbound
-  // (unaffected by config). These components are considered static.
-  const absl::flat_hash_map<uint32_t, Pose3d>
-      rel_attachment_poses_robot_children_objects;
-  // The starting robot configuration in the request.
-  const eigenmath::VectorXd starting_robot_configuration;
-  // The application joint limits of the robot.
-  const JointLimitsXd world_application_limits;
-  // Collision settings of the world.
-  const intrinsic_proto::world::CollisionSettings world_collision_settings;
-  // Collision settings for each motion segment.
-  const std::vector<intrinsic_proto::world::CollisionSettings>
-      motion_segment_collision_settings;
-  // All parent ids in attachment components in the world.
-  const absl::flat_hash_set<uint32_t> attachment_parent_ids;
-  // Captures the structure of the attachment components of the robot.
-  const absl::flat_hash_map<uint32_t, uint32_t>
-      attachment_child_to_parent_ids_robot;
-  // Captures the structure of the attachment components of the children objects
-  // of the robot.
-  const absl::flat_hash_map<uint32_t, uint32_t>
-      attachment_child_to_parent_ids_robot_children_objects;
-  // All geometry ids in geometry components in the world.
-  const absl::flat_hash_set<std::string> geometry_fingerprints;
-  // All geometry ref_t_shape_aff in geometry components in the world.
-  const absl::flat_hash_set<std::string> serialized_geometry_ref_t_shape_aff;
-  // All kinematic object ids in the world excluding the robot. This is used to
-  // check if the kinematic objects in the world have changed.
-  const absl::flat_hash_map<std::string, eigenmath::VectorXd>
-      other_kinematic_object_ids;
+  std::optional<size_t> group_id;
+  // The features of the key, describing the world and robot state at the time
+  // of the request. Used to compute the similarity between this key
+  // and the cache entries of the cache group matching the id of the key.
+  MotionPlanningCacheEntryFeatures cache_entry_features;
   // UUID used for logging only.
-  const std::string uuid;
+  std::string uuid;
 
   // Create a `MotionPlanningRequestCacheKey` from the given set of input
   // arguments.
   static absl::StatusOr<MotionPlanningRequestCacheKey> Create(
-      const intrinsic_proto::world::internal::World& world_proto,
       const object_world::ObjectWorld& object_world,
       const intrinsic_proto::motion_planning::v1::MotionPlanningRequest& request
   );
@@ -132,6 +83,19 @@ struct MotionPlanningRequestCacheKey {
       const;
 
   static absl::StatusOr<MotionPlanningRequestCacheKey> FromProto(
+      const intrinsic_proto::motion_planning::MotionPlanningRequestCacheKey&
+          key_proto);
+
+  // Populates `key_proto` with serialized scene features from `features`.
+  static void PopulateProtoFromCacheEntryFeatures(
+      const MotionPlanningCacheEntryFeatures& features,
+      intrinsic_proto::motion_planning::MotionPlanningRequestCacheKey*
+          key_proto);
+
+  // Deserializes `MotionPlanningCacheEntryFeatures` from `key_proto`, falling
+  // back to deprecated map fields when the repeated feature fields are empty.
+  static absl::StatusOr<MotionPlanningCacheEntryFeatures>
+  ExtractCacheEntryFeaturesFromProto(
       const intrinsic_proto::motion_planning::MotionPlanningRequestCacheKey&
           key_proto);
 
@@ -202,15 +166,21 @@ struct MotionPlanningRequestCacheKeyDistance {
   bool world_collision_settings_are_same;
   // True if both keys have the same `motion_segment_collision_settings`.
   bool motion_segment_collision_settings_are_same;
-  // True if both keys have the same `attachment_parent_ids` and
-  // `attachment_child_to_parent_ids_robot_children_objects`.
-  bool attachment_parent_ids_are_same;
-  // True if both keys have the same `attachment_child_to_parent_ids_robot`.
-  bool attachment_child_to_parent_ids_robot_are_same;
+  // True if both feature sets have identical robot link `(normalized_name,
+  // normalized_parent_name)` attachment pairs.
+  bool robot_links_are_same;
+  // True if both feature sets have identical attached tool/workpiece link
+  // `(normalized_name, normalized_parent_name)` attachment pairs.
+  bool tool_links_are_same;
   // True if both keys have the same `geometry_fingerprints`.
   bool geometry_fingerprints_are_same;
   // True if both keys have the same `geometry_ref_t_shape_aff`.
   bool geometry_ref_t_shape_aff_are_same;
+
+  // True if all motion segment events are identical.
+  bool motion_segment_events_are_same;
+
+
   // Return True if `this` distance is considered shorter than the `other`
   // distance. Two caches with a shorter distance is more likely to match each
   // other. Instead of overriding the < operator, we use a custom function. The
@@ -224,7 +194,8 @@ struct MotionPlanningRequestCacheKeyDistance {
   // the other.
   static absl::StatusOr<MotionPlanningRequestCacheKeyDistance> GetDistance(
       const MotionPlanningRequestCacheKey& first_key,
-      const MotionPlanningRequestCacheKey& second_key);
+      const MotionPlanningRequestCacheKey& second_key,
+      double rotation_weight = 1.0);
 
   struct IsValidForCacheHitOptions {
     const double diff_in_m_for_all_related_frame_poses_threshold = 0.001;
@@ -233,6 +204,7 @@ struct MotionPlanningRequestCacheKeyDistance {
         0.001;
     const double max_diff_in_rad_for_kinematic_objects_threshold = 0.001;
     const double max_diff_in_world_application_limits_threshold = 0.0;
+    const double rotation_weight = 1.0;
     absl::Status Validate() const;
   };
 
@@ -240,8 +212,13 @@ struct MotionPlanningRequestCacheKeyDistance {
   // The distance is valid if all following are true:
   // * world_collision_settings_are_same
   // * motion_segment_collision_settings_are_same
-  // * attachment_parent_ids_are_same
-  // * geometry_refs_are_same
+  // * robot_links_are_same
+  // * tool_links_are_same
+  // * geometry_fingerprints_are_same
+  // * geometry_ref_t_shape_aff_are_same
+
+  // * motion_segment_events_are_same
+
   // * num_of_objects_new_in_one_key == 0
   // * diff_in_m_for_all_related_frame_poses <
   //    diff_in_m_for_all_related_frame_poses_threshold
@@ -252,19 +229,13 @@ struct MotionPlanningRequestCacheKeyDistance {
   //    max_diff_in_world_application_limits_threshold
   bool IsValidForCacheHit(const IsValidForCacheHitOptions& options) const;
 
-  // Return true if the distances is considered valid for fuzzy cache hit.
-  // The distance is valid if all of the following are true:
-  // * attachment_child_to_parent_ids_robot_are_same is true
-  // * diff_in_m_for_robot_attachment_components is under a default threshold.
+  // Returns true if this distance qualifies as a fuzzy cache hit candidate
+  // under `options`. Requires `motion_segment_collision_settings_are_same` and
+  // `robot_links_are_same` to be true,
+  // `diff_in_m_for_robot_attachment_components` to be within tolerance, and
+  // `max_diff_in_world_application_limits` to be within
+  // `options.max_diff_in_world_application_limits_threshold`.
   bool IsValidForFuzzyCacheHit(const IsValidForCacheHitOptions& options) const;
-
- private:
-  // The difference between two poses are calculated by `(pose1 * kOffsetPose -
-  // pose2 * kOffsetPose).norm()`, where `kOffsetPose` is a fix vector. We do
-  // this to roughly convert difference in orintation to difference to
-  // translation.
-  static double GetDiffOfPoses(const Pose3d& first_pose,
-                               const Pose3d& second_pose);
 };
 
 inline std::ostream& operator<<(
@@ -279,7 +250,7 @@ inline std::ostream& operator<<(
              distance.num_of_objects_new_in_one_key,
              distance.world_collision_settings_are_same,
              distance.motion_segment_collision_settings_are_same,
-             distance.attachment_parent_ids_are_same,
+             distance.robot_links_are_same, distance.tool_links_are_same,
              distance.geometry_fingerprints_are_same);
 }
 
@@ -301,12 +272,27 @@ inline std::ostream& operator<<(
 // See `Insert` and `Lookup` for more details.
 class PlanTrajectoryCache {
  public:
-  // An entry in the cache holds the input (key) and output (result) of
-  // MotionPlannerService::PlanTrajectory.
+  // An entry in the cache holding the group identifier (`group_id`), logging
+  // identifier (`uuid`), extracted scene features (`features`), and planned
+  // trajectory (`result`) of `MotionPlannerService::PlanTrajectory()`.
   struct CacheEntry {
-    MotionPlanningRequestCacheKey key;
+    std::string uuid;
+    size_t group_id = 0;
+    MotionPlanningCacheEntryFeatures features;
     MotionPlanner::PlanTrajectoryResult result;
+
+    CacheEntry() = default;
+    // Constructs a `CacheEntry` by extracting `uuid`, `group_id`, and
+    // `features` from `cache_key` along with `plan_result`.
+    explicit CacheEntry(const MotionPlanningRequestCacheKey& cache_key,
+                        MotionPlanner::PlanTrajectoryResult plan_result = {})
+        : uuid(cache_key.uuid),
+          group_id(cache_key.GetGroupId()),
+          features(cache_key.cache_entry_features),
+          result(std::move(plan_result)) {}
   };
+  using CacheGroupEntries = std::deque<std::unique_ptr<CacheEntry>>;
+
   // Perform input validation and create a cache.
   static absl::StatusOr<std::unique_ptr<PlanTrajectoryCache>> Create(
       int max_num_of_groups, int max_num_of_entries_per_group,
@@ -314,21 +300,20 @@ class PlanTrajectoryCache {
           distance_options = MotionPlanningRequestCacheKeyDistance::
               IsValidForCacheHitOptions{});
 
-  // The return type of the `Lookup` function.
-  // If `exact_match` is true, then `cached_entry` is a valid match to
-  // the given key.
-  // If `exact_match` is false, then `cached_entry` is the newest
-  // entry in the group. See the doc of `Lookup` for more information.
+  // The return type of `Lookup()`.
+  // If `exact_match` is true, `cached_entry` is an exact cache hit for the
+  // given `key`. If `exact_match` is false, `cached_entry` is the closest
+  // fuzzy cache hit candidate in the group. See `Lookup()` for more details.
   struct LookupResult {
-    // True if the returned cached entry key is an exact match to the given
-    // cache key.
+    // True if the returned cached entry is an exact match to the given cache
+    // key.
     const bool exact_match;
     // The uuid of the given cache key for look up.
     const std::string given_cache_key_uuid;
     // The returned cached entry.
     const PlanTrajectoryCache::CacheEntry cached_entry;
-    // The difference between the given cache key to `Lookup` and the returned
-    // cached entry key.
+    // The difference between the given cache key to `Lookup()` and the returned
+    // cached entry.
     const MotionPlanningRequestCacheKeyDistance distance;
 
     // Return true if this LookupResult has a valid trajectory.
@@ -376,14 +361,14 @@ class PlanTrajectoryCache {
   // reached). The oldest entry of that group will be removed.
   absl::Status Insert(std::unique_ptr<CacheEntry> entry);
 
-  // Lookup a key in the cache. This cannot be marked const since it requires
-  // reservations.
-  // First we try to find the group based on the key's group_id.
-  // Return `absl::NotFoundError` if such group does not exist in the cache.
-  // Then we iterate through all entries in the group and find a matching one
-  // based on `IsValidForCacheHit`. Return (true, matched_entry) if one is
-  // found.
-  // If no matching entry is found, return (false, newest_entry_in_group).
+  // Looks up `key` in the cache. Cannot be marked `const` since `LruCache`
+  // lookup updates LRU ordering.
+  // First looks up the group matching `key.GetGroupId()`, returning
+  // `absl::NotFoundError` if the group does not exist.
+  // Then searches the group for the first exact match (`IsValidForCacheHit()`),
+  // or the closest fuzzy match candidate (`IsValidForFuzzyCacheHit()`).
+  // Returns `absl::NotFoundError` if no entry in the group is a valid exact or
+  // fuzzy hit.
   absl::StatusOr<LookupResult> Lookup(const MotionPlanningRequestCacheKey& key);
 
  private:
@@ -400,7 +385,7 @@ class PlanTrajectoryCache {
               IsValidForCacheHitOptions{});
 
   const int max_num_of_entries_per_group_;
-  using GroupCache = LruCache<size_t, std::deque<std::unique_ptr<CacheEntry>>>;
+  using GroupCache = LruCache<size_t, CacheGroupEntries>;
   GroupCache group_id_to_entries_ ABSL_GUARDED_BY(mutex_);
   mutable absl::Mutex mutex_;
   const MotionPlanningRequestCacheKeyDistance::IsValidForCacheHitOptions

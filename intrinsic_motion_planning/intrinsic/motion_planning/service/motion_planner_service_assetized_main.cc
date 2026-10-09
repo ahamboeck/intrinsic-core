@@ -83,7 +83,8 @@ ABSL_FLAG(std::string, runtime_context_file, "/etc/intrinsic/runtime_config.pb",
 namespace intrinsic {
 
 int MainImpl() {
-  intrinsic::OpenCensusPlugin open_census;
+  OpenCensusPlugin open_census(/*service_name=*/kMotionPlannerServiceName,
+                               /*use_otel_metrics=*/true);
 
   // Initialize sub-services.
   ASSIGN_OR_DIE(
