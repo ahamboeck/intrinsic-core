@@ -26,9 +26,9 @@ proto_library(
     deps = [
         "//intrinsic/config/proto:application_proto",
         "//intrinsic/config/proto:process_proto",
-        "//intrinsic/executive/proto:behavior_tree_proto",
         "//intrinsic/resources/proto:resource_type_runtime_proto",
         "//intrinsic/skills/catalog/proto:skill_deployment_data_proto",
+        "//intrinsic_sdk/intrinsic/executive/proto:behavior_tree_proto",
         "@intrinsic_apis//intrinsic/config/proto:data_files_proto",
     ],
 )
@@ -57,9 +57,9 @@ go_proto_library(
     deps = [
         "//intrinsic/config/proto:application_go_proto",
         "//intrinsic/config/proto:process_go_proto",
-        "//intrinsic/executive/proto:behavior_tree_go_proto",
         "//intrinsic/resources/proto:resource_type_runtime_go_proto",
         "//intrinsic/skills/catalog/proto:skill_deployment_data_go_proto",
+        "//intrinsic_sdk/intrinsic/executive/proto:behavior_tree_go_proto",
         "@intrinsic_apis//intrinsic/config/proto:data_files_go_proto",
         "@intrinsic_apis//intrinsic/solution_versions/proto/v1:snapshot_go_proto",
     ],

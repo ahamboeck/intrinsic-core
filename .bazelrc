@@ -136,6 +136,9 @@ common --@aspect_rules_lint//lint:fail_on_violation=true
 # Enable custom profiling by default.
 common --@gz-common//profiler:config=custom
 
+# Use OpenTelemetry C++ ABI v2 (enables synchronous Gauge and Span::AddLink).
+common --@io_opentelemetry_cpp//api:abi_version_no=2
+
 # Disable the less permissive Luksan solver from nlopt.
 common --@nlopt//:use_luksan=false
 
