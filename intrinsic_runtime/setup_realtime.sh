@@ -119,6 +119,12 @@ function install_dependencies() {
         packages+=("ethtool")
     fi
 
+    # uninstall_realtime.sh makes GRUB prefer the generic kernel until the
+    # real-time kernel packages are purged. Remove that before apt-get install
+    # (and configure_kernel_cmdline) runs update-grub, otherwise the real-time
+    # kernel would never be booted.
+    rm -f /etc/default/grub.d/zz-intrinsic-uninstall-realtime.cfg
+
     run_silent apt-get install -y "${packages[@]}"
 }
 
