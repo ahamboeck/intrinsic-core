@@ -83,6 +83,7 @@ cuda_library(
         "//intrinsic_perception/intrinsic/perception/gpu/cuda_utils",
         "@abseil-cpp//absl/status",
         "@abseil-cpp//absl/status:statusor",
+        "@abseil-cpp//absl/strings",
         "@cuda//:cuda_headers",
     ],
 )
