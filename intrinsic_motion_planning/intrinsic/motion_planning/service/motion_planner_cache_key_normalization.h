@@ -22,6 +22,7 @@
 #include "absl/status/status.h"
 #include "absl/status/statusor.h"
 #include "intrinsic/eigenmath/types.h"
+#include "intrinsic/geometry/api/geometry.h"
 #include "intrinsic/motion_planning/proto/v1/motion_planner_service.pb.h"
 #include "intrinsic/motion_planning/proto/v1/motion_specification.pb.h"
 #include "intrinsic/motion_planning/proto/v1/robot_specification.pb.h"
@@ -47,6 +48,14 @@ struct EntityCollisionGeometryFeature {
   std::string geometry_fingerprint;
   eigenmath::Matrix4d ref_t_shape = eigenmath::Matrix4d::Identity();
 };
+
+// Computes a deterministic, lock-free fingerprint for the collision shape of
+// `geometry`, ignoring visual `Renderable` properties.
+// - For `Mesh` and `PointCloud`, this is an O(1) operation that reads the
+//   precomputed `ObjectStore` content hash without serializing vertex buffers.
+// - For primitive shapes, hashes the exact primitive parameters (radius, size).
+absl::StatusOr<std::string> ComputeCollisionGeometryFingerprint(
+    const Geometry& geometry);
 
 // Extracts the geometry fingerprint and `ref_t_shape` matrix for each collision
 // geometry attached to `entity_id` in `entity_world`. Returns an empty vector

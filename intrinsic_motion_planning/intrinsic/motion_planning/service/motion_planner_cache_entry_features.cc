@@ -33,7 +33,6 @@
 #include "absl/types/span.h"
 #include "intrinsic/eigenmath/types.h"
 #include "intrinsic/geometry/api/affine_transform_of_geometry.h"
-#include "intrinsic/geometry/api/geometry_fingerprint.h"
 #include "intrinsic/math/pose3.h"
 #include "intrinsic/math/proto_conversion.h"
 #include "intrinsic/motion_planning/proto/motion_planner_service_proto_utils.h"

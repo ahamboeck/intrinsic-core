@@ -20,6 +20,7 @@
 #include <queue>
 #include <string>
 #include <utility>
+#include <variant>
 #include <vector>
 
 #include "absl/algorithm/container.h"
@@ -30,12 +31,18 @@
 #include "absl/strings/string_view.h"
 #include "google/protobuf/repeated_ptr_field.h"
 #include "intrinsic/eigenmath/types.h"
+#include "intrinsic/geometry/api/exact_geometry.h"
+#include "intrinsic/geometry/api/geometry.h"
 #include "intrinsic/geometry/api/geometry_fingerprint.h"
+#include "intrinsic/geometry/api/geometry_options.h"
+#include "intrinsic/geometry/shapes/point_cloud.h"
 #include "intrinsic/motion_planning/proto/v1/geometric_constraints.pb.h"
 #include "intrinsic/motion_planning/proto/v1/motion_planner_service.pb.h"
 #include "intrinsic/motion_planning/proto/v1/motion_specification.pb.h"
 #include "intrinsic/motion_planning/proto/v1/robot_specification.pb.h"
 #include "intrinsic/util/hash.h"
+#include "intrinsic/util/object_store/memoize_fingerprint.h"
+#include "intrinsic/util/object_store/object_ref.h"
 #include "intrinsic/util/proto/pb_hash.h"
 #include "intrinsic/util/status/status_macros.h"
 #include "intrinsic/world/collision/util/make_collision_settings.h"
@@ -743,6 +750,65 @@ bool IsKinematicObject(const object_world::WorldObject& object) {
   return visitor.is_kinematic;
 }
 
+absl::StatusOr<std::string> ComputeCollisionGeometryFingerprint(
+    const Geometry& geometry) {
+  // Guard against silent O(N) fallback on future shape additions.
+  // Any new alternative added to `ComputedShape` must be handled explicitly
+  // here.
+  static_assert(std::variant_size_v<geo::ExactGeometry::ComputedShape> == 2,
+                "Handle the new ExactGeometry::ComputedShape alternative in "
+                "ComputeCollisionGeometryFingerprint().");
+
+  const geo::ExactGeometry& exact_geometry = geometry.GetExactGeometry();
+
+  // Primitives must be checked prior to meshes because `geo::ExactGeometry`
+  // constructors for primitive shapes eagerly instantiate an internal
+  // `ObjectRef<Mesh>`. Checking `HasPrimitiveShapes()` first ensures that
+  // the analytical dimensions of the primitive shape are hashed rather
+  // than its tessellation.
+  if (exact_geometry.HasPrimitiveShapes()) {
+    // Use the default geometry options to make the fingerprint only depend on
+    // the exact geometry, avoiding to create a new ExactGeometry object if
+    // already using the default options.
+    if (exact_geometry.options() == geo::GeometryOptions::Default()) {
+      return geo::GenerateFingerprint(exact_geometry);
+    }
+    return geo::GenerateFingerprint(
+        geo::ExactGeometry(exact_geometry, geo::GeometryOptions::Default()));
+  }
+
+  // For meshes, use the precomputed `ObjectStore` content hash in
+  // `ObjectRef<Mesh>`. `MemoizeFingerprint` provides lock-free O(1) retrieval.
+  if (exact_geometry.HasMesh()) {
+    INTR_ASSIGN_OR_RETURN(const ObjectRef<geo::Mesh> mesh_ref,
+                          exact_geometry.GetMesh(),
+                          _ << "Failed to get mesh from exact geometry.");
+    const uint64_t mesh_fingerprint =
+        memoize::MemoizeFingerprint<ObjectRef<geo::Mesh>>::Fingerprint(
+            mesh_ref);
+    return absl::StrCat(absl::Hex(mesh_fingerprint));
+  }
+
+  // For point clouds, use the precomputed `ObjectStore` content hash in
+  // `ObjectRef<PointCloud>`. `MemoizeFingerprint` provides lock-free O(1)
+  // retrieval.
+  if (exact_geometry.HasPointCloud()) {
+    INTR_ASSIGN_OR_RETURN(
+        const ObjectRef<geo::PointCloud> point_cloud_ref,
+        exact_geometry.GetPointCloud(),
+        _ << "Failed to get point cloud from exact geometry.");
+    const uint64_t point_cloud_fingerprint =
+        memoize::MemoizeFingerprint<ObjectRef<geo::PointCloud>>::Fingerprint(
+            point_cloud_ref);
+    return absl::StrCat(absl::Hex(point_cloud_fingerprint));
+  }
+
+  // This condition should be unreachable as ExactGeometry can only hold `Mesh`,
+  // `PointCloud` or primitve shapes.
+  return absl::InternalError(
+      "ExactGeometry has an unsupported shape representation.");
+}
+
 absl::StatusOr<std::vector<EntityCollisionGeometryFeature>>
 ExtractEntityCollisionGeometryFeatures(const World& entity_world,
                                        const EntityId entity_id) {
@@ -769,7 +835,7 @@ ExtractEntityCollisionGeometryFeatures(const World& entity_world,
        *collision_geometries) {
     INTR_ASSIGN_OR_RETURN(
         std::string fingerprint,
-        GenerateFingerprint(transformed_geometry.shape()),
+        ComputeCollisionGeometryFingerprint(transformed_geometry.shape()),
         _ << "Failed to generate fingerprint for collision geometry: "
           << geometry_name);
     features.push_back(EntityCollisionGeometryFeature{
