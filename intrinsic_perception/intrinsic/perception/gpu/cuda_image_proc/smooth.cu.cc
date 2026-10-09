@@ -21,6 +21,7 @@
 #include "absl/status/statusor.h"
 #include "intrinsic/perception/gpu/cuda_image_proc/border_extrapolation.h"
 #include "intrinsic/perception/gpu/cuda_image_proc/border_extrapolation_device.h"
+#include "intrinsic/perception/gpu/cuda_image_proc/smooth_device.h"
 #include "intrinsic/perception/gpu/cuda_utils/cuda_image.h"
 #include "intrinsic/perception/gpu/cuda_utils/cuda_math.h"
 #include "intrinsic/perception/gpu/cuda_utils/cuda_utils.h"
@@ -30,19 +31,12 @@ namespace intrinsic {
 namespace perception {
 namespace {
 
-constexpr int kGaussian5x5BlockSize = 12;
-constexpr int kGaussian5x5HalfKernelWidth = 2;
-constexpr int kGaussian5x5BlockSizePadded =
-    kGaussian5x5BlockSize + 2 * kGaussian5x5HalfKernelWidth;
-
 template <typename ImageTraits>
 __global__ void SmoothImageWithGaussian5x5Kernel(
     const typename ImageTraits::ScalarType* image_src,
     typename ImageTraits::ScalarType* image_dst, int cols, int rows,
     BorderType border_type, float sum_weight) {
   constexpr int kNumChannels = ImageTraits::kNumChannels;
-  constexpr int kKernelWidth = 5;
-  const float kernel_1d[5] = {0.0625f, 0.25f, 0.375f, 0.25f, 0.0625f};
 
   constexpr int kHalfKernelWidth = kGaussian5x5HalfKernelWidth;
   constexpr int kPaddedBlockWidth = kGaussian5x5BlockSizePadded;
@@ -77,37 +71,17 @@ __global__ void SmoothImageWithGaussian5x5Kernel(
     // extends top and bottom into the padded region.
     if (threadIdx.x >= kHalfKernelWidth &&
         threadIdx.x < kHalfKernelWidth + kGaussian5x5BlockSize) {
-      const int block_row = threadIdx.y;
-      const int block_col = threadIdx.x;
-      float sum = 0.0f;
-#pragma unroll
-      for (int j = 0; j < kKernelWidth; ++j) {
-        const int block_col_with_offset = block_col - kHalfKernelWidth + j;
-        const float val = static_cast<float>(
-            block_src[block_row * kPaddedBlockWidth + block_col_with_offset]);
-        sum += kernel_1d[j] * val;
-      }
-      block_src_temp[block_row * kPaddedBlockWidth + block_col] = sum;
+      block_src_temp[threadIdx.y * kPaddedBlockWidth + threadIdx.x] =
+          ConvolveGaussian5x5Row(block_src, threadIdx.x, threadIdx.y);
     }
     __syncthreads();
 
     // Computes convolution in y direction. This convolution is performed by
     // all threads whose x and y coordinates fall into the un-padded region of
     // size kGaussian5x5BlockSize x kGaussian5x5BlockSize.
-    if (threadIdx.x >= kHalfKernelWidth &&
-        threadIdx.x < kHalfKernelWidth + kGaussian5x5BlockSize &&
-        threadIdx.y >= kHalfKernelWidth &&
-        threadIdx.y < kHalfKernelWidth + kGaussian5x5BlockSize) {
-      const int block_col = threadIdx.x;
-      float sum = 0.0f;
-#pragma unroll
-      for (int j = 0; j < kKernelWidth; ++j) {
-        const int block_row_with_offset = threadIdx.y - kHalfKernelWidth + j;
-        const float val =
-            block_src_temp[block_row_with_offset * kPaddedBlockWidth +
-                           block_col];
-        sum += kernel_1d[j] * val;
-      }
+    if (IsGaussian5x5InteriorThread()) {
+      const float sum =
+          ConvolveGaussian5x5Col(block_src_temp, threadIdx.x, threadIdx.y);
 
       if (image_col >= 0 && image_col < cols && image_row >= 0 &&
           image_row < rows) {
