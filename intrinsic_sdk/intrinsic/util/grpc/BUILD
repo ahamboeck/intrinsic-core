@@ -37,7 +37,7 @@ cc_library(
     srcs = ["auth.cc"],
     hdrs = ["auth.h"],
     deps = [
-        "//intrinsic/config:environments_cc",
+        "//intrinsic_sdk/intrinsic/config:environments_cc",
         "@abseil-cpp//absl/status",
         "@abseil-cpp//absl/status:statusor",
         "@abseil-cpp//absl/strings",
@@ -50,7 +50,7 @@ py_library(
     srcs = ["auth.py"],
     deps = [
         ":userconfig",
-        "//intrinsic/config:environments_py",
+        "//intrinsic_sdk/intrinsic/config:environments_py",
         "//intrinsic_sdk/intrinsic/kubernetes/acl/py:jwt",
         "@ai_intrinsic_sdks_pip_deps//retrying",
         "@com_github_grpc_grpc//src/python/grpcio/grpc:grpcio",
@@ -62,7 +62,7 @@ py_library(
     srcs = ["dialerutil.py"],
     deps = [
         ":auth_py",
-        "//intrinsic/config:environments_py",
+        "//intrinsic_sdk/intrinsic/config:environments_py",
         "//intrinsic_sdk/intrinsic/kubernetes/acl/py:identity",
         "//intrinsic_sdk/intrinsic/kubernetes/acl/py:jwt",
         "@com_github_grpc_grpc//src/python/grpcio/grpc:grpcio",

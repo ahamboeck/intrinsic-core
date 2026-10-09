@@ -49,24 +49,6 @@ go_library(
 )
 
 alias(
-    name = "environments_cc",
-    actual = "//intrinsic_sdk/intrinsic/config:environments_cc",
-    tags = ["go/intrinsic-ioc-transition-tdd"],
-    visibility = [
-        "//visibility:public",
-    ],
-)
-
-alias(
-    name = "environments_py",
-    actual = "//intrinsic_sdk/intrinsic/config:environments_py",
-    tags = ["go/intrinsic-ioc-transition-tdd"],
-    visibility = [
-        "//visibility:public",
-    ],
-)
-
-alias(
     name = "environments",
     actual = "//intrinsic_sdk/intrinsic/config:environments",
     tags = ["go/intrinsic-ioc-transition-tdd"],
