@@ -14,9 +14,8 @@
 
 #include "intrinsic/perception/gpu/cuda_image_proc/color_conversion.h"
 
-#include <algorithm>
-
 #include "absl/status/statusor.h"
+#include "intrinsic/perception/gpu/cuda_image_proc/color_conversion_device.h"
 #include "intrinsic/perception/gpu/cuda_utils/cuda_image.h"
 #include "intrinsic/perception/gpu/cuda_utils/cuda_math.h"
 #include "intrinsic/perception/gpu/cuda_utils/cuda_utils.h"
@@ -37,18 +36,8 @@ __global__ void RgbToGrayKernel(
   }
   image_rgb += y * cols * 3 + x * 3;
   image_gray += y * cols + x;
-  const float r = static_cast<float>(image_rgb[0]);
-  const float g = static_cast<float>(image_rgb[1]);
-  const float b = static_cast<float>(image_rgb[2]);
-  float gray = 0.299f * r + 0.587f * g + 0.114f * b;
-  if constexpr (std::is_integral_v<typename OutputImageTraits::ScalarType>) {
-    gray += 0.5f;
-  } else {
-    gray /= OutputImageTraits::kIntensityMax;
-  }
-  gray = std::clamp(gray, 0.0f,
-                    static_cast<float>(OutputImageTraits::kIntensityMax));
-  image_gray[0] = static_cast<OutputImageTraits::ScalarType>(gray);
+  image_gray[0] = RgbPixelToGray<OutputImageTraits>(image_rgb[0], image_rgb[1],
+                                                    image_rgb[2]);
 }
 
 }  // namespace

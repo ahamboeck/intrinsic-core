@@ -22,6 +22,7 @@
 #include "intrinsic/perception/core/image_traits.h"
 #include "intrinsic/perception/gpu/cuda_image_proc/border_extrapolation.h"
 #include "intrinsic/perception/gpu/cuda_image_proc/border_extrapolation_device.h"
+#include "intrinsic/perception/gpu/cuda_image_proc/laplacian_device.h"
 #include "intrinsic/perception/gpu/cuda_utils/cuda_image.h"
 #include "intrinsic/perception/gpu/cuda_utils/cuda_math.h"
 #include "intrinsic/perception/gpu/cuda_utils/cuda_utils.h"
@@ -30,11 +31,6 @@
 namespace intrinsic {
 namespace perception {
 namespace {
-
-constexpr int kLaplacian3x3BlockSize = 14;
-constexpr int kLaplacian3x3HalfKernelWidth = 1;
-constexpr int kLaplacian3x3BlockSizePadded =
-    kLaplacian3x3BlockSize + 2 * kLaplacian3x3HalfKernelWidth;
 
 template <typename ImageTraits>
 __global__ void ApplyLaplacian3x3Kernel(
@@ -73,26 +69,8 @@ __global__ void ApplyLaplacian3x3Kernel(
         src_pix;
     __syncthreads();
 
-    if (within_image_bounds && threadIdx.x >= kLaplacian3x3HalfKernelWidth &&
-        threadIdx.x < kLaplacian3x3BlockSize + kLaplacian3x3HalfKernelWidth &&
-        threadIdx.y >= kLaplacian3x3HalfKernelWidth &&
-        threadIdx.y < kLaplacian3x3BlockSize + kLaplacian3x3HalfKernelWidth) {
-      const int up =
-          (threadIdx.y - 1) * kLaplacian3x3BlockSizePadded + threadIdx.x;
-      const int left =
-          threadIdx.y * kLaplacian3x3BlockSizePadded + (threadIdx.x - 1);
-      const int center =
-          threadIdx.y * kLaplacian3x3BlockSizePadded + threadIdx.x;
-      const int right =
-          threadIdx.y * kLaplacian3x3BlockSizePadded + (threadIdx.x + 1);
-      const int down =
-          (threadIdx.y + 1) * kLaplacian3x3BlockSizePadded + threadIdx.x;
-      const float sum = static_cast<float>(block_src[up]) +
-                        static_cast<float>(block_src[left]) +
-                        static_cast<float>(block_src[right]) +
-                        static_cast<float>(block_src[down]) +
-                        -4.0f * static_cast<float>(block_src[center]);
-      image_dst[i] = sum;
+    if (within_image_bounds && IsLaplacian3x3InteriorThread()) {
+      image_dst[i] = ConvolveLaplacian3x3(block_src, threadIdx.x, threadIdx.y);
     }
     __syncthreads();
   }

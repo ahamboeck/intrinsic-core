@@ -28,6 +28,7 @@ cc_library(
         "//intrinsic/util/status:status_macros",
         "//intrinsic/util/thread",
         "//intrinsic_control/intrinsic/icon/actions:adio_info",
+        "//intrinsic_control/intrinsic/icon/actions:empty_action_signature",
         "//intrinsic_control/intrinsic/icon/actions:trajectory_tracking_action_info",
         "//intrinsic_control/intrinsic/icon/cc_client:client",
         "//intrinsic_control/intrinsic/icon/cc_client:client_utils",
@@ -36,6 +37,8 @@ cc_library(
         "//intrinsic_control/intrinsic/icon/common:builtins",
         "//intrinsic_control/intrinsic/icon/common:id_types",
         "//intrinsic_control/intrinsic/icon/equipment:equipment_utils",
+        "//intrinsic_control/intrinsic/icon/proto/v1:motion_event_types_cc_proto",
+        "//intrinsic_motion_planning/intrinsic/motion_planning/proto/v1:motion_events_cc_proto",
         "//intrinsic_sdk/intrinsic/skills/cc:skill_canceller",
         "@abseil-cpp//absl/cleanup",
         "@abseil-cpp//absl/container:flat_hash_set",
@@ -48,5 +51,5 @@ cc_library(
         "@intrinsic_apis//intrinsic/icon/proto:joint_space_cc_proto",
         "@intrinsic_apis//intrinsic/icon/proto/v1:condition_types_cc_proto",
         "@intrinsic_apis//intrinsic/logging/proto:context_cc_proto",
-    ] + [],
+    ],
 )

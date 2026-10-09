@@ -106,6 +106,13 @@ class MotionPlannerInterface {
 
     // The collision checking statistics for the planned trajectory.
     DistanceCheckStatistics distance_check_statistics = {};
+
+
+    // The motion events corresponding to the planned trajectory.
+    // Could be empty if there are no events or before trajectory generation.
+    std::vector<intrinsic_proto::motion_planning::v1::MotionEvent>
+        motion_events = {};
+
     // Contains information about the motion planning duration, and its
     // breakdown, such as into path planning duration and trajectory generation
     // duration.

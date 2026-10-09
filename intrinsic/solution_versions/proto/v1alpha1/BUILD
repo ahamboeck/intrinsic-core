@@ -12,50 +12,22 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-load("//bazel:go_macros.bzl", "go_proto_library")
-load("//bazel:protos.bzl", "proto_library")
-
-proto_library(
-    name = "motion_planner_service_migration_proto",
-    srcs = ["motion_planner_service_migration.proto"],
-)
-
-go_proto_library(
+alias(
     name = "motion_planner_service_migration_go_proto",
-    compilers = [
-        "@io_bazel_rules_go//proto:go_proto",
-    ],
-    importpath = "intrinsic/solution_versions/proto/v1alpha1/motion_planner_service_migration_go_proto",
-    protos = [":motion_planner_service_migration_proto"],
+    actual = "//intrinsic_sdk/intrinsic/solution_versions/proto/v1alpha1:motion_planner_service_migration_go_proto",
+    tags = ["go/intrinsic-ioc-transition-tdd"],
     visibility = [
         "//intrinsic/solution_versions:__subpackages__",
         "//intrinsic_sdk/intrinsic/tools/inctl/cmd/solution/migrate:__pkg__",
     ],
 )
 
-proto_library(
-    name = "solution_migration_proto",
-    srcs = ["solution_migration.proto"],
-    deps = [
-        ":motion_planner_service_migration_proto",
-        "@intrinsic_apis//intrinsic/solution_versions/proto/v1:snapshot_source_proto",
-    ],
-)
-
-go_proto_library(
+alias(
     name = "solution_migration_go_proto",
-    compilers = [
-        "@io_bazel_rules_go//proto:go_grpc_v2",
-        "@io_bazel_rules_go//proto:go_proto",
-    ],
-    importpath = "intrinsic/solution_versions/proto/v1alpha1/solution_migration_go_proto",
-    protos = [":solution_migration_proto"],
+    actual = "//intrinsic_sdk/intrinsic/solution_versions/proto/v1alpha1:solution_migration_go_proto",
+    tags = ["go/intrinsic-ioc-transition-tdd"],
     visibility = [
         "//intrinsic/solution_versions:__subpackages__",
         "//intrinsic_sdk/intrinsic/tools/inctl/cmd/solution/migrate:__pkg__",
-    ],
-    deps = [
-        ":motion_planner_service_migration_go_proto",
-        "@intrinsic_apis//intrinsic/solution_versions/proto/v1:snapshot_source_go_proto",
     ],
 )

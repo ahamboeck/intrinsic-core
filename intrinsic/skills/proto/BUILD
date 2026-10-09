@@ -91,15 +91,3 @@ alias(
     actual = "//intrinsic_sdk/intrinsic/skills/proto:skill_registry_config_go_proto",
     tags = ["go/intrinsic-ioc-transition-tdd"],
 )
-
-alias(
-    name = "prediction_go_proto",
-    actual = "//intrinsic_sdk/intrinsic/skills/proto:prediction_go_proto",
-    tags = ["go/intrinsic-ioc-transition-tdd"],
-)
-
-alias(
-    name = "prediction_cc_proto",
-    actual = "//intrinsic_sdk/intrinsic/skills/proto:prediction_cc_proto",
-    tags = ["go/intrinsic-ioc-transition-tdd"],
-)

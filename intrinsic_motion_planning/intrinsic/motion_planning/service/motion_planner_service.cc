@@ -14,6 +14,8 @@
 
 #include "intrinsic/motion_planning/service/motion_planner_service.h"
 
+#include <algorithm>
+#include <array>
 #include <cstddef>
 #include <memory>
 #include <optional>
@@ -118,7 +120,9 @@
 #include "intrinsic/world/proto/object_world_updates.pb.h"
 #include "intrinsic/world/service/objects/object_world_converter.h"
 #include "intrinsic/world/world.h"
-#include "opencensus/stats/stats.h"
+#include "opentelemetry/common/attribute_value.h"
+#include "opentelemetry/context/runtime_context.h"
+#include "opentelemetry/metrics/sync_instruments.h"
 
 namespace intrinsic {
 namespace {
@@ -556,6 +560,11 @@ MotionPlannerService::ConvertPlanTrajectoryResultToTrajectoryPlanningResponse(
       ToProto(plan_trajectory_result.trajectory)
   );
   *response.mutable_discretized() = trajectory_proto;
+
+  *response.mutable_motion_events() = {
+      plan_trajectory_result.motion_events.begin(),
+      plan_trajectory_result.motion_events.end()};
+
   INTR_LOG_IF_ERROR(absl::LogSeverity::kError,
                     planned_trajectory_publisher_.Publish(trajectory_proto));
 
@@ -621,7 +630,7 @@ MotionPlannerService::ConvertPlanTrajectoryResultToTrajectoryPlanningResponse(
   INTR_ASSIGN_OR_RETURN_GRPC(
       MotionPlanningRequestCacheKey cache_key,
       MotionPlanningRequestCacheKey::Create(
-          initial_world_and_proto.world_proto, *object_world,
+          *object_world,
           *request
           )
   );
@@ -683,12 +692,11 @@ MotionPlannerService::ConvertPlanTrajectoryResultToTrajectoryPlanningResponse(
       if (valid_trajectory) {
         // Log the cache hit and increase the cache hit count.
         LOG(INFO) << absl::StrFormat(
-            *return_cache_format_string, lookup_result.cached_entry.key.uuid,
+            *return_cache_format_string, lookup_result.cached_entry.uuid,
             cache_key.uuid, plan_trajectory_cache_->GetNumOfEntries());
         cache_hit = lookup_result.exact_match ? "exact" : "fuzzy";
         logger.Attach("cache_hit_type", cache_hit);
-        logger.Attach("matched_cache_key_id",
-                      lookup_result.cached_entry.key.uuid);
+        logger.Attach("matched_cache_key_id", lookup_result.cached_entry.uuid);
 
         INTR_RETURN_IF_ERROR_GRPC(
             ConvertPlanTrajectoryResultToTrajectoryPlanningResponse(

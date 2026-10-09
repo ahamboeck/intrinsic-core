@@ -231,6 +231,7 @@ cc_library(
     srcs = ["hdr_utils.cc"],
     hdrs = ["hdr_utils.h"],
     deps = [
+        ":image",
         ":image_traits",
         ":opencv_wrapper",
         "//intrinsic/util/status:status_builder",
@@ -238,7 +239,9 @@ cc_library(
         "//intrinsic_perception/intrinsic/perception/gpu/cuda_hdr:hdr_mertens",
         "//intrinsic_perception/intrinsic/perception/gpu/cuda_utils",
         "@abseil-cpp//absl/log",
+        "@abseil-cpp//absl/status",
         "@abseil-cpp//absl/status:statusor",
+        "@abseil-cpp//absl/time",
         "@magic_enum",
         "@opencv//:core",
         "@opencv//:photo",

@@ -109,11 +109,12 @@ proto_library(
     strip_import_prefix = "/intrinsic_motion_planning",
     deps = [
         "//intrinsic_motion_planning/intrinsic/motion_planning/path_planning:path_segment_proto",
+        "//intrinsic_motion_planning/intrinsic/motion_planning/proto/v1:motion_events_proto",
         "//intrinsic_motion_planning/intrinsic/motion_planning/proto/v1:motion_specification_proto",
         "@intrinsic_apis//intrinsic/icon/proto:joint_space_proto",
         "@intrinsic_apis//intrinsic/math/proto:pose_proto",
         "@intrinsic_apis//intrinsic/motion_planning/proto/v1:robot_specification_proto",
-    ] + [],
+    ],
 )
 
 cc_proto_library(
@@ -127,9 +128,10 @@ go_proto_library(
     proto = ":motion_planner_nonvolatile_cache_proto",
     deps = [
         "//intrinsic_motion_planning/intrinsic/motion_planning/path_planning:path_segment_go_proto",
+        "//intrinsic_motion_planning/intrinsic/motion_planning/proto/v1:motion_events_go_proto",
         "//intrinsic_motion_planning/intrinsic/motion_planning/proto/v1:motion_specification_go_proto",
         "@intrinsic_apis//intrinsic/icon/proto:joint_space_go_proto",
         "@intrinsic_apis//intrinsic/math/proto:pose_go_proto",
         "@intrinsic_apis//intrinsic/motion_planning/proto/v1:robot_specification_go_proto",
-    ] + [],
+    ],
 )

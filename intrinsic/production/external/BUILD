@@ -14,35 +14,8 @@
 
 load("@rules_java//java:java_binary.bzl", "java_binary")
 load("//bazel:cc_macros.bzl", "cc_test")
-load("//bazel:python.bzl", "py_test")
 
 package(default_visibility = ["//visibility:public"])
-
-# Used by compile_pip_requirements.
-exports_files(
-    srcs = ["requirements.txt"],
-    visibility = ["//:__pkg__"],
-)
-
-py_test(
-    name = "grpc_synchronized_py_test",
-    size = "small",
-    srcs = ["grpc_synchronized_test.py"],
-    args = [
-        "--module-bazel",
-        "$(location //:MODULE.bazel)",
-        "--requirements-in",
-        "$(location //:requirements.in)",
-        "--requirements-txt",
-        "$(location //:requirements.txt)",
-    ],
-    data = [
-        "//:MODULE.bazel",
-        "//:requirements.in",
-        "//:requirements.txt",
-    ],
-    main = "grpc_synchronized_test.py",
-)
 
 java_binary(
     name = "firestore-emulator",

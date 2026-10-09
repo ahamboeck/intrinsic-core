@@ -30,7 +30,6 @@ go_library(
     importpath = "intrinsic/tools/inctl/cmd/organization/organization",
     visibility = [
         "//intrinsic/tools:__subpackages__",
-        "//intrinsic/tools/inctl:__pkg__",
         "//intrinsic_sdk/intrinsic/tools:__subpackages__",
     ],
     deps = [

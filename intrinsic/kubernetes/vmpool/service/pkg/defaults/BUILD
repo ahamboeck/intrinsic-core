@@ -12,16 +12,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-load("//bazel:go_macros.bzl", "go_library")
-
 package(default_visibility = [
     "//intrinsic/kubernetes/vmpool/service:__subpackages__",
     "//intrinsic/tools/inctl/cmd/vm:__subpackages__",
     "//intrinsic_sdk/intrinsic/tools/inctl/cmd/vm:__subpackages__",
 ])
 
-go_library(
+alias(
     name = "defaults",
-    srcs = ["defaults.go"],
-    importpath = "intrinsic/kubernetes/vmpool/service/pkg/defaults",
+    actual = "//intrinsic_sdk/intrinsic/kubernetes/vmpool/service/pkg/defaults",
+    tags = ["go/intrinsic-ioc-transition-tdd"],
 )

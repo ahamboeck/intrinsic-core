@@ -47,8 +47,8 @@ cc_library(
     srcs = ["cyclic_runner.cc"],
     hdrs = ["cyclic_runner.h"],
     deps = [
-        "//intrinsic/util/time",
-        "//intrinsic/util/time:timer",
+        "//intrinsic_sdk/intrinsic/util/time",
+        "//intrinsic_sdk/intrinsic/util/time:timer",
         "@abseil-cpp//absl/base:core_headers",
         "@abseil-cpp//absl/status",
         "@abseil-cpp//absl/strings",
