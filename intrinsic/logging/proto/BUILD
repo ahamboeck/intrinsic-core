@@ -51,12 +51,6 @@ alias(
 )
 
 alias(
-    name = "logger_service_cc_proto",
-    actual = "//intrinsic_sdk/intrinsic/logging/proto:logger_service_cc_proto",
-    tags = ["go/intrinsic-ioc-transition-tdd"],
-)
-
-alias(
     name = "logger_service_cc_grpc",
     actual = "//intrinsic_sdk/intrinsic/logging/proto:logger_service_cc_grpc",
     tags = ["go/intrinsic-ioc-transition-tdd"],

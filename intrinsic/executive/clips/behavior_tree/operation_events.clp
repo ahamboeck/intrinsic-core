@@ -149,6 +149,45 @@
 
 )
 
+; Adds a RunMetadataChangeEvent for ?operation-name.
+;
+; The event is a snapshot of all RunMetadataChangeEvent fields, copied from the
+; operation's run-metadata-proto. Thus call this after the run-metadata-proto
+; has been updated.
+;
+; Args:
+;   ?operation-name: Name of the operation for this event
+(deffunction operation-events-add-run-metadata-change-event (?operation-name)
+
+  (do-for-fact ((?op operation-envelope)) (eq ?op:name ?operation-name)
+    (bind ?rmd-proto ?op:run-metadata-proto)
+    (if (= ?rmd-proto 0) then
+      (return)
+    )
+
+    (bind ?event-proto
+      (pb-create "intrinsic_proto.executive.OperationEvent"))
+    (foreach ?field (create$ "world_id" "scene_id" "execution_mode"
+                             "simulation_mode")
+      (pb-set-field ?event-proto (str-cat "run_metadata." ?field)
+                    (pb-get-field ?rmd-proto ?field))
+    )
+    (foreach ?field (create$ "start_tree_id" "start_node_id")
+      (if (pb-has-field ?rmd-proto ?field) then
+        (pb-set-field ?event-proto (str-cat "run_metadata." ?field)
+                      (pb-get-field ?rmd-proto ?field))
+      )
+    )
+    (if (pb-has-field ?rmd-proto "start_time") then
+      (bind ?start-time-proto (pb-get-field ?rmd-proto "start_time"))
+      (pb-set-field ?event-proto "run_metadata.start_time" ?start-time-proto)
+      (pb-remove ?start-time-proto)
+    )
+    (operation-events-add-event ?operation-name ?event-proto)
+  )
+
+)
+
 
 
 ; Adds an event for ?operation-name

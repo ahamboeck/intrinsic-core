@@ -123,7 +123,7 @@ absl::Status TransformNode::SetTransform(const TransformNode* a,
                                          const TransformNode* b,
                                          const Pose3d& a_t_b,
                                          std::optional<absl::Time> timestamp) {
-  const world::ObjectEntityFilter kBaseFilter =
+  const world::ObjectEntityFilter& kBaseFilter =
       world::ObjectEntityFilter::BaseEntity();
   return SetTransform(kBaseFilter, a, kBaseFilter, b, kBaseFilter, a_t_b,
                       timestamp);
@@ -136,7 +136,7 @@ absl::Status TransformNode::SetTransform(
     const TransformNode* node_b,
     std::optional<world::ObjectEntityFilter> node_b_filter, const Pose3d& a_t_b,
     std::optional<absl::Time> timestamp, bool bypass_movable_check) {
-  const world::ObjectEntityFilter kBaseFilter =
+  const world::ObjectEntityFilter& kBaseFilter =
       world::ObjectEntityFilter::BaseEntity();
 
   if (!bypass_movable_check) {

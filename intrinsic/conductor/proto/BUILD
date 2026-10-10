@@ -27,12 +27,6 @@ alias(
 )
 
 alias(
-    name = "conductor_cc_proto",
-    actual = "//intrinsic_sdk/intrinsic/conductor/proto:conductor_cc_proto",
-    tags = ["go/intrinsic-ioc-transition-tdd"],
-)
-
-alias(
     name = "conductor_cc_grpc",
     actual = "//intrinsic_sdk/intrinsic/conductor/proto:conductor_cc_grpc",
     tags = ["go/intrinsic-ioc-transition-tdd"],
@@ -87,7 +81,7 @@ proto_library(
     srcs = ["wrapper_bridge.proto"],
     deps = [
         "//intrinsic/resources/proto:geometric_resource_data_proto",
-        "//intrinsic/world/proto:object_world_updates_proto",
+        "//intrinsic_sdk/intrinsic/world/proto:object_world_updates_proto",
         "@intrinsic_apis//intrinsic/util/status:status_proto",
     ],
 )
@@ -98,7 +92,7 @@ go_proto_library(
     protos = [":wrapper_bridge_proto"],
     deps = [
         "//intrinsic/resources/proto:geometric_resource_data_go_proto",
-        "//intrinsic/world/proto:object_world_updates_go_proto",
+        "//intrinsic_sdk/intrinsic/world/proto:object_world_updates_go_proto",
         "@intrinsic_apis//intrinsic/util/status:status_go_proto",
     ],
 )
