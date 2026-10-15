@@ -26,9 +26,11 @@ cc_library(
         "//intrinsic/util/grpc:connection_params",
         "//intrinsic/util/status:status_builder",
         "//intrinsic/util/status:status_macros",
+        "@abseil-cpp//absl/base:core_headers",
         "@abseil-cpp//absl/log",
         "@abseil-cpp//absl/status",
         "@abseil-cpp//absl/status:statusor",
+        "@abseil-cpp//absl/synchronization",
         "@com_github_grpc_grpc//:grpc++",
     ],
 )

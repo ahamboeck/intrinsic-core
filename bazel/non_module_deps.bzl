@@ -21,19 +21,6 @@ load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive", "http_file"
 # Module extension function signatures include a ctx variable, which should not be removed.
 def _non_module_deps_impl(
         ctx):  # @unused
-    # To update this, see https://github.com/intrinsic-ai/intrinsic-core/blob/main/bazel/sysroot/README.md.  
-    http_archive(
-        name = "intrinsic_llvm_sysroot",
-        sha256 = "24d7e61ceb0a26a2002bd0a3e87dfbc8e12ec95456bd1cced7fc5ccd79c47ed8",
-        build_file_content = """
-filegroup(
-    name = "all_files",
-    srcs = glob(["**"]),
-    visibility = ["//visibility:public"]
-)""",
-        urls = ["https://storage.googleapis.com/intrinsic-mirror/bazel/sysroot-2025-07-22-845e86b8.tar.zst"],
-    )
-
 
 
 
@@ -103,9 +90,9 @@ filegroup(
     visibility = ["//visibility:public"],
 )
 """,
-        sha256 = "2a9792cb5f1403f524543ce94c3115e3c4a4229f0e86af55fd26c078da448164",
+        sha256 = "5716719def14a3fec3ed285e5e8c4280e6268854039b5073a96e8c0adafb1c02",
         type = "tar.gz",
-        urls = ["https://github.com/kubernetes-sigs/controller-tools/releases/download/envtest-v1.30.0/envtest-v1.30.0-linux-amd64.tar.gz"],
+        urls = ["https://github.com/kubernetes-sigs/controller-tools/releases/download/envtest-v1.35.0/envtest-v1.35.0-linux-amd64.tar.gz"],
         strip_prefix = "controller-tools/envtest",
     )
 
@@ -148,6 +135,20 @@ filegroup(
         sha256 = "ee770ce4721fe37dd3ef6a80e4f646082d835bf4923d235c29484641b0129782",
     )
 
+    OPENXLA_COMMIT = "35fbc9a3be7d43ffaedecb96e3fa1b0e7cf5a077"  # 2026-10-12
+    http_file(
+        name = "com_github_openxla_xla_tsl_net_h",
+        downloaded_file_path = "net.h",
+        urls = ["https://raw.githubusercontent.com/openxla/xla/%s/third_party/tsl/tsl/platform/net.h" % OPENXLA_COMMIT],
+        sha256 = "67042c2c2d2014d1e4d446eae02a436d8993162d2c92e75fcd729784c26c1854",
+    )
+    http_file(
+        name = "com_github_openxla_xla_tsl_net_cc",
+        downloaded_file_path = "net.cc",
+        urls = ["https://raw.githubusercontent.com/openxla/xla/%s/xla/tsl/platform/default/net.cc" % OPENXLA_COMMIT],
+        sha256 = "a3c6a4f331255dedbb77e349bbdf34ac4971fa60115bb33e7d72c33ce8ef4e87",
+    )
+
     http_file(
         name = "oss_licenses",
         downloaded_file_path = "oss_licenses.json",
@@ -164,5 +165,9 @@ filegroup(
     )
 
 
+
+    # The pass below ensures that if copybara strips everything out of this function
+    # it still produces a valid function (functions without content are invalid).
+    pass
 
 non_module_deps_ext = module_extension(implementation = _non_module_deps_impl)

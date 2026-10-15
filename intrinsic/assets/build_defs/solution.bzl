@@ -22,12 +22,12 @@ SolutionInfo = provider(
     fields = {
         "asset_bundles": "asset bundle files used in the solution",
         "instance_configs": "instance config files used in the solution",
-        "solution": "binary proto file containing a LocalSolution message",
+        "solution": "textproto file containing a LocalSolution message",
     },
 )
 
 def _intrinsic_solution_impl(ctx):
-    out = ctx.actions.declare_file(ctx.label.name + ".local_solution.binpb")
+    out = ctx.actions.declare_file(ctx.label.name + ".local_solution.txtpb")
     assets = [
         a[AssetInfo].asset_info
         for a in ctx.attr.assets

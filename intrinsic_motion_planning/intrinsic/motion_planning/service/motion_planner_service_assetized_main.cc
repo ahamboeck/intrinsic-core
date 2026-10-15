@@ -43,7 +43,7 @@
 #include "intrinsic/logging/data_logger_client.h"
 #include "intrinsic/logging/structured_logging_client.h"
 #include "intrinsic/motion_planning/motion_planner/motion_planner_flags.h"
-#include "intrinsic/motion_planning/service/motion_planner_cache.h"
+#include "intrinsic/motion_planning/service/cache/motion_planner_cache.h"
 #include "intrinsic/motion_planning/service/motion_planner_service.h"
 #include "intrinsic/motion_planning/service/motion_planner_service_asset_utils.h"
 #include "intrinsic/motion_planning/service/motion_planner_service_utils.h"

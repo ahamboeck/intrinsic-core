@@ -83,7 +83,6 @@ cc_library(
     ],
     deps = [
         ":axia80_net_cc_proto",
-        "//intrinsic/util/status:status_macros",
         "//intrinsic_control/intrinsic/icon/hal:default_hardware_interfaces",
         "//intrinsic_control/intrinsic/icon/hal:hardware_interface_handle",
         "//intrinsic_control/intrinsic/icon/hal:hardware_interface_registry",
@@ -102,6 +101,7 @@ cc_library(
         "//intrinsic_control/intrinsic/icon/utils:sensor_utils",
         "//intrinsic_hardware/intrinsic/hardware/gripper/wsg32:async_buffer",
         "//intrinsic_sdk/intrinsic/eigenmath",
+        "//intrinsic_sdk/intrinsic/util/status:status_macros",
         "//intrinsic_sdk/intrinsic/util/thread",
         "//intrinsic_sdk/intrinsic/util/thread:stop_token",
         "//intrinsic_sdk/intrinsic/util/thread:thread_options",

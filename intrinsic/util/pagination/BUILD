@@ -38,7 +38,7 @@ cc_library(
     ],
     deps = [
         ":page_token_cc_proto",
-        "//intrinsic/util:proto_time",
+        "//intrinsic_sdk/intrinsic/util:proto_time",
         "@abseil-cpp//absl/status",
         "@abseil-cpp//absl/status:statusor",
         "@abseil-cpp//absl/strings",

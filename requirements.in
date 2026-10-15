@@ -164,7 +164,7 @@ pyink==25.12.0
 python-dateutil==2.9.0.post0
 python-fcl==0.7.0.8
 prometheus-client==0.22.1
-protobuf==6.32.1
+protobuf==6.33.6
 proto-breaking-change-detector @ https://github.com/googleapis/proto-breaking-change-detector/archive/refs/tags/v2.6.0.tar.gz # TODO(b/296864864) Use from pypi.org once the bug is fixed.
 pytorch3d @ https://us-central1-python.pkg.dev/intrinsic-mirror/intrinsic-public-python/pytorch3d/pytorch3d-0.7.8-cp311-cp311-linux_x86_64.whl
 pyyaml==6.0.2

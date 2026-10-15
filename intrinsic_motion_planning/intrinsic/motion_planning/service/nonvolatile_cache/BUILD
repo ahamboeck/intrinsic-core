@@ -40,7 +40,7 @@ cc_library(
         "//intrinsic_motion_planning/intrinsic/motion_planning/path_planning:path_segment",
         "//intrinsic_motion_planning/intrinsic/motion_planning/proto/v1:motion_planner_service_cc_proto",
         "//intrinsic_motion_planning/intrinsic/motion_planning/proto/v1:motion_specification_cc_proto",
-        "//intrinsic_motion_planning/intrinsic/motion_planning/service:motion_planner_cache_utils",
+        "//intrinsic_motion_planning/intrinsic/motion_planning/service/cache:cache_utils",
         "//intrinsic_sdk/intrinsic/connect/cc/grpc:channel",
         "//intrinsic_sdk/intrinsic/eigenmath",
         "//intrinsic_sdk/intrinsic/math:pose3",

@@ -28,6 +28,7 @@ import (
 	"intrinsic/util/proto/protoio"
 
 	log "github.com/golang/glog"
+	"google.golang.org/protobuf/reflect/protoregistry"
 
 	assetpb "intrinsic/assets/build_defs/asset_go_proto"
 	opmodepb "intrinsic/config/proto/operation_mode_go_proto"
@@ -143,7 +144,7 @@ func main() {
 	if err != nil {
 		log.Exitf("could not create LocalSolution proto: %v", err)
 	}
-	if err := protoio.WriteBinaryProto(*output, assets, protoio.WithDeterministic(true)); err != nil {
+	if err := protoio.WriteStableTextProto(*output, assets, protoio.WithWriteResolver(new(protoregistry.Types))); err != nil {
 		log.Exitf("Failed to write solution proto: %v", err)
 	}
 }

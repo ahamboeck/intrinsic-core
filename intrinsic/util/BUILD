@@ -19,12 +19,6 @@ package(
 )
 
 alias(
-    name = "demangle",
-    actual = "//intrinsic_sdk/intrinsic/util:demangle",
-    tags = ["go/intrinsic-ioc-transition-tdd"],
-)
-
-alias(
     name = "hash",
     actual = "//intrinsic_sdk/intrinsic/util:hash",
     tags = ["go/intrinsic-ioc-transition-tdd"],
@@ -33,12 +27,6 @@ alias(
 alias(
     name = "aggregate_type",
     actual = "//intrinsic_sdk/intrinsic/util:aggregate_type",
-    tags = ["go/intrinsic-ioc-transition-tdd"],
-)
-
-alias(
-    name = "atomic_sequence_num",
-    actual = "//intrinsic_sdk/intrinsic/util:atomic_sequence_num",
     tags = ["go/intrinsic-ioc-transition-tdd"],
 )
 
@@ -62,7 +50,7 @@ cc_library(
     srcs = ["file_helpers.cc"],
     hdrs = ["file_helpers.h"],
     deps = [
-        "//intrinsic/util/status:status_macros",
+        "//intrinsic_sdk/intrinsic/util/status:status_macros",
         "@abseil-cpp//absl/status",
         "@abseil-cpp//absl/status:statusor",
         "@abseil-cpp//absl/strings",
@@ -78,20 +66,8 @@ alias(
 )
 
 alias(
-    name = "invalid_until_set",
-    actual = "//intrinsic_sdk/intrinsic/util:invalid_until_set",
-    tags = ["go/intrinsic-ioc-transition-tdd"],
-)
-
-alias(
     name = "macros",
     actual = "//intrinsic_sdk/intrinsic/util:macros",
-    tags = ["go/intrinsic-ioc-transition-tdd"],
-)
-
-alias(
-    name = "page_fault_info",
-    actual = "//intrinsic_sdk/intrinsic/util:page_fault_info",
     tags = ["go/intrinsic-ioc-transition-tdd"],
 )
 
@@ -141,12 +117,6 @@ alias(
 )
 
 alias(
-    name = "memory_lock",
-    actual = "//intrinsic_sdk/intrinsic/util:memory_lock",
-    tags = ["go/intrinsic-ioc-transition-tdd"],
-)
-
-alias(
     name = "string_type",
     actual = "//intrinsic_sdk/intrinsic/util:string_type",
     tags = ["go/intrinsic-ioc-transition-tdd"],
@@ -169,7 +139,7 @@ cc_library(
     srcs = ["testcallback.cc"],
     hdrs = ["testcallback.h"],
     deps = [
-        "//intrinsic/util/status:status_macros",
+        "//intrinsic_sdk/intrinsic/util/status:status_macros",
         "@abseil-cpp//absl/base:core_headers",
         "@abseil-cpp//absl/base:no_destructor",
         "@abseil-cpp//absl/container:flat_hash_map",

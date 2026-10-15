@@ -87,7 +87,6 @@ cc_library(
     deps = [
         ":kinematic_chain_ik_solver",
         "//intrinsic/eigenmath:random_number_utils",
-        "//intrinsic/util:eigen",
         "//intrinsic_control/intrinsic/icon/utils:log",
         "//intrinsic_control/intrinsic/icon/utils:realtime_status",
         "//intrinsic_control/intrinsic/icon/utils:realtime_status_macro",
@@ -101,6 +100,7 @@ cc_library(
         "//intrinsic_kinematics/intrinsic/kinematics/types:joint_state",
         "//intrinsic_sdk/intrinsic/eigenmath",
         "//intrinsic_sdk/intrinsic/math:pose3",
+        "//intrinsic_sdk/intrinsic/util:eigen",
         "//intrinsic_sdk/intrinsic/util/time",
         "//intrinsic_sdk/intrinsic/util/time:timer",
         "@abseil-cpp//absl/log",

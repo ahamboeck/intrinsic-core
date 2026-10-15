@@ -109,7 +109,9 @@ absl::Status StartServerAndListen() {
 
 int main(int argc, char** argv) {
   InitIntrinsic(argv[0], argc, argv);
-  intrinsic::OpenCensusPlugin open_census("camera");
+  intrinsic::OpenCensusPlugin open_census(/*service_name=*/"camera",
+                                          /*use_otel_metrics=*/true);
+  intrinsic::perception::RegisterCameraServiceMetrics();
   const std::string data_logger_address =
       absl::GetFlag(FLAGS_data_logger_grpc_service_address);
   if (!data_logger_address.empty()) {

@@ -18,13 +18,6 @@ load("//bazel:cc_macros.bzl", "cc_library")
 
 package(default_visibility = ["//visibility:private"])
 
-alias(
-    name = "tartooling",
-    actual = "//intrinsic_sdk/intrinsic/util/archive:tartooling",
-    tags = ["go/intrinsic-ioc-transition-tdd"],
-    visibility = ["//intrinsic:intrinsic_internal"],
-)
-
 cc_library(
     name = "unzip",
     srcs = ["unzip.cc"],
@@ -32,7 +25,7 @@ cc_library(
     visibility = ["//intrinsic:intrinsic_internal"],
     deps = [
         "//intrinsic/util:file_helpers",
-        "//intrinsic/util/status:status_macros",
+        "//intrinsic_sdk/intrinsic/util/status:status_macros",
         "@abseil-cpp//absl/algorithm:container",
         "@abseil-cpp//absl/container:flat_hash_set",
         "@abseil-cpp//absl/log",

@@ -28,6 +28,7 @@ import (
 	"intrinsic/assets/bundle"
 	"intrinsic/assets/clientutils"
 	"intrinsic/assets/cmdutils"
+	"intrinsic/assets/conversion/solutionconversion"
 	"intrinsic/assets/imagetransfer"
 	"intrinsic/assets/platformlevelswitch"
 	"intrinsic/assets/referenceddata"
@@ -45,6 +46,7 @@ import (
 	"intrinsic/tools/inctl/util/traceutil"
 	"intrinsic/util/go/build"
 	"intrinsic/util/path_resolver/pathresolver"
+	"intrinsic/util/proto/protoio"
 
 	lropb "cloud.google.com/go/longrunning/autogen/longrunningpb"
 	"github.com/bazelbuild/rules_go/go/runfiles"
@@ -55,7 +57,6 @@ import (
 	"go.opencensus.io/trace"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
-	"google.golang.org/protobuf/proto"
 
 	assetpb "intrinsic/assets/build_defs/asset_go_proto"
 	assetartifactspb "intrinsic/assets/proto/v1/asset_artifacts_go_proto"
@@ -71,13 +72,9 @@ import (
 )
 
 func readLocalSolution(path string) (*assetpb.LocalSolution, error) {
-	b, err := os.ReadFile(path)
-	if err != nil {
-		return nil, fmt.Errorf("failed to read solution assets proto %q: %w", path, err)
-	}
 	assets := new(assetpb.LocalSolution)
-	if err := proto.Unmarshal(b, assets); err != nil {
-		return nil, fmt.Errorf("failed to parse solution assets proto %q: %w", path, err)
+	if err := protoio.ReadTextProto(path, assets); err != nil {
+		return nil, fmt.Errorf("failed to read solution assets proto %q: %w", path, err)
 	}
 	return assets, nil
 }
@@ -305,9 +302,13 @@ $ bazel run //intrinsic/config:empty_application --\
 				},
 				ConcurrencyLimiter: processingLimiter,
 			}
-			app, err := proc.Process(ctx, assets)
+			solutionDeployment, err := proc.Process(ctx, assets)
 			if err != nil {
-				return err
+				return fmt.Errorf("failed to process solution: %w", err)
+			}
+			app, err := solutionconversion.AsApplication(solutionDeployment)
+			if err != nil {
+				return fmt.Errorf("failed to convert solution deployment to application: %w", err)
 			}
 			if mode := operationmode.FromString(flagOperationMode); mode != opmodepb.OperationMode_OPERATION_MODE_UNSPECIFIED {
 				app.OperationMode = mode

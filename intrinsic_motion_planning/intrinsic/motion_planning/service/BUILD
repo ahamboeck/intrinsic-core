@@ -12,11 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-load("@com_google_protobuf//bazel:cc_proto_library.bzl", "cc_proto_library")
 load("//bazel:cc_macros.bzl", "cc_binary", "cc_library", "cc_test")
 load("//bazel:cc_oci_image.bzl", "cc_oci_image")
-load("//bazel:go_macros.bzl", "go_proto_library")
-load("//bazel:protos.bzl", "proto_library")
 load("//intrinsic/httpjson:intrinsic_http_image.bzl", "intrinsic_http_image")
 load("//intrinsic/httpjson/openapi:protoc_gen_openapi.bzl", "protoc_gen_openapi")
 load("//intrinsic_sdk/intrinsic/assets/services/build_defs:services.bzl", "intrinsic_service")
@@ -39,9 +36,9 @@ cc_library(
     srcs = ["motion_planner_service.cc"],
     hdrs = ["motion_planner_service.h"],
     deps = [
-        ":motion_planner_cache",
         ":motion_planner_service_asset_utils",
         ":motion_planner_service_utils",
+        "//intrinsic/assets:id_utils",
         "//intrinsic/logging:log_item_builder",
         "//intrinsic/logging/proto:log_dispatcher_service_cc_proto",
         "//intrinsic/logging/proto:log_item_cc_proto",
@@ -98,6 +95,7 @@ cc_library(
         "//intrinsic_motion_planning/intrinsic/motion_planning/proto/v1:motion_planner_service_cc_grpc_proto",
         "//intrinsic_motion_planning/intrinsic/motion_planning/proto/v1:motion_planner_service_cc_proto",
         "//intrinsic_motion_planning/intrinsic/motion_planning/proto/v1:motion_specification_cc_proto",
+        "//intrinsic_motion_planning/intrinsic/motion_planning/service/cache:motion_planner_cache",
         "//intrinsic_motion_planning/intrinsic/motion_planning/service/debug:timing_debug_logger",
         "//intrinsic_motion_planning/intrinsic/motion_planning/service/nonvolatile_cache:motion_planner_nonvolatile_cache",
         "//intrinsic_motion_planning/intrinsic/motion_planning/service/nonvolatile_cache:motion_planner_nonvolatile_cache_utils",
@@ -145,7 +143,6 @@ cc_binary(
     name = "motion_planner_service_assetized_main",
     srcs = ["motion_planner_service_assetized_main.cc"],
     deps = [
-        ":motion_planner_cache",
         ":motion_planner_service",
         ":motion_planner_service_asset_utils",
         ":motion_planner_service_utils",
@@ -164,6 +161,7 @@ cc_binary(
         "//intrinsic_control/intrinsic/icon/release:file_helpers",
         "//intrinsic_control/intrinsic/icon/release/portable:init_intrinsic",
         "//intrinsic_motion_planning/intrinsic/motion_planning/motion_planner:motion_planner_flags",
+        "//intrinsic_motion_planning/intrinsic/motion_planning/service/cache:motion_planner_cache",
         "//intrinsic_motion_planning/intrinsic/motion_planning/service/nonvolatile_cache:motion_planner_nonvolatile_cache",
         "//intrinsic_sdk/intrinsic/assets/dependencies:utils_cc",
         "//intrinsic_sdk/intrinsic/assets/proto:installed_assets_cc_grpc_proto",
@@ -254,7 +252,6 @@ cc_library(
     srcs = ["motion_planner_service_base_test_fixture.cc"],
     hdrs = ["motion_planner_service_base_test_fixture.h"],
     deps = [
-        ":motion_planner_cache",
         ":motion_planner_service",
         ":motion_planner_service_asset_utils",
         ":motion_planner_service_proxy",
@@ -291,6 +288,7 @@ cc_library(
         "//intrinsic_motion_planning/intrinsic/motion_planning/proto/v1:motion_planner_service_cc_grpc_proto",
         "//intrinsic_motion_planning/intrinsic/motion_planning/proto/v1:motion_planner_service_cc_proto",
         "//intrinsic_motion_planning/intrinsic/motion_planning/proto/v1:motion_specification_cc_proto",
+        "//intrinsic_motion_planning/intrinsic/motion_planning/service/cache:motion_planner_cache",
         "//intrinsic_motion_planning/intrinsic/motion_planning/service/nonvolatile_cache:motion_planner_nonvolatile_cache",
         "//intrinsic_motion_planning/intrinsic/motion_planning/skills:motion_planning_util",
         "//intrinsic_sdk/intrinsic/connect/cc/grpc:channel",
@@ -336,7 +334,6 @@ cc_test(
         "nozapfhahn",  # flaky in coverage mode
     ],
     deps = [
-        ":motion_planner_cache",
         ":motion_planner_service",
         ":motion_planner_service_asset_utils",
         ":motion_planner_service_base_test_fixture",
@@ -379,6 +376,7 @@ cc_test(
         "//intrinsic_motion_planning/intrinsic/motion_planning/proto/v1:motion_planner_service_cc_grpc_proto",
         "//intrinsic_motion_planning/intrinsic/motion_planning/proto/v1:motion_planner_service_cc_proto",
         "//intrinsic_motion_planning/intrinsic/motion_planning/proto/v1:motion_specification_cc_proto",
+        "//intrinsic_motion_planning/intrinsic/motion_planning/service/cache:motion_planner_cache",
         "//intrinsic_motion_planning/intrinsic/motion_planning/service/nonvolatile_cache:motion_planner_nonvolatile_cache",
         "//intrinsic_motion_planning/intrinsic/motion_planning/service/nonvolatile_cache:motion_planner_nonvolatile_cache_cc_proto",
         "//intrinsic_motion_planning/intrinsic/motion_planning/skills:motion_planning_util",
@@ -438,69 +436,10 @@ cc_library(
 )
 
 cc_library(
-    name = "motion_planner_cache",
-    srcs = ["motion_planner_cache.cc"],
-    hdrs = ["motion_planner_cache.h"],
-    deps = [
-        ":motion_planner_cache_cc_proto",
-        ":motion_planner_cache_entry_features",
-        ":motion_planner_cache_key_normalization",
-        ":motion_planner_cache_utils",
-        "//intrinsic/logging/proto:log_item_cc_proto",
-        "//intrinsic/util:eigen",
-        "//intrinsic/util/proto:pb_hash",
-        "//intrinsic/util/status:ret_check",
-        "//intrinsic/util/status:status_macros",
-        "//intrinsic/world:cc_proto",
-        "//intrinsic/world/collision:collision_context_cc_proto",
-        "//intrinsic/world/collision/util:make_collision_settings",
-        "//intrinsic/world/objects:object_world",
-        "//intrinsic/world/proto:attachment_component_cc_proto",
-        "//intrinsic_kinematics/intrinsic/kinematics/types:joint_limits_xd",
-        "//intrinsic_motion_planning/intrinsic/motion_planning/motion_planner",
-        "//intrinsic_motion_planning/intrinsic/motion_planning/motion_planner:robot_specification",
-        "//intrinsic_motion_planning/intrinsic/motion_planning/path_planning/planners:validation",
-        "//intrinsic_motion_planning/intrinsic/motion_planning/proto:motion_planner_service_proto_utils",
-        "//intrinsic_motion_planning/intrinsic/motion_planning/proto/v1:motion_planner_service_cc_proto",
-        "//intrinsic_motion_planning/intrinsic/motion_planning/proto/v1:motion_specification_cc_proto",
-        "//intrinsic_sdk/intrinsic/eigenmath",
-        "//intrinsic_sdk/intrinsic/geometry/api:affine_transform_of_geometry",
-        "//intrinsic_sdk/intrinsic/geometry/api:geometry_fingerprint",
-        "//intrinsic_sdk/intrinsic/logging:data_logger_client",
-        "//intrinsic_sdk/intrinsic/math:pose3",
-        "//intrinsic_sdk/intrinsic/math:proto_conversion",
-        "//intrinsic_sdk/intrinsic/world:entity_id",
-        "//intrinsic_sdk/intrinsic/world:geometry_types",
-        "//intrinsic_sdk/intrinsic/world/component:geometry_component",
-        "//intrinsic_sdk/intrinsic/world/component:kinematics_component",
-        "//intrinsic_sdk/intrinsic/world/objects:object_world_ids",
-        "//third_party/simple_lru_cache",
-        "@abseil-cpp//absl/algorithm:container",
-        "@abseil-cpp//absl/base:core_headers",
-        "@abseil-cpp//absl/container:flat_hash_map",
-        "@abseil-cpp//absl/container:flat_hash_set",
-        "@abseil-cpp//absl/log",
-        "@abseil-cpp//absl/log:check",
-        "@abseil-cpp//absl/memory",
-        "@abseil-cpp//absl/status",
-        "@abseil-cpp//absl/status:statusor",
-        "@abseil-cpp//absl/strings",
-        "@abseil-cpp//absl/strings:str_format",
-        "@abseil-cpp//absl/synchronization",
-        "@intrinsic_apis//intrinsic/icon/proto:joint_space_cc_proto",
-        "@intrinsic_apis//intrinsic/motion_planning/proto/v1:geometric_constraints_cc_proto",
-        "@intrinsic_apis//intrinsic/motion_planning/proto/v1:robot_specification_cc_proto",
-        "@intrinsic_apis//intrinsic/world/proto:collision_settings_cc_proto",
-        "@intrinsic_apis//intrinsic/world/proto:object_world_refs_cc_proto",
-    ],
-)
-
-cc_library(
     name = "motion_planner_service_utils",
     srcs = ["motion_planner_service_utils.cc"],
     hdrs = ["motion_planner_service_utils.h"],
     deps = [
-        "//intrinsic/geometry/api:fuse_geometries",
         "//intrinsic/geometry/proto:geometry_service_cc_grpc_proto",
         "//intrinsic/geometry/storage:geometry_service_storage",
         "//intrinsic/logging/proto:logger_service_cc_grpc",
@@ -519,19 +458,12 @@ cc_library(
         "//intrinsic_motion_planning/intrinsic/motion_planning/motion_planner",
         "//intrinsic_motion_planning/intrinsic/motion_planning/motion_planner:motion_planner_factory",
         "//intrinsic_motion_planning/intrinsic/motion_planning/motion_planner:motion_planner_flags",
-        "//intrinsic_motion_planning/intrinsic/motion_planning/path_planning:interpolation",
         "//intrinsic_motion_planning/intrinsic/motion_planning/proto/v1:motion_planner_service_cc_proto",
         "//intrinsic_sdk/intrinsic/connect/cc/grpc:channel",
         "//intrinsic_sdk/intrinsic/eigenmath",
-        "//intrinsic_sdk/intrinsic/geometry/api:affine_transform_of_geometry",
-        "//intrinsic_sdk/intrinsic/geometry/api:apply_transform",
-        "//intrinsic_sdk/intrinsic/geometry/api:axis_aligned_bounding_box_3d",
-        "//intrinsic_sdk/intrinsic/geometry/api:geometry",
         "//intrinsic_sdk/intrinsic/logging:structured_logging_client",
-        "//intrinsic_sdk/intrinsic/math:pose3",
         "//intrinsic_sdk/intrinsic/world:entity_id",
         "//intrinsic_sdk/intrinsic/world:geometry_types",
-        "//intrinsic_sdk/intrinsic/world/component:geometry_component",
         "@abseil-cpp//absl/container:flat_hash_map",
         "@abseil-cpp//absl/log",
         "@abseil-cpp//absl/log:check",
@@ -542,7 +474,7 @@ cc_library(
         "@abseil-cpp//absl/time",
         "@abseil-cpp//absl/types:span",
         "@com_github_grpc_grpc//:grpc++",
-    ] + [],
+    ],
 )
 
 cc_library(
@@ -565,143 +497,5 @@ cc_library(
         "@abseil-cpp//absl/strings:string_view",
         "@com_github_grpc_grpc//:grpc++",
         "@intrinsic_apis//intrinsic/assets/proto/v1:resolved_dependency_cc_proto",
-    ],
-)
-
-cc_library(
-    name = "motion_planner_cache_key_normalization",
-    srcs = ["motion_planner_cache_key_normalization.cc"],
-    hdrs = ["motion_planner_cache_key_normalization.h"],
-    deps = [
-        "//intrinsic/util:hash",
-        "//intrinsic/util/proto:pb_hash",
-        "//intrinsic/util/status:status_macros",
-        "//intrinsic/world",
-        "//intrinsic/world:geometry_types",
-        "//intrinsic/world/collision/util:make_collision_settings",
-        "//intrinsic/world/objects:object_world",
-        "//intrinsic/world/objects:object_world_creation_utils",
-        "//intrinsic/world/objects:object_world_proto_utils",
-        "//intrinsic_motion_planning/intrinsic/motion_planning/proto/v1:motion_planner_service_cc_proto",
-        "//intrinsic_motion_planning/intrinsic/motion_planning/proto/v1:motion_specification_cc_proto",
-        "//intrinsic_sdk/intrinsic/eigenmath",
-        "//intrinsic_sdk/intrinsic/geometry/api:geometry_fingerprint",
-        "//intrinsic_sdk/intrinsic/world:entity_id",
-        "//intrinsic_sdk/intrinsic/world/component:geometry_component",
-        "//intrinsic_sdk/intrinsic/world/objects:object_world_ids",
-        "@abseil-cpp//absl/algorithm:container",
-        "@abseil-cpp//absl/status",
-        "@abseil-cpp//absl/status:statusor",
-        "@abseil-cpp//absl/strings",
-        "@abseil-cpp//absl/strings:string_view",
-        "@intrinsic_apis//intrinsic/motion_planning/proto/v1:geometric_constraints_cc_proto",
-        "@intrinsic_apis//intrinsic/motion_planning/proto/v1:robot_specification_cc_proto",
-        "@intrinsic_apis//intrinsic/world/proto:collision_settings_cc_proto",
-        "@intrinsic_apis//intrinsic/world/proto:object_world_refs_cc_proto",
-    ],
-)
-
-cc_library(
-    name = "motion_planner_cache_utils",
-    srcs = ["motion_planner_cache_utils.cc"],
-    hdrs = ["motion_planner_cache_utils.h"],
-    deps = [
-        "//intrinsic/logging/proto:log_item_cc_proto",
-        "//intrinsic/util/status:status_macros",
-        "//intrinsic/world:cc_proto",
-        "//intrinsic/world/collision:collision_context_cc_proto",
-        "//intrinsic/world/objects:object_world",
-        "//intrinsic/world/objects:object_world_proto_utils",
-        "//intrinsic/world/proto:attachment_component_cc_proto",
-        "//intrinsic_motion_planning/intrinsic/motion_planning/proto/v1:motion_planner_service_cc_proto",
-        "//intrinsic_motion_planning/intrinsic/motion_planning/proto/v1:motion_specification_cc_proto",
-        "//intrinsic_sdk/intrinsic/math:pose3",
-        "//intrinsic_sdk/intrinsic/world/objects:object_world_ids",
-        "@abseil-cpp//absl/container:flat_hash_map",
-        "@abseil-cpp//absl/log",
-        "@abseil-cpp//absl/log:check",
-        "@abseil-cpp//absl/status",
-        "@abseil-cpp//absl/status:statusor",
-        "@abseil-cpp//absl/strings",
-        "@intrinsic_apis//intrinsic/icon/proto:joint_space_cc_proto",
-        "@intrinsic_apis//intrinsic/motion_planning/proto/v1:geometric_constraints_cc_proto",
-        "@intrinsic_apis//intrinsic/world/proto:collision_settings_cc_proto",
-        "@intrinsic_apis//intrinsic/world/proto:object_world_refs_cc_proto",
-    ],
-)
-
-cc_library(
-    name = "motion_planner_cache_entry_features",
-    srcs = ["motion_planner_cache_entry_features.cc"],
-    hdrs = ["motion_planner_cache_entry_features.h"],
-    deps = [
-        ":motion_planner_cache_key_normalization",
-        ":motion_planner_cache_utils",
-        "//intrinsic/util:eigen",
-        "//intrinsic/util/status:status_macros",
-        "//intrinsic/world",
-        "//intrinsic/world/collision/util:make_collision_settings",
-        "//intrinsic/world/objects:object_world",
-        "//intrinsic/world/objects:object_world_proto_utils",
-        "//intrinsic_kinematics/intrinsic/kinematics/types:joint_limits_xd",
-        "//intrinsic_motion_planning/intrinsic/motion_planning/proto:motion_planner_service_proto_utils",
-        "//intrinsic_motion_planning/intrinsic/motion_planning/proto/v1:motion_planner_service_cc_proto",
-        "//intrinsic_motion_planning/intrinsic/motion_planning/proto/v1:motion_specification_cc_proto",
-        "//intrinsic_sdk/intrinsic/eigenmath",
-        "//intrinsic_sdk/intrinsic/geometry/api:affine_transform_of_geometry",
-        "//intrinsic_sdk/intrinsic/geometry/api:geometry_fingerprint",
-        "//intrinsic_sdk/intrinsic/math:pose3",
-        "//intrinsic_sdk/intrinsic/math:proto_conversion",
-        "//intrinsic_sdk/intrinsic/world:entity_id",
-        "//intrinsic_sdk/intrinsic/world:geometry_types",
-        "//intrinsic_sdk/intrinsic/world/component:geometry_component",
-        "//intrinsic_sdk/intrinsic/world/component:kinematics_component",
-        "//intrinsic_sdk/intrinsic/world/objects:object_world_ids",
-        "//intrinsic_sdk/intrinsic/world/objects:world_object",
-        "@abseil-cpp//absl/container:flat_hash_map",
-        "@abseil-cpp//absl/container:flat_hash_set",
-        "@abseil-cpp//absl/status",
-        "@abseil-cpp//absl/status:statusor",
-        "@abseil-cpp//absl/strings",
-        "@abseil-cpp//absl/strings:string_view",
-        "@abseil-cpp//absl/types:span",
-        "@intrinsic_apis//intrinsic/world/proto:collision_settings_cc_proto",
-        "@intrinsic_apis//intrinsic/world/proto:object_world_refs_cc_proto",
-    ],
-)
-
-# keep
-proto_library(
-    name = "motion_planner_cache_proto",
-    srcs = ["motion_planner_cache.proto"],
-    strip_import_prefix = "/intrinsic_motion_planning",
-    deps = [
-        "//intrinsic_motion_planning/intrinsic/motion_planning/proto/v1:motion_specification_proto",
-        "@intrinsic_apis//intrinsic/icon/proto:joint_space_proto",
-        "@intrinsic_apis//intrinsic/kinematics/types:joint_limits_proto",
-        "@intrinsic_apis//intrinsic/math/proto:pose_proto",
-        "@intrinsic_apis//intrinsic/motion_planning/proto/v1:robot_specification_proto",
-        "@intrinsic_apis//intrinsic/world/proto:collision_settings_proto",
-    ],
-)
-
-go_proto_library(
-    name = "motion_planner_cache_go_proto",
-    importpath = "intrinsic_motion_planning/intrinsic/motion_planning/service/motion_planner_cache_go_proto",
-    proto = ":motion_planner_cache_proto",
-    deps = [
-        "//intrinsic_motion_planning/intrinsic/motion_planning/proto/v1:motion_specification_go_proto",
-        "@intrinsic_apis//intrinsic/icon/proto:joint_space_go_proto",
-        "@intrinsic_apis//intrinsic/kinematics/types:joint_limits_go_proto",
-        "@intrinsic_apis//intrinsic/math/proto:pose_go_proto",
-        "@intrinsic_apis//intrinsic/motion_planning/proto/v1:robot_specification_go_proto",
-        "@intrinsic_apis//intrinsic/world/proto:collision_settings_go_proto",
-    ],
-)
-
-cc_proto_library(
-    name = "motion_planner_cache_cc_proto",
-    deps = [
-        ":motion_planner_cache_proto",
     ],
 )

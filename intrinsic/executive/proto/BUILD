@@ -21,12 +21,6 @@ load("//bazel:protos.bzl", "proto_library")
 
 package(default_visibility = ["//intrinsic:public_api_users"])
 
-alias(
-    name = "behavior_call_py_pb2",
-    actual = "//intrinsic_sdk/intrinsic/executive/proto:behavior_call_py_pb2",
-    tags = ["go/intrinsic-ioc-transition-tdd"],
-)
-
 # code_execution_service
 proto_library(
     name = "code_execution_service_proto",
@@ -157,26 +151,8 @@ alias(
 )
 
 alias(
-    name = "executive_service_py_pb2",
-    actual = "//intrinsic_sdk/intrinsic/executive/proto:executive_service_py_pb2",
-    tags = ["go/intrinsic-ioc-transition-tdd"],
-)
-
-alias(
-    name = "executive_service_py_pb2_grpc",
-    actual = "//intrinsic_sdk/intrinsic/executive/proto:executive_service_py_pb2_grpc",
-    tags = ["go/intrinsic-ioc-transition-tdd"],
-)
-
-alias(
     name = "executive_service_go_proto",
     actual = "//intrinsic_sdk/intrinsic/executive/proto:executive_service_go_proto",
-    tags = ["go/intrinsic-ioc-transition-tdd"],
-)
-
-alias(
-    name = "run_metadata_py_pb2",
-    actual = "//intrinsic_sdk/intrinsic/executive/proto:run_metadata_py_pb2",
     tags = ["go/intrinsic-ioc-transition-tdd"],
 )
 
@@ -195,12 +171,6 @@ alias(
 alias(
     name = "behavior_tree_proto",
     actual = "//intrinsic_sdk/intrinsic/executive/proto:behavior_tree_proto",
-    tags = ["go/intrinsic-ioc-transition-tdd"],
-)
-
-alias(
-    name = "behavior_tree_py_pb2",
-    actual = "//intrinsic_sdk/intrinsic/executive/proto:behavior_tree_py_pb2",
     tags = ["go/intrinsic-ioc-transition-tdd"],
 )
 

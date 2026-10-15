@@ -33,56 +33,14 @@ go_proto_library(
 )
 
 alias(
-    name = "behavior_tree_registry_py_pb2",
-    actual = "//intrinsic_sdk/intrinsic/skills/proto:behavior_tree_registry_py_pb2",
-    tags = ["go/intrinsic-ioc-transition-tdd"],
-)
-
-alias(
-    name = "behavior_tree_registry_py_pb2_grpc",
-    actual = "//intrinsic_sdk/intrinsic/skills/proto:behavior_tree_registry_py_pb2_grpc",
-    tags = ["go/intrinsic-ioc-transition-tdd"],
-)
-
-alias(
-    name = "behavior_tree_registry_go_proto",
-    actual = "//intrinsic_sdk/intrinsic/skills/proto:behavior_tree_registry_go_proto",
-    tags = ["go/intrinsic-ioc-transition-tdd"],
-)
-
-alias(
-    name = "skill_service_proto",
-    actual = "//intrinsic_sdk/intrinsic/skills/proto:skill_service_proto",
-    tags = ["go/intrinsic-ioc-transition-tdd"],
-)
-
-alias(
     name = "skill_service_cc_proto",
     actual = "//intrinsic_sdk/intrinsic/skills/proto:skill_service_cc_proto",
     tags = ["go/intrinsic-ioc-transition-tdd"],
 )
 
 alias(
-    name = "skill_service_cc_grpc_proto",
-    actual = "//intrinsic_sdk/intrinsic/skills/proto:skill_service_cc_grpc_proto",
-    tags = ["go/intrinsic-ioc-transition-tdd"],
-)
-
-alias(
-    name = "skill_service_go_proto",
-    actual = "//intrinsic_sdk/intrinsic/skills/proto:skill_service_go_proto",
-    tags = ["go/intrinsic-ioc-transition-tdd"],
-)
-
-alias(
     name = "skill_registry_config_proto",
     actual = "//intrinsic_sdk/intrinsic/skills/proto:skill_registry_config_proto",
-    tags = ["go/intrinsic-ioc-transition-tdd"],
-)
-
-alias(
-    name = "skill_registry_config_py_pb2",
-    actual = "//intrinsic_sdk/intrinsic/skills/proto:skill_registry_config_py_pb2",
     tags = ["go/intrinsic-ioc-transition-tdd"],
 )
 

@@ -68,6 +68,10 @@ message RunMetadata {
   // operation is reset.
   string scene_id = 29;
 
+  // TODO(b/493547558): Update comment below. Once the service switches over to
+  // the RunMetadata managed by the ProtoManager, these fields will be set (to
+  // their defaults) right from the creation of the operation.
+
   // These fields will be initialized when starting a behavior tree (not
   // immediately when creating it).
   ExecutionMode execution_mode = 20;

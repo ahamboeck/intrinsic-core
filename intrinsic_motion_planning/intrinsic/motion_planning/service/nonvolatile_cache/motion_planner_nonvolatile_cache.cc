@@ -49,7 +49,7 @@
 #include "intrinsic/motion_planning/proto/v1/motion_blending_parameter.pb.h"
 #include "intrinsic/motion_planning/proto/v1/motion_planning_limits.pb.h"
 #include "intrinsic/motion_planning/proto/v1/robot_specification.pb.h"
-#include "intrinsic/motion_planning/service/motion_planner_cache_utils.h"
+#include "intrinsic/motion_planning/service/cache/cache_utils.h"
 #include "intrinsic/motion_planning/service/nonvolatile_cache/motion_planner_nonvolatile_cache.pb.h"
 #include "intrinsic/storage/content_addressable_storage/cpp/client_helpers.h"
 #include "intrinsic/util/eigen.h"

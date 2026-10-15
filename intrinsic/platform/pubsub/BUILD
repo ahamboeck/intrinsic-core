@@ -40,14 +40,6 @@ alias(
     tags = ["go/intrinsic-ioc-transition-tdd"],
 )
 
-# PubSub API library. The user-facing API providing access to
-# publish-subscribe system.
-alias(
-    name = "kvstore",
-    actual = "//intrinsic_sdk/intrinsic/platform/pubsub:kvstore",
-    tags = ["go/intrinsic-ioc-transition-tdd"],
-)
-
 alias(
     name = "publisher",
     actual = "//intrinsic_sdk/intrinsic/platform/pubsub:publisher",

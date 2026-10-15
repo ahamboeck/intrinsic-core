@@ -15,6 +15,7 @@
 #include "intrinsic/skills/internal/world_service_utils.h"
 
 #include <string>
+#include <utility>
 
 #include "absl/status/status.h"
 #include "absl/status/statusor.h"
@@ -114,15 +115,8 @@ absl::StatusOr<ObjectWorldProto> DownloadWorldProtoFromObjectWorldService(
   return world_proto;
 }
 
-absl::StatusOr<World> DownloadWorldFromObjectWorldService(
-    absl::string_view world_id,
-    ObjectWorldService::StubInterface& object_world_service,
-    GeometryLibrary* geolib) {
-  LOG(INFO) << "Downloading world proto from Object World Service...";
-  INTR_ASSIGN_OR_RETURN(
-      ObjectWorldProto world_proto,
-      DownloadWorldProtoFromObjectWorldService(world_id, object_world_service));
-
+absl::StatusOr<World> CreateWorldFromObjectWorldProto(
+    ObjectWorldProto world_proto, GeometryLibrary* geolib) {
   ListObjectsResponse list_objects_response;
   *list_objects_response.mutable_objects() =
       std::move(*world_proto.mutable_objects());
@@ -141,6 +135,18 @@ absl::StatusOr<World> DownloadWorldFromObjectWorldService(
   }
 
   return world;
+}
+
+absl::StatusOr<World> DownloadWorldFromObjectWorldService(
+    absl::string_view world_id,
+    ObjectWorldService::StubInterface& object_world_service,
+    GeometryLibrary* geolib) {
+  LOG(INFO) << "Downloading world proto from Object World Service...";
+  INTR_ASSIGN_OR_RETURN(
+      ObjectWorldProto world_proto,
+      DownloadWorldProtoFromObjectWorldService(world_id, object_world_service));
+
+  return CreateWorldFromObjectWorldProto(std::move(world_proto), geolib);
 }
 
 }  // namespace skills

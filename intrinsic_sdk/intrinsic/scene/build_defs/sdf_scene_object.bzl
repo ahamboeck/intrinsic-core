@@ -15,8 +15,8 @@
 """Custom rules for creating SceneObject from SDF."""
 
 load("@com_google_protobuf//bazel/common:proto_info.bzl", "ProtoInfo")
-load("//intrinsic/util/proto/build_defs:descriptor_set.bzl", "ProtoSourceCodeInfo", "gen_source_code_info_descriptor_set")
 load("//intrinsic_sdk/intrinsic/scene/build_defs:scene_object.bzl", "SceneObjectInfo")
+load("//intrinsic_sdk/intrinsic/util/proto/build_defs:descriptor_set.bzl", "ProtoSourceCodeInfo", "gen_source_code_info_descriptor_set")
 
 def _sdf_scene_object_impl(ctx):
     # Determine output files up front.

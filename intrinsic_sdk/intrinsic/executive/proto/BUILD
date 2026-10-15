@@ -166,8 +166,6 @@ proto_library(
         "@com_google_protobuf//:any_proto",
         "@com_google_protobuf//:timestamp_proto",
         "@intrinsic_apis//intrinsic/executive/proto:executive_execution_mode_proto",
-        "@intrinsic_apis//intrinsic/logging/proto:context_proto",
-        "@intrinsic_apis//intrinsic/util/status:extended_status_proto",
     ],
 )
 
@@ -189,8 +187,6 @@ go_proto_library(
         ":behavior_tree_go_proto",
         ":run_metadata_go_proto",
         "@intrinsic_apis//intrinsic/executive/proto:executive_execution_mode_go_proto",
-        "@intrinsic_apis//intrinsic/logging/proto:context_go_proto",
-        "@intrinsic_apis//intrinsic/util/status:extended_status_go_proto",
         "@org_golang_google_genproto_googleapis_rpc//status",
         "@org_golang_google_protobuf//types/known/anypb",
         "@org_golang_google_protobuf//types/known/timestamppb",

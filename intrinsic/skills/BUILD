@@ -22,9 +22,6 @@ cc_library(
     hdrs = ["footprint_util.h"],
     deps = [
         "//intrinsic/choreographer/footprints:footprint",
-        "//intrinsic/util:eigen",
-        "//intrinsic/util/status:status_builder",
-        "//intrinsic/util/status:status_macros",
         "//intrinsic/world",
         "//intrinsic/world:world_acl_spec",
         "//intrinsic/world:world_entity_acl_spec",
@@ -36,6 +33,9 @@ cc_library(
         "//intrinsic_sdk/intrinsic/geometry/api:io",
         "//intrinsic_sdk/intrinsic/geometry/storage:geometry_deserializer",
         "//intrinsic_sdk/intrinsic/math:proto_conversion",
+        "//intrinsic_sdk/intrinsic/util:eigen",
+        "//intrinsic_sdk/intrinsic/util/status:status_builder",
+        "//intrinsic_sdk/intrinsic/util/status:status_macros",
         "//intrinsic_sdk/intrinsic/world:entity_id",
         "//intrinsic_sdk/intrinsic/world/hashing",
         "@abseil-cpp//absl/status",
@@ -44,20 +44,6 @@ cc_library(
         "@intrinsic_apis//intrinsic/geometry/proto/v1:transformed_geometry_cc_proto",
         "@intrinsic_apis//intrinsic/skills/proto:footprint_cc_proto",
     ],
-)
-
-alias(
-    name = "skillbundle",
-    actual = "//intrinsic_sdk/intrinsic/skills:skillbundle",
-    tags = ["go/intrinsic-ioc-transition-tdd"],
-    visibility = ["//intrinsic:internal_api_users"],
-)
-
-alias(
-    name = "skillmanifest",
-    actual = "//intrinsic_sdk/intrinsic/skills:skillmanifest",
-    tags = ["go/intrinsic-ioc-transition-tdd"],
-    visibility = ["//intrinsic:public_api_users"],
 )
 
 alias(

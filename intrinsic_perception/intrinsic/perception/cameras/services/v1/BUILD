@@ -104,7 +104,7 @@ cc_library(
     deps = [
         ":camera_service_utils",
         "//intrinsic/platform/pubsub",
-        "//intrinsic/production/external/googleinit",
+        "//intrinsic/stats:metrics_utils",
         "//intrinsic/stats:scoped_span",
         "//intrinsic/util:proto_time",
         "//intrinsic/util/status:ret_check",
@@ -150,7 +150,7 @@ cc_library(
         "@intrinsic_apis//intrinsic/perception/proto/v1:capture_result_cc_proto",
         "@intrinsic_apis//intrinsic/perception/proto/v1:image_buffer_cc_proto",
         "@intrinsic_apis//intrinsic/perception/proto/v1:post_processing_cc_proto",
-        "@io_opencensus_cpp//opencensus/stats",
+        "@io_opentelemetry_cpp//api",
     ],
 )
 

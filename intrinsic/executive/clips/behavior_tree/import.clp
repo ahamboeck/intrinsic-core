@@ -1506,6 +1506,9 @@
                 (operation-execution-mode-to-proto-mode NORMAL))
   (pb-set-field ?s-metadata-proto "simulation_mode"
                 (operation-sim-mode-to-proto-mode REALITY))
+  (do-for-fact ((?w world)) TRUE
+    (pb-set-field ?s-metadata-proto "world_id" ?w:id)
+  )
 
   (bind ?tree-import-result
     (behavior-tree-import-top-level-proto ?bt-proto ?operation-name
@@ -1574,6 +1577,16 @@
 
   (bind ?operation-tree-id (result-value ?tree-import-result))
 
+  ; start_tree_id and start_node_id are unset in the RunMetadata proto, which
+  ; means starting from the root of the operation tree. Initialize the tracking
+  ; slots to match, so that run-metadata-proto-update-start-tree-and-node does
+  ; not fire right after import and publish a RunMetadataChangeEvent although
+  ; the proto is unchanged.
+  (bind ?operation-tree-root-id 0)
+  (do-for-fact ((?bt behavior-tree)) (eq ?bt:id ?operation-tree-id)
+    (bind ?operation-tree-root-id ?bt:root)
+  )
+
   (assert (operation-envelope (name ?operation-name)
                               (operation-proto ?operation-proto)
                               (run-metadata-proto ?s-metadata-proto)
@@ -1590,7 +1603,11 @@
                               (return-value-descriptor-pool
                                 ?operation-return-value-pool)
                               (operation-tree-id ?operation-tree-id)
-                              (start-tree-id ?operation-tree-id)))
+                              (start-tree-id ?operation-tree-id)
+                              (run-metadata-proto-start-tree-id
+                                ?operation-tree-id)
+                              (run-metadata-proto-start-node-id
+                                ?operation-tree-root-id)))
 
   (return (result-create TRUE ""))
 )

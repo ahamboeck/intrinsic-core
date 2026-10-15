@@ -2604,6 +2604,17 @@ grpc::Status ObjectWorldService::AreFootprintsCompatible(
 
 namespace {
 
+absl::StatusOr<intrinsic_proto::world::CollisionSettings>
+GetCollisionSettingsInternal(WorldAndMutex& world_ptr)
+    ABSL_EXCLUSIVE_LOCKS_REQUIRED(world_ptr.mtx) {
+  INTR_ASSIGN_OR_RETURN(const auto world, world_ptr.GetObjectWorld());
+  std::multiset<intrinsic_proto::Rule> rules =
+      FillRuleSet(world_ptr.world, world_ptr.world.GetDefaultRuleSet());
+  intrinsic_proto::RuleSet filled_rule_set;
+  *filled_rule_set.mutable_rules() = {rules.begin(), rules.end()};
+  return MakeCollisionSettings(*world, filled_rule_set);
+}
+
 absl::StatusOr<intrinsic_proto::world::World> BuildWorldProto(
     const std::string& world_id, WorldAndMutex& world_ptr,
     const intrinsic_proto::world::WorldView& world_view)
@@ -2630,8 +2641,8 @@ absl::StatusOr<intrinsic_proto::world::World> BuildWorldProto(
           *response.mutable_objects(),
           AllWorldObjects(*world, world_id, {},
                           intrinsic_proto::world::ObjectView::FULL));
-      *response.mutable_collision_settings() =
-          MakeCollisionSettings(world_ptr->GetDefaultRuleSet());
+      INTR_ASSIGN_OR_RETURN(*response.mutable_collision_settings(),
+                            GetCollisionSettingsInternal(world_ptr));
       return response;
     }
     default:
@@ -2711,12 +2722,8 @@ grpc::Status ObjectWorldService::GetCollisionSettings(
   INTR_ASSIGN_OR_RETURN_GRPC(std::shared_ptr<WorldAndMutex> world_ptr,
                              WorldStore().GetWorld(request->world_id()));
   absl::WriterMutexLock lock(*world_ptr->mtx);
-  INTR_ASSIGN_OR_RETURN_GRPC(const auto world, world_ptr->GetObjectWorld());
-  std::multiset<intrinsic_proto::Rule> rules =
-      FillRuleSet(world_ptr->world, world_ptr->world.GetDefaultRuleSet());
-  intrinsic_proto::RuleSet filled_rule_set;
-  *filled_rule_set.mutable_rules() = {rules.begin(), rules.end()};
-  *response = MakeCollisionSettings(*world, filled_rule_set);
+  INTR_ASSIGN_OR_RETURN_GRPC(*response,
+                             GetCollisionSettingsInternal(*world_ptr));
   return grpc::Status::OK;
 }
 

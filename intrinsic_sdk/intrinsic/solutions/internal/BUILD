@@ -16,11 +16,7 @@
 
 load("//bazel:python.bzl", "py_library")
 
-package(default_visibility = [
-    "//intrinsic/solutions:__subpackages__",
-    "//intrinsic/solutions/internal:__pkg__",
-    "//intrinsic_sdk/intrinsic/solutions:__subpackages__",
-])
+package(default_visibility = ["//intrinsic_sdk/intrinsic/solutions:__subpackages__"])
 
 py_library(
     name = "process_providing",
@@ -178,11 +174,7 @@ py_library(
 py_library(
     name = "skill_providing",
     srcs = ["skill_providing.py"],
-    visibility = [
-        "//intrinsic/solutions:__subpackages__",
-        "//intrinsic/solutions/internal:__pkg__",
-        "//intrinsic_sdk/intrinsic/solutions:__subpackages__",
-    ],
+    visibility = ["//intrinsic_sdk/intrinsic/solutions:__subpackages__"],
     deps = [
         ":resources",
         ":skill_generation",

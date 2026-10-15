@@ -1155,10 +1155,14 @@ func (s *DeployService) GetSolutionDeployment(ctx context.Context, req *solution
 	}
 
 	app := resp.GetApplication()
-	rts, err := runtimedbtransfer.Retrieve(ctx, s.resourceTypeRuntimeClient, app)
+	rtrs, err := resourcetyperuntime.GetAll(ctx, s.resourceTypeRuntimeClient)
 	if err != nil {
 		log.ErrorContextf(ctx, "Failed to get application: %v", err)
 		return nil, status.Errorf(codes.Internal, "failed to retrieve asset information: %v", err)
+	}
+	rts := make(map[string]*rtrpb.ResourceTypeRuntime, len(rtrs))
+	for _, rtr := range rtrs {
+		rts[idutils.IDVersionFromProtoUnchecked(rtr.GetMetadata().GetIdVersion())] = rtr
 	}
 
 	sd, err := solutionconversion.AsSolutionDeployment(app, rts)

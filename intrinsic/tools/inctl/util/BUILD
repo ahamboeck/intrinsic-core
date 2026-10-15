@@ -16,30 +16,6 @@ load("//bazel:go_macros.bzl", "go_library")
 
 package(default_visibility = ["//visibility:public"])
 
-alias(
-    name = "buildozer",
-    actual = "//intrinsic_sdk/intrinsic/tools/inctl/util:buildozer",
-    tags = ["go/intrinsic-ioc-transition-tdd"],
-)
-
-alias(
-    name = "printer",
-    actual = "//intrinsic_sdk/intrinsic/tools/inctl/util:printer",
-    tags = ["go/intrinsic-ioc-transition-tdd"],
-)
-
-alias(
-    name = "cobrautil",
-    actual = "//intrinsic_sdk/intrinsic/tools/inctl/util:cobrautil",
-    tags = ["go/intrinsic-ioc-transition-tdd"],
-)
-
-alias(
-    name = "vmalias",
-    actual = "//intrinsic_sdk/intrinsic/tools/inctl/util:vmalias",
-    tags = ["go/intrinsic-ioc-transition-tdd"],
-)
-
 go_library(
     name = "releaseutil",
     srcs = ["releaseutil.go"],
@@ -102,19 +78,16 @@ go_library(
     deps = [
         ":orgutil",
         "@com_github_golang_glog//:go_default_library",
-        "@com_github_googlecloudplatform_opentelemetry_operations_go_exporter_trace//:go_default_library",
         "@io_opentelemetry_go_otel//:otel",
+        "@io_opentelemetry_go_otel//attribute",
         "@io_opentelemetry_go_otel//semconv/v1.34.0:v1_34_0",
         "@io_opentelemetry_go_otel_bridge_opencensus//:opencensus",
+        "@io_opentelemetry_go_otel_exporters_otlp_otlptrace_otlptracegrpc//:otlptracegrpc",
         "@io_opentelemetry_go_otel_sdk//resource",
         "@io_opentelemetry_go_otel_sdk//trace",
+        "@org_golang_google_grpc//:go_default_library",
+        "@org_golang_google_grpc//credentials/oauth:go_default_library",
     ],
-)
-
-alias(
-    name = "templateutil",
-    actual = "//intrinsic_sdk/intrinsic/tools/inctl/util:templateutil",
-    tags = ["go/intrinsic-ioc-transition-tdd"],
 )
 
 alias(
@@ -126,12 +99,6 @@ alias(
 alias(
     name = "orgutil",
     actual = "//intrinsic_sdk/intrinsic/tools/inctl/util:orgutil",
-    tags = ["go/intrinsic-ioc-transition-tdd"],
-)
-
-alias(
-    name = "agents",
-    actual = "//intrinsic_sdk/intrinsic/tools/inctl/util:agents",
     tags = ["go/intrinsic-ioc-transition-tdd"],
 )
 

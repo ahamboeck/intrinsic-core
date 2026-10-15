@@ -34,7 +34,7 @@ cc_library(
     srcs = ["compile_utils.cc"],
     hdrs = ["compile_utils.h"],
     deps = [
-        "//intrinsic/util/status:status_macros",
+        "//intrinsic_sdk/intrinsic/util/status:status_macros",
         "@abseil-cpp//absl/container:flat_hash_map",
         "@abseil-cpp//absl/status",
         "@abseil-cpp//absl/status:statusor",
@@ -53,12 +53,6 @@ go_library(
         "@org_golang_google_protobuf//proto",
         "@org_golang_google_protobuf//types/descriptorpb:go_default_library",
     ],
-)
-
-alias(
-    name = "dynamic_message_parser",
-    actual = "//intrinsic_sdk/intrinsic/util/proto:dynamic_message_parser",
-    tags = ["go/intrinsic-ioc-transition-tdd"],
 )
 
 alias(
@@ -114,26 +108,8 @@ alias(
 )
 
 alias(
-    name = "source_code_info_view",
-    actual = "//intrinsic_sdk/intrinsic/util/proto:source_code_info_view",
-    tags = ["go/intrinsic-ioc-transition-tdd"],
-)
-
-alias(
-    name = "source_code_info_view_py",
-    actual = "//intrinsic_sdk/intrinsic/util/proto:source_code_info_view_py",
-    tags = ["go/intrinsic-ioc-transition-tdd"],
-)
-
-alias(
     name = "type_url",
     actual = "//intrinsic_sdk/intrinsic/util/proto:type_url",
-    tags = ["go/intrinsic-ioc-transition-tdd"],
-)
-
-alias(
-    name = "typeurl",
-    actual = "//intrinsic_sdk/intrinsic/util/proto:typeurl",
     tags = ["go/intrinsic-ioc-transition-tdd"],
 )
 
@@ -156,12 +132,6 @@ alias(
 )
 
 alias(
-    name = "sourcecodeinfoview",
-    actual = "//intrinsic_sdk/intrinsic/util/proto:sourcecodeinfoview",
-    tags = ["go/intrinsic-ioc-transition-tdd"],
-)
-
-alias(
     name = "names",
     actual = "//intrinsic_sdk/intrinsic/util/proto:names",
     tags = ["go/intrinsic-ioc-transition-tdd"],
@@ -178,7 +148,7 @@ cc_library(
     srcs = ["walk_messages.cc"],
     hdrs = ["walk_messages.h"],
     deps = [
-        "//intrinsic/util/status:status_macros",
+        "//intrinsic_sdk/intrinsic/util/status:status_macros",
         "@abseil-cpp//absl/functional:function_ref",
         "@abseil-cpp//absl/log",
         "@abseil-cpp//absl/status",

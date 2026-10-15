@@ -25,7 +25,6 @@ cc_library(
     # We don't plan to expand the ik_base interface. So we limit to current use.
     visibility = ["//visibility:private"],
     deps = [
-        "//intrinsic/util:eigen",
         "//intrinsic_control/intrinsic/icon/utils:realtime_status_macro",
         "//intrinsic_kinematics/intrinsic/kinematics",
         "//intrinsic_kinematics/intrinsic/kinematics:joint_wrapping",
@@ -34,6 +33,7 @@ cc_library(
         "//intrinsic_kinematics/intrinsic/kinematics:state",
         "//intrinsic_kinematics/intrinsic/kinematics/types:joint_limits",
         "//intrinsic_sdk/intrinsic/math:units",
+        "//intrinsic_sdk/intrinsic/util:eigen",
         "//intrinsic_sdk/intrinsic/util/time",
         "//intrinsic_sdk/intrinsic/util/time:timer",
         "@abseil-cpp//absl/log:check",

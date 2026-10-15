@@ -15,7 +15,7 @@
 """Custom rules for creating SceneObject from SDF."""
 
 load("@com_google_protobuf//bazel/common:proto_info.bzl", "ProtoInfo")
-load("//intrinsic/util/proto/build_defs:descriptor_set.bzl", "ProtoSourceCodeInfo", "gen_source_code_info_descriptor_set")
+load("//intrinsic_sdk/intrinsic/util/proto/build_defs:descriptor_set.bzl", "ProtoSourceCodeInfo", "gen_source_code_info_descriptor_set")
 
 SceneObjectInfo = provider(
     "provided by the scene_object() rule",

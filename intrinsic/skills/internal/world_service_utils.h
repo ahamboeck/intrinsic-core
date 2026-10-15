@@ -43,6 +43,15 @@ DownloadWorldProtoFromObjectWorldService(
     intrinsic_proto::world::ObjectWorldService::StubInterface&
         object_world_service);
 
+// Constructs a World instance from an ObjectWorldService World proto (as
+// returned by `DownloadWorldProtoFromObjectWorldService` or by
+// `ObjectWorldService.GetWorld` with `WORLD_VIEW_FULL`). Only the objects and
+// collision settings of `world_proto` are used. If geolib is provided,
+// deserializes world geometries in-place.
+absl::StatusOr<World> CreateWorldFromObjectWorldProto(
+    intrinsic_proto::world::World world_proto,
+    GeometryLibrary* geolib = nullptr);
+
 // Downloads the world with the given ID from ObjectWorldService (querying
 // ListObjects and GetCollisionSettings) and constructs a World instance.
 // If geolib is provided, deserializes world geometries in-place.

@@ -89,8 +89,8 @@
 #include "intrinsic/motion_planning/proto/v1/motion_planning_error.pb.h"
 #include "intrinsic/motion_planning/proto/v1/motion_specification.pb.h"
 #include "intrinsic/motion_planning/proto/v1/robot_specification.pb.h"
+#include "intrinsic/motion_planning/service/cache/motion_planner_cache.h"
 #include "intrinsic/motion_planning/service/debug/timing_debug_logger.h"
-#include "intrinsic/motion_planning/service/motion_planner_cache.h"
 #include "intrinsic/motion_planning/service/motion_planner_service_asset_utils.h"
 #include "intrinsic/motion_planning/service/motion_planner_service_utils.h"
 #include "intrinsic/motion_planning/service/nonvolatile_cache/motion_planner_nonvolatile_cache.h"
@@ -243,18 +243,9 @@ absl::StatusOr<std::unique_ptr<object_world::ObjectWorld>> GetObjectWorldView(
 absl::StatusOr<std::vector<intrinsic_proto::geometry::v1::TransformedGeometry>>
 ComputeSweptVolume(const World& world, const RobotCollectionsEntityId& robot_id,
                    GeometrySerializer& geolib, const PointPath& path) {
-  INTR_ASSIGN_OR_RETURN(const auto shape_data,
-                        ComputeSweptVolumeFromPath(world, robot_id, path));
-
-  std::vector<intrinsic_proto::geometry::v1::TransformedGeometry> result;
-  result.reserve(shape_data.size());
-  for (const TransformedGeometry& shape : shape_data) {
-    INTR_ASSIGN_OR_RETURN(
-        intrinsic_proto::geometry::v1::TransformedGeometry shape_proto,
-        intrinsic::geo::ToProto(shape, &geolib));
-    result.push_back(std::move(shape_proto));
-  }
-  return result;
+  return absl::UnimplementedError(
+      "ComputeSweptVolume is "
+      "not implemented.");
 }
 
 PointPath PathSegmentsToPath(const std::vector<PathSegment>& path_segments) {

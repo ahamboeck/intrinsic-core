@@ -41,7 +41,7 @@
 #include "intrinsic/motion_planning/proto/v1/motion_planner_service.pb.h"
 #include "intrinsic/motion_planning/proto/v1/motion_specification.pb.h"
 #include "intrinsic/motion_planning/proto/v1/robot_specification.pb.h"
-#include "intrinsic/motion_planning/service/motion_planner_cache.h"
+#include "intrinsic/motion_planning/service/cache/motion_planner_cache.h"
 #include "intrinsic/motion_planning/service/motion_planner_service_asset_utils.h"
 #include "intrinsic/motion_planning/service/nonvolatile_cache/motion_planner_nonvolatile_cache.h"
 #include "intrinsic/platform/pubsub/publisher.h"

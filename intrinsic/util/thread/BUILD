@@ -22,12 +22,6 @@ alias(
     tags = ["go/intrinsic-ioc-transition-tdd"],
 )
 
-alias(
-    name = "util",
-    actual = "//intrinsic_sdk/intrinsic/util/thread:util",
-    tags = ["go/intrinsic-ioc-transition-tdd"],
-)
-
 # --------------------------------------------------------------------------------------------------
 # The targets below are not exported to the SDK.
 # --------------------------------------------------------------------------------------------------

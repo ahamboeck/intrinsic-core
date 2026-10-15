@@ -474,6 +474,7 @@
  =>
   (run-metadata-proto-update-field "scene_id" ?scene-id ?operation-name)
   (modify ?op (run-metadata-proto-scene-id ?scene-id))
+  (operation-events-add-run-metadata-change-event ?operation-name)
 )
 
 (defrule run-metadata-proto-update-execution-mode
@@ -487,6 +488,7 @@
                                    (operation-execution-mode-to-proto-mode ?execution-mode)
                                    ?operation-name)
   (modify ?op (run-metadata-proto-execution-mode ?execution-mode))
+  (operation-events-add-run-metadata-change-event ?operation-name)
 )
 
 (defrule run-metadata-proto-update-simulation-mode
@@ -500,6 +502,7 @@
                                    (operation-sim-mode-to-proto-mode ?simulation-mode)
                                    ?operation-name)
   (modify ?op (run-metadata-proto-simulation-mode ?simulation-mode))
+  (operation-events-add-run-metadata-change-event ?operation-name)
 )
 
 (defrule run-metadata-proto-update-start-tree-and-node
@@ -529,6 +532,7 @@
   )
   (modify ?op (run-metadata-proto-start-tree-id ?start-tree-id)
               (run-metadata-proto-start-node-id ?start-node-id))
+  (operation-events-add-run-metadata-change-event ?operation-name)
 )
 
 (defrule run-metadata-proto-update-start-time
@@ -547,6 +551,7 @@
       (pb-remove ?ts-proto)
   )
   (modify ?op (run-metadata-proto-start-time ?start-time))
+  (operation-events-add-run-metadata-change-event ?operation-name)
 )
 
 (defrule run-metadata-proto-clear-start-time
@@ -557,13 +562,14 @@
  =>
   (run-metadata-proto-clear-field "start_time" ?operation-name)
   (modify ?op (run-metadata-proto-start-time 0 0))
+  (operation-events-add-run-metadata-change-event ?operation-name)
 )
 
 (defrule operation-state-proto-update
   (declare (salience ?*SALIENCE-HIGHER*))
   ?op <- (operation-envelope (name ?operation-name)
                       (state ?state)
-                      (run-metadata-proto-state ~?state)
+                      (run-metadata-proto-state ?prev-state&~?state)
                       (return-value-proto ?return-value-proto)
                       (operation-proto ?operation-proto)
   )
@@ -605,6 +611,15 @@
         (pb-clear-field ?operation-proto "error")
         (pb-set-field ?operation-proto "done" FALSE)
       )
+    )
+    ; Publish the result when the operation becomes done and once when a done
+    ; operation leaves its terminal state, e.g., on reset.
+    (bind ?terminal-states (create$ SUCCEEDED FAILED CANCELED))
+    (if (or (member$ ?state ?terminal-states)
+            (member$ ?prev-state ?terminal-states))
+     then
+      (operation-events-add-operation-result-change-event ?operation-name
+                                                          ?operation-proto)
     )
   )
 )

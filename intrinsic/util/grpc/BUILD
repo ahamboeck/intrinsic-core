@@ -25,18 +25,6 @@ alias(
 )
 
 alias(
-    name = "auth_py",
-    actual = "//intrinsic_sdk/intrinsic/util/grpc:auth_py",
-    tags = ["go/intrinsic-ioc-transition-tdd"],
-)
-
-alias(
-    name = "dialerutil",
-    actual = "//intrinsic_sdk/intrinsic/util/grpc:dialerutil",
-    tags = ["go/intrinsic-ioc-transition-tdd"],
-)
-
-alias(
     name = "channel",
     actual = "//intrinsic_sdk/intrinsic/util/grpc:channel",
     tags = ["go/intrinsic-ioc-transition-tdd"],
@@ -68,13 +56,6 @@ alias(
 )
 
 alias(
-    name = "limits",
-    actual = "//intrinsic_sdk/intrinsic/util/grpc:limits",
-    tags = ["go/intrinsic-ioc-transition-tdd"],
-    visibility = ["//intrinsic:public_api_users"],
-)
-
-alias(
     name = "interceptor",
     actual = "//intrinsic_sdk/intrinsic/util/grpc:interceptor",
     tags = ["go/intrinsic-ioc-transition-tdd"],
@@ -89,11 +70,5 @@ alias(
 alias(
     name = "statusutil",
     actual = "//intrinsic_sdk/intrinsic/util/grpc:statusutil",
-    tags = ["go/intrinsic-ioc-transition-tdd"],
-)
-
-alias(
-    name = "userconfig",
-    actual = "//intrinsic_sdk/intrinsic/util/grpc:userconfig",
     tags = ["go/intrinsic-ioc-transition-tdd"],
 )

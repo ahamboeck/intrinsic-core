@@ -35,8 +35,8 @@ go_proto_library(
     importpath = "intrinsic/skills/internal/proto/skill_registry_internal_go_proto",
     protos = [":skill_registry_internal_proto"],
     deps = [
-        "//intrinsic/executive/proto:behavior_tree_go_proto",
-        "//intrinsic/skills/proto:skill_registry_config_go_proto",
+        "//intrinsic_sdk/intrinsic/executive/proto:behavior_tree_go_proto",
+        "//intrinsic_sdk/intrinsic/skills/proto:skill_registry_config_go_proto",
         "@intrinsic_apis//intrinsic/resources/proto:resource_handle_go_proto",
         "@intrinsic_apis//intrinsic/skills/proto:equipment_go_proto",
         "@intrinsic_apis//intrinsic/skills/proto:skills_go_proto",
@@ -58,6 +58,6 @@ go_proto_library(
     importpath = "intrinsic/skills/internal/proto/behavior_tree_registry_internal_go_proto",
     protos = [":behavior_tree_registry_internal_proto"],
     deps = [
-        "//intrinsic/executive/proto:behavior_tree_go_proto",
+        "//intrinsic_sdk/intrinsic/executive/proto:behavior_tree_go_proto",
     ],
 )
