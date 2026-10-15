@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-load("@rules_python//python:defs.bzl", "py_binary", "py_library")
+load("@rules_python//python:defs.bzl", "py_binary", "py_library", "py_test")
 load("//bazel:python_oci_image.bzl", "python_oci_image")
 load("//intrinsic_sdk/intrinsic/assets/services/build_defs:services.bzl", "intrinsic_service")
 
@@ -26,10 +26,10 @@ py_library(
     srcs = ["service/segmentation_model.py"],
     data = ["model_files/segmentation/config.pbtxt"],
     deps = [
+        "//incode/util/runfiles",
         "//intrinsic_inference/core/utils:oip_mappings",
         "//intrinsic_inference/core/utils:oip_utils",
         "//intrinsic_sdk/intrinsic/assets:id_utils_py",
-        "//incode/util/runfiles",
         "@ai_intrinsic_sdks_pip_deps//numpy",
         "@ai_intrinsic_sdks_pip_deps//opencv_python_headless",
         "@com_github_grpc_grpc//src/python/grpcio/grpc:grpcio",
@@ -47,10 +47,10 @@ py_library(
     srcs = ["service/pose_estimator_model.py"],
     data = ["model_files/pose/config.pbtxt"],
     deps = [
+        "//incode/util/runfiles",
         "//intrinsic_inference/core/utils:oip_mappings",
         "//intrinsic_inference/core/utils:oip_utils",
         "//intrinsic_sdk/intrinsic/assets:id_utils_py",
-        "//incode/util/runfiles",
         "@ai_intrinsic_sdks_pip_deps//numpy",
         "@ai_intrinsic_sdks_pip_deps//opencv_python_headless",
         "@ai_intrinsic_sdks_pip_deps//trimesh",
@@ -68,6 +68,7 @@ py_library(
     name = "ioc_pose_estimator_service",
     srcs = ["service/ioc_pose_estimator_service.py"],
     deps = [
+        ":depth_registration",
         ":pose_estimator_model",
         ":segmentation_model",
         "//intrinsic/storage/content_addressable_storage/python:client_helpers",
@@ -101,6 +102,32 @@ py_library(
         "@intrinsic_apis//intrinsic/perception/proto/v1:pose_estimation_service_py_pb2_grpc",
         "@intrinsic_apis//intrinsic/storage/content_addressable_storage/proto:cas_service_py_pb2_grpc",
         "@open_inference_protocol//:open_inference_grpc_py_pb2_grpc",
+    ],
+)
+
+py_library(
+    name = "depth_registration",
+    srcs = ["service/depth_registration.py"],
+    deps = ["@ai_intrinsic_sdks_pip_deps//numpy"],
+)
+
+py_test(
+    name = "depth_registration_test",
+    srcs = ["service/depth_registration_test.py"],
+    deps = [
+        ":depth_registration",
+        "@ai_intrinsic_sdks_pip_deps//numpy",
+    ],
+)
+
+py_test(
+    name = "depth_registration_input_test",
+    srcs = ["service/depth_registration_input_test.py"],
+    deps = [
+        ":ioc_pose_estimator_service",
+        "//intrinsic_sdk/intrinsic/math/python:pose3",
+        "@ai_intrinsic_sdks_pip_deps//numpy",
+        "@intrinsic_apis//intrinsic/perception/proto/v1:image_buffer_py_pb2",
     ],
 )
 

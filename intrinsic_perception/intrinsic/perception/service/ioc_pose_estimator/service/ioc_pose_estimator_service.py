@@ -29,14 +29,6 @@ from google.longrunning import operations_pb2_grpc
 from google.protobuf import text_format
 from google.protobuf.empty_pb2 import Empty
 import grpc
-import numpy as np
-from specification.protocol import open_inference_grpc_pb2_grpc
-import trimesh
-
-from intrinsic_perception.intrinsic.perception.service.ioc_pose_estimator.proto import ioc_service_config_pb2
-from intrinsic_perception.intrinsic.perception.service.ioc_pose_estimator.service import pose_estimator_model
-from intrinsic_perception.intrinsic.perception.service.ioc_pose_estimator.service import segmentation_model
-from intrinsic_perception.intrinsic.perception.service.ioc_train_service.proto import ioc_pose_estimator_params_pb2
 from intrinsic.assets import interface_utils
 from intrinsic.assets.dependencies import utils as asset_utils
 from intrinsic.assets.install import installed_assets_client
@@ -59,6 +51,14 @@ from intrinsic.platform.pubsub.python import pubsub
 from intrinsic.storage.content_addressable_storage.proto import cas_service_pb2_grpc
 from intrinsic.storage.content_addressable_storage.python import client_helpers
 from intrinsic.util.grpc import interceptor
+from intrinsic_perception.intrinsic.perception.service.ioc_pose_estimator.proto import ioc_service_config_pb2
+from intrinsic_perception.intrinsic.perception.service.ioc_pose_estimator.service import depth_registration
+from intrinsic_perception.intrinsic.perception.service.ioc_pose_estimator.service import pose_estimator_model
+from intrinsic_perception.intrinsic.perception.service.ioc_pose_estimator.service import segmentation_model
+from intrinsic_perception.intrinsic.perception.service.ioc_train_service.proto import ioc_pose_estimator_params_pb2
+import numpy as np
+from specification.protocol import open_inference_grpc_pb2_grpc
+import trimesh
 
 CAS_ADDRESS = (
     "content-addressable-storage.app-intrinsic-base.svc.cluster.local:9747"
@@ -180,11 +180,12 @@ def _extract_rgb_depth_and_intrinsics(
     pubsub_instance: PubSub client used to fetch capture data stored in KV store.
 
   Returns:
-    A tuple of (rgb_image, depth_image, intrinsic_matrix).
+    A tuple of (rgb_image, registered_depth_image, rgb_intrinsic_matrix), with
+    depth registered to the RGB sensor's pixel grid and axial depth in metres.
 
   Raises:
     ValueError: If source_type is unspecified or if RGB image, depth image, or
-      intrinsic matrix is missing.
+      calibration is missing, or sensor images are distorted.
   """
 
   capture_result = None
@@ -215,6 +216,8 @@ def _extract_rgb_depth_and_intrinsics(
   rgb_img = None
   depth_img = None
   intrinsic_matrix = None
+  rgb_sensor = None
+  depth_sensor = None
 
   for v in capture_result.sensor_images.values():
     pixel_type = v.proto.buffer.pixel_type
@@ -248,6 +251,7 @@ def _extract_rgb_depth_and_intrinsics(
             " either (H, W), (H, W, 1), (H, W, 3) or (H, W, 4)"
         )
       intrinsic_matrix = v.intrinsic_matrix
+      rgb_sensor = v
       logging.info(
           "[_extract_rgb_depth_and_intrinsics] Extracted intensity image"
           " and matching intrinsics from sensor '%s'.",
@@ -261,6 +265,7 @@ def _extract_rgb_depth_and_intrinsics(
             " but got multiple depth inputs."
         )
       depth_img = np.squeeze(v.array).astype(np.float32)
+      depth_sensor = v
       if depth_img.ndim != 2:
         raise ValueError(
             f"Got invalid depth image shape {v.array.shape}, expected 2D map."
@@ -286,6 +291,27 @@ def _extract_rgb_depth_and_intrinsics(
         " capture results."
     )
 
+  if depth_sensor.intrinsic_matrix is None:
+    raise ValueError("Depth sensor intrinsics are required for registration.")
+  for sensor in (rgb_sensor, depth_sensor):
+    if sensor.camera_t_sensor is None:
+      raise ValueError(
+          "Sensor extrinsics are required for RGB-depth registration."
+      )
+    if sensor.distortion_params is not None and np.any(
+        sensor.distortion_params
+    ):
+      raise ValueError("RGB-depth registration requires undistorted images.")
+  rgb_t_depth = rgb_sensor.camera_t_sensor.inverse().multiply(
+      depth_sensor.camera_t_sensor
+  )
+  depth_img = depth_registration.register_depth_to_rgb(
+      depth_img,
+      depth_sensor.intrinsic_matrix,
+      intrinsic_matrix,
+      rgb_img.shape[:2],
+      rgb_t_depth.matrix4x4(),
+  )
   return rgb_img, depth_img, intrinsic_matrix
 
 
