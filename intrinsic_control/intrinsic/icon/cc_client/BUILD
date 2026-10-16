@@ -73,7 +73,6 @@ cc_library(
         "//intrinsic_control/intrinsic/icon/common:id_types",
         "//intrinsic_control/intrinsic/icon/common:slot_part_map",
         "//intrinsic_control/intrinsic/icon/proto:concatenate_trajectory_protos",
-        "//intrinsic_control/intrinsic/icon/release:grpc_time_support",
         "//intrinsic_control/intrinsic/icon/release:source_location",
         "//intrinsic_sdk/intrinsic/util:atomic_sequence_num",
         "//intrinsic_sdk/intrinsic/util:proto_time",
@@ -118,7 +117,6 @@ cc_library(
         "//intrinsic_control/intrinsic/icon/common:part_properties",
         "//intrinsic_control/intrinsic/icon/common:slot_part_map",
         "//intrinsic_control/intrinsic/icon/control:logging_mode",
-        "//intrinsic_control/intrinsic/icon/release:grpc_time_support",
         "//intrinsic_sdk/intrinsic/util:proto_time",
         "//intrinsic_sdk/intrinsic/util/grpc:channel_interface",
         "//intrinsic_sdk/intrinsic/util/status:status_conversion_grpc",
@@ -175,7 +173,6 @@ cc_library(
     hdrs = ["stream.h"],
     deps = [
         "//intrinsic_control/intrinsic/icon/common:id_types",
-        "//intrinsic_control/intrinsic/icon/release:grpc_time_support",
         "//intrinsic_sdk/intrinsic/util/grpc:channel_interface",
         "//intrinsic_sdk/intrinsic/util/status:status_conversion_grpc",
         "//intrinsic_sdk/intrinsic/util/status:status_conversion_rpc",

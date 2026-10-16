@@ -334,7 +334,6 @@ cc_library(
         "//intrinsic/executive/proto:code_execution_service_cc_grpc_proto",
         "//intrinsic/executive/proto:code_execution_service_cc_proto",
         "//intrinsic/stats:scoped_span",
-        "//intrinsic_control/intrinsic/icon/release:grpc_time_support",
         "//intrinsic_sdk/intrinsic/util:proto_time",
         "//intrinsic_sdk/intrinsic/util/grpc",
         "//intrinsic_sdk/intrinsic/util/status:get_extended_status",
@@ -525,7 +524,6 @@ cc_library(
         "//intrinsic/world/service/updater:world_updater_cc_grpc_proto",
         "//intrinsic/world/service/updater:world_updater_cc_proto",
         "//intrinsic/world/util:remove_redundant_updates",
-        "//intrinsic_control/intrinsic/icon/release:grpc_time_support",
         "//intrinsic_sdk/intrinsic/math:proto_conversion",
         "//intrinsic_sdk/intrinsic/util:eigen",
         "//intrinsic_sdk/intrinsic/util/grpc",
@@ -598,7 +596,6 @@ cc_library(
     deps = [
         "//intrinsic/executive/clips_cpp",
         "//intrinsic/executive/clips_cpp:clips_protobuf",
-        "//intrinsic_control/intrinsic/icon/release:grpc_time_support",
         "//intrinsic_sdk/intrinsic/conductor/proto:conductor_cc_grpc",
         "//intrinsic_sdk/intrinsic/conductor/proto:conductor_cc_proto",
         "//intrinsic_sdk/intrinsic/executive/proto:run_metadata_cc_proto",

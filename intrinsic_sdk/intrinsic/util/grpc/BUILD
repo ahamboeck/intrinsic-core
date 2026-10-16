@@ -132,7 +132,6 @@ cc_library(
     visibility = ["//intrinsic:public_api_users"],
     deps = [
         ":limits",
-        "//intrinsic_control/intrinsic/icon/release:grpc_time_support",
         "//intrinsic_sdk/intrinsic/util/thread",
         "@abseil-cpp//absl/log",
         "@abseil-cpp//absl/status",

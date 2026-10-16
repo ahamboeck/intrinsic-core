@@ -521,10 +521,6 @@ class WorldObject : public TransformNode {
       const world::ObjectEntityFilter& this_entity_filter,
       const world::ObjectEntityFilter& other_entity_filter) = 0;
 
-  absl::Status CheckObjectNameAgainstSiblingObjectAndFrameNames(
-      const WorldObject& parent_object,
-      const WorldObjectName& new_name_to_set) const;
-
   // Creates a raw sensor frame if the object has a sensor entity.
   // Note: This frame is not added to the object, Remember to call
   // AddFrameAsymmetric to move ownership of the frame to the object.

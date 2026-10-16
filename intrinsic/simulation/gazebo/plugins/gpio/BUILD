@@ -32,7 +32,6 @@ cc_library(
         "//intrinsic/util/status:status_conversion_grpc",
         "//intrinsic/util/status:status_conversion_rpc",
         "//intrinsic/util/status:status_macros",
-        "//intrinsic_control/intrinsic/icon/release:grpc_time_support",
         "//intrinsic_hardware/intrinsic/hardware/gpio:gpio_service_proto_utils",
         "@abseil-cpp//absl/algorithm:container",
         "@abseil-cpp//absl/base:core_headers",

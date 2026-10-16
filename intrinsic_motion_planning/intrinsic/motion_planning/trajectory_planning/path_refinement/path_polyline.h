@@ -124,9 +124,10 @@ class PathPolyline {
   // Specifically, it performs the following steps and checks:
   // - Performs sanity checks on each segment and verifies that the segments
   //   are connected.
-  // - Removes duplicated points (at segment connection or within the segment),
-  //   considering the least restrictive blending deviation and the most
-  //   conservative joint/Cartesian limits.
+  // - Removes duplicated points (using `kJointEqualitySegmentMarginRad` at
+  //   segment connections and `kJointEqualityNumericalMarginRad` within a
+  //   segment), considering the least restrictive blending deviation and the
+  //   most conservative joint/Cartesian limits.
   // - Assigns the IDs from both segments to points at the connection between
   //   two segments.
   static absl::StatusOr<std::unique_ptr<PathPolyline>> Create(

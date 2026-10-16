@@ -257,10 +257,6 @@ void FromProto(
     flags.concurrent_collision_checking_thread_count =
         proto_flags.concurrent_collision_checking_thread_count();
   }
-  if (proto_flags.has_parameterization_service_address()) {
-    flags.parameterization_service_address =
-        proto_flags.parameterization_service_address();
-  }
   if (proto_flags.has_enable_fallback_trajectory()) {
     flags.enable_fallback_trajectory = proto_flags.enable_fallback_trajectory();
   }
@@ -289,8 +285,6 @@ intrinsic_proto::motion_planning::v1::MotionPlannerFlags ToProto(
       flags.enable_concurrent_collision_checking);
   proto_flags.set_concurrent_collision_checking_thread_count(
       flags.concurrent_collision_checking_thread_count);
-  proto_flags.set_parameterization_service_address(
-      flags.parameterization_service_address);
   proto_flags.set_enable_fallback_trajectory(flags.enable_fallback_trajectory);
   proto_flags.set_enable_fallback_trajectory_local_adjust(
       flags.enable_fallback_trajectory_local_adjust);

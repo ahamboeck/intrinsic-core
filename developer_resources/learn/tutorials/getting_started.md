@@ -67,8 +67,14 @@ Intrinsic Core uses [Kubernetes](../glossary/general_terms.md#kubernetes-k8s) to
    sudo apt install -y util-linux-extra
    newgrp containerd
    ```
+   
+6. If you need to run supplied perception packages, it is required to run the following script to configure the K3s setup for GPU support.
 
-6. Download and deploy Intrinsic Core:
+   ```bash
+   sudo ~/intrinsic-core/intrinsic_runtime/setup_nvidia.sh
+   ```
+
+7. Download and deploy Intrinsic Core:
 
    ```bash
    gh release download --repo intrinsic-ai/intrinsic-core "${CORE_TAG:?}" \
@@ -89,7 +95,7 @@ Intrinsic Core uses [Kubernetes](../glossary/general_terms.md#kubernetes-k8s) to
    Timing: XX.XX seconds to install Workcell Spec.
    ```
 
-7. Install the [inctl](../glossary/intrinsic_terms.md#inctl-intrinsic-control-cli) ("in control") CLI, which you'll use to control Intrinsic Core:
+8. Install the [inctl](../glossary/intrinsic_terms.md#inctl-intrinsic-control-cli) ("in control") CLI, which you'll use to control Intrinsic Core:
 
    ```bash
    gh release download --repo intrinsic-ai/intrinsic-core "${CORE_TAG:?}" \
@@ -99,11 +105,6 @@ Intrinsic Core uses [Kubernetes](../glossary/general_terms.md#kubernetes-k8s) to
    sudo chmod +x /usr/local/bin/inctl
    ```
 
-8. If you need to run supplied perception packages, it is required to run the following script to configure the K3s setup for GPU support.
-
-   ```bash
-   sudo ~/intrinsic-core/intrinsic_runtime/setup_nvidia.sh
-   ```
 
 ## Step 2: Build and deploy OMTS
 

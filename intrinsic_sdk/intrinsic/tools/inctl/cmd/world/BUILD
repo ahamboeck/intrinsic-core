@@ -17,6 +17,7 @@ load("//bazel:go_macros.bzl", "go_library")
 go_library(
     name = "world",
     srcs = [
+        "print.go",
         "reset.go",
         "world.go",
     ],
@@ -32,8 +33,12 @@ go_library(
         "//intrinsic_sdk/intrinsic/conductor/proto:conductor_go_proto",
         "//intrinsic_sdk/intrinsic/tools/inctl/cmd:root",
         "//intrinsic_sdk/intrinsic/tools/inctl/util:cobrautil",
+        "//intrinsic_sdk/intrinsic/tools/inctl/util:printer",
+        "//intrinsic_sdk/intrinsic/world/proto:object_world_service_go_proto",
         "@com_github_pkg_errors//:go_default_library",
         "@com_github_spf13_cobra//:go_default_library",
         "@org_golang_google_grpc//:go_default_library",
+        "@org_golang_google_protobuf//encoding/protojson:go_default_library",
+        "@org_golang_google_protobuf//encoding/prototext:go_default_library",
     ],
 )

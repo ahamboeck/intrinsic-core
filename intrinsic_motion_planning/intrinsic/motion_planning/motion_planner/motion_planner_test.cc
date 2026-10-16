@@ -5534,8 +5534,6 @@ class MotionPlannerPathTest : public MotionPlannerBaseTest,
  public:
   void SetUp() override {
     ASSERT_OK_AND_ASSIGN(world_, testing::LoadTestWorld(kUr5eTestWorldGzfPath));
-
-    motion_planner_flags_.parameterization_service_address = "";
   }
 
  protected:

@@ -210,7 +210,7 @@ intrinsic_service(
     images = [
         ":motion-planner-service-image.tar",
         ":motion_planner_service_httpjson_bridge",
-    ] + [],
+    ],
     manifest = "motion_planner_service_manifest.textproto",
     deps = [
         "//intrinsic_motion_planning/intrinsic/motion_planning/proto/v1:motion_planner_service_proto",
@@ -240,10 +240,8 @@ cc_library(
     srcs = ["motion_planner_service_oss_test_fixture.cc"],
     hdrs = ["motion_planner_service_test_fixture.h"],
     deps = [
-        "//intrinsic/util/status:status_macros",
-        "//intrinsic_motion_planning/intrinsic/motion_planning/motion_planner:motion_planner_flags",
-        "@abseil-cpp//absl/log:check",
-    ] + [],
+        "@abseil-cpp//absl/status",
+    ],
 )
 
 cc_library(
@@ -432,7 +430,7 @@ cc_library(
         "@abseil-cpp//absl/strings",
         "@com_github_grpc_grpc//:grpc++",
         "@com_github_grpc_grpc//:grpc_security_base",
-    ] + [],
+    ],
 )
 
 cc_library(

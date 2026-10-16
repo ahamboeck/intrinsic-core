@@ -238,6 +238,7 @@ go_library(
     ],
     deps = [
         "//intrinsic/kubernetes/appstat:inspect",
+        "//intrinsic/stats/go:telemetry",
         "@cat_dario_mergo//:go_default_library",
         "@com_github_bazelbuild_buildtools//labels:go_default_library",
         "@com_github_cenkalti_backoff_v4//:go_default_library",
@@ -252,7 +253,9 @@ go_library(
         "@io_k8s_apimachinery//pkg/util/wait:go_default_library",
         "@io_k8s_client_go//kubernetes:go_default_library",
         "@io_k8s_sigs_yaml//:go_default_library",
-        "@io_opencensus_go//trace:go_default_library",
+        "@io_opentelemetry_go_otel//attribute",
+        "@io_opentelemetry_go_otel//propagation",
+        "@io_opentelemetry_go_otel_trace//:trace",
     ],
 )
 

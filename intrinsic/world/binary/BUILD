@@ -44,7 +44,6 @@ cc_binary(
         "//intrinsic/world/service:world_storage",
         "//intrinsic/world/service:worldservice_impl",
         "//intrinsic/world/service/updater:world_updater",
-        "//intrinsic_control/intrinsic/icon/release:grpc_time_support",
         "//intrinsic_control/intrinsic/icon/release/portable:init_intrinsic",
         "//intrinsic_sdk/intrinsic/connect/cc/grpc:channel",
         "//intrinsic_sdk/intrinsic/geometry/storage:geometry_library",

@@ -83,7 +83,6 @@ cc_library(
         "//intrinsic_control/intrinsic/icon/cc_client:session",
         "//intrinsic_control/intrinsic/icon/cc_client:state_variable_path",
         "//intrinsic_control/intrinsic/icon/common:id_types",
-        "//intrinsic_control/intrinsic/icon/release:grpc_time_support",
         "//intrinsic_sdk/intrinsic/logging/proto:log_item_cc_proto",
         "//intrinsic_sdk/intrinsic/platform/pubsub",
         "//intrinsic_sdk/intrinsic/platform/pubsub:publisher",
@@ -156,7 +155,6 @@ cc_library(
         ":opcua_gpio_data_types",
         ":opcua_gpio_service_config_cc_proto",
         ":opcua_node_map",
-        "//intrinsic_control/intrinsic/icon/release:grpc_time_support",
         "//intrinsic_hardware/intrinsic/hardware/opcua:opcua_client",
         "//intrinsic_hardware/intrinsic/hardware/opcua:opcua_raii_types",
         "//intrinsic_sdk/intrinsic/platform/pubsub",
@@ -270,7 +268,6 @@ cc_library(
     visibility = ["//intrinsic:public_api_users"],
     deps = [
         ":gpio_service_proto_utils",
-        "//intrinsic_control/intrinsic/icon/release:grpc_time_support",
         "//intrinsic_sdk/intrinsic/connect/cc/grpc:channel",
         "//intrinsic_sdk/intrinsic/platform/pubsub",
         "//intrinsic_sdk/intrinsic/platform/pubsub:subscription",
@@ -300,7 +297,6 @@ cc_test(
     deps = [
         ":gpio_client",
         ":gpio_service_proto_utils",
-        "//intrinsic_control/intrinsic/icon/release:grpc_time_support",
         "//intrinsic_sdk/intrinsic/platform/pubsub",
         "//intrinsic_sdk/intrinsic/platform/pubsub:subscription",
         "//intrinsic_sdk/intrinsic/util/grpc",

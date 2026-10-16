@@ -69,6 +69,24 @@ cc_library(
 )
 
 cc_library(
+    name = "scene_file_discovery",
+    srcs = ["scene_file_discovery.cc"],
+    hdrs = ["scene_file_discovery.h"],
+    deps = [
+        "//intrinsic/geometry/api:file_io",
+        "//intrinsic_sdk/intrinsic/scene/usd:scene_object_from_usd",
+        "//intrinsic_sdk/intrinsic/util/status:status_macros",
+        "@abseil-cpp//absl/container:flat_hash_set",
+        "@abseil-cpp//absl/log",
+        "@abseil-cpp//absl/status",
+        "@abseil-cpp//absl/status:statusor",
+        "@abseil-cpp//absl/strings",
+        "@or_tools//ortools/base:file",
+        "@or_tools//ortools/base:path",
+    ],
+)
+
+cc_library(
     name = "scene_object_import",
     srcs = ["scene_object_import.cc"],
     hdrs = ["scene_object_import.h"],
@@ -81,6 +99,7 @@ cc_library(
         ":geometry_client_with_cache",
         ":import_cache",
         ":post_process_imported_scene",
+        ":scene_file_discovery",
         "//intrinsic/geometry/api:file_io",
         "//intrinsic/geometry/compatibility:io",
         "//intrinsic/geometry/processing:pipeline_config_cc_proto",
@@ -132,7 +151,6 @@ cc_library(
         "@abseil-cpp//absl/base:core_headers",
         "@abseil-cpp//absl/base:nullability",
         "@abseil-cpp//absl/container:flat_hash_map",
-        "@abseil-cpp//absl/container:flat_hash_set",
         "@abseil-cpp//absl/hash",
         "@abseil-cpp//absl/log",
         "@abseil-cpp//absl/log:check",

@@ -45,7 +45,6 @@ import (
 	"intrinsic/tools/inctl/util/releaseutil"
 	"intrinsic/tools/inctl/util/traceutil"
 	"intrinsic/util/go/build"
-	"intrinsic/util/path_resolver/pathresolver"
 	"intrinsic/util/proto/protoio"
 
 	lropb "cloud.google.com/go/longrunning/autogen/longrunningpb"
@@ -228,10 +227,6 @@ $ bazel run //intrinsic/config:empty_application --\
 
 			assetsPath := args[0]
 			span.AddAttributes(trace.StringAttribute("app_path", assetsPath))
-			runfilesFS, err := pathresolver.ResolveRunfilesFsRoot()
-			if err != nil {
-				return fmt.Errorf("failed to resolve runfiles FS root: %w", err)
-			}
 			assets, err := readLocalSolution(assetsPath)
 			if err != nil {
 				return err
@@ -248,7 +243,6 @@ $ bazel run //intrinsic/config:empty_application --\
 			casClient := casgrpcpb.NewContentAddressableStorageServiceClient(ingressConn)
 			f2c := filetocas.NewUploader(
 				casClient,
-				filetocas.WithRunfilesFS(runfilesFS),
 				filetocas.UseChunkSize(releaseutil.CASUploadChunkSize),
 			)
 			processingLimiter := throttle.NewConcurrencyLimiter(flags.GetFlagProcessingConcurrency())

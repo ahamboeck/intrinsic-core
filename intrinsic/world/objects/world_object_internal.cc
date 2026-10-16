@@ -2235,10 +2235,7 @@ absl::Status VerifyLinkCanBeCloned(const WorldObject& existing_object,
       existing_object.GetEntityWorld().GetEntityById(existing_link_id));
 
   if (existing_link->HasComponent<SensorComponent>()) {
-    std::vector<std::string> unsupported_components;
-    if (existing_link->HasComponent<SensorComponent>()) {
-      unsupported_components.push_back("SensorComponent");
-    }
+    const std::vector<std::string> unsupported_components = {"SensorComponent"};
     return absl::InvalidArgumentError(absl::Substitute(
         "Cannot clone the object named \"$0\". The objects "
         "member entity \"$1\" has the following unsupported components: $2.",
@@ -2249,8 +2246,7 @@ absl::Status VerifyLinkCanBeCloned(const WorldObject& existing_object,
   return absl::OkStatus();
 }
 
-absl::Status VerifyObjectCanBeCloned(const WorldObject& existing_object,
-                                     const World& target_entity_world) {
+absl::Status VerifyObjectCanBeCloned(const WorldObject& existing_object) {
   if (existing_object.GetId() == RootObjectId()) {
     return absl::InvalidArgumentError("Cannot clone the root object");
   }
@@ -2292,8 +2288,7 @@ absl::StatusOr<WorldObject*> WorldObject::CloneObject(
     WorldObjectNameType name_type, AttachmentEntityId parent_entity_id,
     bool clone_frames, std::optional<Pose3d> parent_entity_t_new_object) {
   const absl::Time clone_time = absl::Now();
-  INTR_RETURN_IF_ERROR(
-      VerifyObjectCanBeCloned(existing_object, GetEntityWorld()));
+  INTR_RETURN_IF_ERROR(VerifyObjectCanBeCloned(existing_object));
 
   INTR_RETURN_IF_ERROR(CheckObjectNameIsAvailable(
       name, name_type == WorldObjectNameType::kNameIsGlobalAlias, *this,
@@ -2383,7 +2378,6 @@ absl::StatusOr<WorldObject*> WorldObject::CloneObject(
                           world->GetEntityById(new_link_id));
     INTR_ASSIGN_OR_RETURN(AttachmentComponent * new_attachment,
                           new_link->GetComponent<AttachmentComponent>());
-    Pose3d parent_t_entity;
     if (const auto existing_and_new_parent_attachment_id =
             existing_to_new_link_ids.find(existing_attachment->GetParentId());
         existing_and_new_parent_attachment_id !=

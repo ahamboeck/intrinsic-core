@@ -46,7 +46,6 @@ cc_library(
     hdrs = ["sim_inputs_service_singleton.h"],
     deps = [
         "//intrinsic/util/status:status_conversion_grpc",
-        "//intrinsic_control/intrinsic/icon/release:grpc_time_support",
         "@abseil-cpp//absl/base:core_headers",
         "@abseil-cpp//absl/log",
         "@abseil-cpp//absl/log:check",

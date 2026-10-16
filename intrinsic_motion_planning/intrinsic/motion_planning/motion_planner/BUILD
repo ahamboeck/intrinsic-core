@@ -338,10 +338,8 @@ cc_library(
     deps = [
         ":motion_planner_base_test_fixture",
         ":motion_planner_flags",
-        "@abseil-cpp//absl/status:status_matchers",
-        "@com_google_cel_cpp//internal:testing_no_main",
         "@com_google_googletest//:gtest",
-    ] + [],
+    ],
 )
 
 cc_library(

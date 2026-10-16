@@ -65,6 +65,41 @@ cc_grpc_library(
     deps = [":object_world_service_cc_proto"],
 )
 
+go_proto_library(
+    name = "object_world_service_go_proto",
+    compilers = [
+        "@io_bazel_rules_go//proto:go_grpc_v2",
+        "@io_bazel_rules_go//proto:go_proto",
+        "//bazel:go_gen_grpc_gateway",
+    ],
+    importpath = "intrinsic/world/proto/object_world_service_go_proto",
+    importpath_aliases = ["intrinsic/world/public/proto/object_world_service_go_proto"],
+    protos = [":object_world_service_proto"],
+    visibility = ["//intrinsic:public_api_users"],
+    deps = [
+        ":object_world_updates_go_proto",
+        "//intrinsic/resources/proto:geometric_resource_data_go_proto",
+        "//intrinsic/world/proto:ppr_component_go_proto",
+        "@intrinsic_apis//intrinsic/icon/proto:cart_space_go_proto",
+        "@intrinsic_apis//intrinsic/kinematics/types:joint_limits_go_proto",
+        "@intrinsic_apis//intrinsic/kubernetes/generator/proto:auth_options_go_proto",
+        "@intrinsic_apis//intrinsic/math/proto:pose_go_proto",
+        "@intrinsic_apis//intrinsic/skills/proto:footprint_go_proto",
+        "@intrinsic_apis//intrinsic/world/proto:collision_action_go_proto",
+        "@intrinsic_apis//intrinsic/world/proto:collision_settings_go_proto",
+        "@intrinsic_apis//intrinsic/world/proto:geometry_component_go_proto",
+        "@intrinsic_apis//intrinsic/world/proto:kinematics_component_go_proto",
+        "@intrinsic_apis//intrinsic/world/proto:object_world_refs_go_proto",
+        "@intrinsic_apis//intrinsic/world/proto:physics_component_go_proto",
+        "@intrinsic_apis//intrinsic/world/proto:robot_payload_go_proto",
+        "@intrinsic_apis//intrinsic/world/proto:sensor_component_go_proto",
+        "@intrinsic_apis//intrinsic/world/proto:simulation_component_go_proto",
+        "@org_golang_google_genproto_googleapis_api//annotations",
+        "@org_golang_google_genproto_googleapis_rpc//status",
+        "@org_golang_google_protobuf//types/known/emptypb",
+    ],
+)
+
 py_proto_library(
     name = "object_world_service_py_pb2",
     visibility = ["//intrinsic:public_api_users"],

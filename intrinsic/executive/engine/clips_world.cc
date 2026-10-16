@@ -40,6 +40,7 @@
 #include "absl/types/span.h"
 #include "google/protobuf/empty.pb.h"
 #include "grpcpp/client_context.h"
+#include "grpcpp/support/time.h"  // for grpc::TimePoint<absl::Time>
 #include "intrinsic/executive/clips_cpp/assert_facade.h"
 #include "intrinsic/executive/clips_cpp/function_facade.h"
 #include "intrinsic/executive/clips_cpp/protobuf.h"
@@ -48,7 +49,6 @@
 #include "intrinsic/executive/proto/any_list.pb.h"
 #include "intrinsic/executive/proto/world_query.pb.h"
 #include "intrinsic/geometry/proto/v1/transformed_geometry.pb.h"
-#include "intrinsic/icon/release/grpc_time_support.h"  // for grpc::TimePoint<absl::Time>
 #include "intrinsic/math/proto_conversion.h"
 #include "intrinsic/skills/internal/conflicts.h"
 #include "intrinsic/skills/proto/footprint.pb.h"

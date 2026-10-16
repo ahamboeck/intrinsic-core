@@ -21,7 +21,6 @@ cc_library(
     visibility = ["//visibility:public"],
     deps = [
         ":operations_proxy",
-        "//intrinsic_control/intrinsic/icon/release:grpc_time_support",
         "//intrinsic_sdk/intrinsic/connect/cc/grpc:channel",
         "//intrinsic_sdk/intrinsic/util/status:status_conversion_grpc",
         "//intrinsic_sdk/intrinsic/util/status:status_macros",

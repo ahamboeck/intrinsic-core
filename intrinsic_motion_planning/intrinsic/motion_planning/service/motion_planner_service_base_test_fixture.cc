@@ -532,8 +532,7 @@ void MotionPlannerServiceWithoutLoggerTest::SetUpWithTestParams(
   }
 
   MotionPlannerFlags motion_planner_flags;
-  ASSERT_OK(SetUpAndUpdateFlags(test_params.set_infinite_jerk_limits,
-                                motion_planner_flags));
+  ASSERT_OK(CheckJerkLimitsSupported(test_params.set_infinite_jerk_limits));
   Init(/*use_nonvolatile_cache=*/false, /*extra_flags=*/motion_planner_flags,
        /*worlds_by_name=*/std::move(worlds));
 }

@@ -397,7 +397,7 @@ function inctl_app_stop() {
   args=(
     --cluster="${CLUSTER_NAME}"
   )
-  inctl app stop \
+  inctl solution stop \
       "${args[@]}" \
       "$@"
 }

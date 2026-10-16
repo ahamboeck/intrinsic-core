@@ -807,7 +807,6 @@ cc_library(
         "//intrinsic_control/intrinsic/icon/cc_client:client",
         "//intrinsic_control/intrinsic/icon/equipment:channel_factory",
         "//intrinsic_control/intrinsic/icon/equipment:equipment_utils",
-        "//intrinsic_control/intrinsic/icon/release:grpc_time_support",
         "//intrinsic_sdk/intrinsic/skills/cc:equipment_pack",
         "//intrinsic_sdk/intrinsic/skills/cc:skill_interface",
         "//intrinsic_sdk/intrinsic/skills/cc:skill_utils",
@@ -820,6 +819,7 @@ cc_library(
         "@abseil-cpp//absl/status",
         "@abseil-cpp//absl/status:statusor",
         "@abseil-cpp//absl/strings",
+        "@com_github_grpc_grpc//:grpc++",
         "@com_google_protobuf//:protobuf",
         "@intrinsic_apis//intrinsic/math/proto:point_cc_proto",
         "@intrinsic_apis//intrinsic/resources/proto:resource_handle_cc_proto",
@@ -840,9 +840,3 @@ cc_skill(
         ":set_payload_cc_proto",
     ],
 )
-
-# ----------------------------------------------------------------------------
-# Skill definition for 'visual_servoing'
-
-# ----------------------------------------------------------------------------
-# Skill definition for 'search_target'
