@@ -34,7 +34,6 @@
 #include "intrinsic/scene/proto/v1/scene_object_import.pb.h"
 #include "intrinsic/scene/proto/v1/scene_object_internal.grpc.pb.h"
 #include "intrinsic/scene/proto/v1/scene_object_internal.pb.h"
-#include "intrinsic/world/proto/world_fragment.pb.h"
 
 namespace intrinsic {
 
@@ -122,4 +121,5 @@ class SceneObjectExport
 };
 
 }  // namespace intrinsic
+
 #endif  // INTRINSIC_SCENE_SERVICE_SCENE_OBJECT_IMPORT_H_

@@ -120,6 +120,18 @@ class ConductorImpl final
   explicit ConductorImpl(ConductorOptions opts);
   ~ConductorImpl() override;
 
+  // Creates the solution worlds (edit world, belief world and sim world) if a
+  // valid execution context exists, e.g., one recovered from a previous run of
+  // the conductor. Existing worlds with the same IDs are overwritten. Invalid
+  // world updates are skipped and reported through the edit world status.
+  //
+  // Does nothing and returns OK if no valid execution context was found, i.e.,
+  // if there is no execution context or any of its world IDs is empty.
+  //
+  // Intended to be called once before the conductor starts serving requests.
+  absl::Status CreateSolutionWorldsIfValidExecutionContext()
+      ABSL_LOCKS_EXCLUDED(mu_);
+
   grpc::Status StartSolution(
       grpc::ServerContext* context,
       const intrinsic_proto::conductor::StartSolutionRequest* request,

@@ -126,6 +126,9 @@
 
 namespace intrinsic {
 namespace {
+
+constexpr absl::Duration kStopCheckInterval = absl::Milliseconds(100);
+constexpr absl::Duration kContextRetryDelay = absl::Seconds(5);
 static const auto* const kConfigFormatString =
     new absl::ParsedFormat<'s', 's', 'f'>(
         "Cache <%s> and <%s> has a max starting robot configuration "
@@ -338,6 +341,19 @@ absl::Status MaybeInsertMotionPlanningRequestCacheHit(
   return absl::OkStatus();
 }
 
+// Sleeps for `duration` in `kStopCheckInterval` increments, returning early if
+// `stop_token.stop_requested()` becomes true.
+void SleepForWithStopCheck(const absl::Duration duration,
+                           const StopToken& stop_token) {
+  const absl::Time deadline = absl::Now() + duration;
+  while (!stop_token.stop_requested()) {
+    const absl::Duration remaining = deadline - absl::Now();
+    if (remaining <= absl::ZeroDuration()) {
+      break;
+    }
+    absl::SleepFor(std::min(remaining, kStopCheckInterval));
+  }
+}
 }  // namespace
 
 void FromProto(
@@ -526,12 +542,9 @@ MotionPlannerService::MotionPlannerService(
                         << organization_id_ << ", workcell=" << workcell_name_;
               break;
             }
-            // Instead of a single 5-second sleep, check stop_requested() in
-            // 100ms increments to ensure the thread exits immediately during
-            // service shutdown.
-            for (int i = 0; i < 50 && !stop_token.stop_requested(); ++i) {
-              absl::SleepFor(absl::Milliseconds(100));
-            }
+            // Sleep in `kStopCheckInterval` increments to ensure the thread
+            // exits immediately during service shutdown.
+            SleepForWithStopCheck(kContextRetryDelay, stop_token);
           }
         });
   }

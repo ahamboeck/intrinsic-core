@@ -281,8 +281,15 @@ int main(int argc, char** argv) {
   ASSIGN_OR_DIE(std::unique_ptr<ConductorImpl> conductor,
                 ConductorImpl::Create(conductor_params));
 
-  // The conductor is served on a separate server so that worlds can be
-  // re-created using execution context. Additionally, its RPCs cannot be
+  // Recreates the solution worlds from a recovered execution context before the
+  // conductor starts serving so that no conductor request observes missing or
+  // stale worlds after a restart. A failure is logged but not fatal: the
+  // conductor still serves requests and the worlds are recreated by the next
+  // StartSolution call, i.e., when the solution is (re)started.
+  INTR_LOG_IF_ERROR(absl::LogSeverity::kError,
+                    conductor->CreateSolutionWorldsIfValidExecutionContext());
+
+  // The conductor is served on a separate server so that its RPCs cannot be
   // starved by long-running world RPCs sharing the same completion queues.
   const std::string conductor_address =
       absl::StrCat("[::]:", absl::GetFlag(FLAGS_conductor_port));

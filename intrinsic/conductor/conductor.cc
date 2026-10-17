@@ -118,6 +118,8 @@ constexpr int kExtstatusCodeEditWorldSkippedWorldUpdate = 10002;
 constexpr absl::string_view kConductorComponent = "ai.intrinsic.conductor";
 constexpr absl::Duration kDefaultGrpcTimeout = absl::Seconds(30);
 constexpr absl::Duration kSimResetTimeout = absl::Seconds(60);
+// ID of the edit world that is composed from the solution's resource set.
+constexpr absl::string_view kInitWorldId = "init_world";
 
 std::unique_ptr<grpc::ClientContext> CreateClientContext(
     const acl::User* user, absl::Duration timeout = kDefaultGrpcTimeout) {
@@ -312,6 +314,36 @@ ConductorImpl::~ConductorImpl() {
   CancelExecutionContextOperation(/*context=*/nullptr, /*wait=*/true);
 }
 
+absl::Status ConductorImpl::CreateSolutionWorldsIfValidExecutionContext() {
+  absl::MutexLock lock(mu_);
+  if (execution_context_ == nullptr) {
+    LOG(INFO) << "No valid execution context found, skipping creation of "
+                 "solution worlds.";
+    return absl::OkStatus();
+  }
+
+  // An execution context is only valid for creating the solution worlds if
+  // all of its world IDs are set. Otherwise, e.g., if the conductor stopped
+  // before StartSolution set the edit world ID, it is treated like a missing
+  // execution context.
+  if (execution_context_->EditWorldID().empty() ||
+      execution_context_->BeliefWorldID().empty() ||
+      execution_context_->SimWorldID().empty()) {
+    LOG(WARNING) << "Recovered execution context is not valid, skipping "
+                    "creation of solution worlds: "
+                 << execution_context_->ToProto().ShortDebugString();
+    return absl::OkStatus();
+  }
+
+  LOG(INFO) << "Creating solution worlds for recovered execution context: "
+            << execution_context_->ToProto().ShortDebugString();
+
+  // Skips invalid world updates so that the worlds are still created. Skipped
+  // updates are reported through the edit world status.
+  return ToAbslStatus(CreateWorldsFromSolution(
+      /*context=*/nullptr, /*skip_invalid_world_updates=*/true));
+}
+
 grpc::Status ConductorImpl::StartSolution(
     grpc::ServerContext* context, const ConductorStartSolutionRequest* request,
     ConductorStartSolutionResponse* response) {
@@ -337,7 +369,7 @@ grpc::Status ConductorImpl::StartSolution(
       execution_context_,
       ExecutionContext::Create(operation_mode, kv_store_.get()));
 
-  INTR_RETURN_IF_ERROR_GRPC(execution_context_->SetEditWorldID("init_world"))
+  INTR_RETURN_IF_ERROR_GRPC(execution_context_->SetEditWorldID(kInitWorldId))
       << "failed to set edit world ID: ";
 
   // Resets the world service just in case except for the ones that are
@@ -399,6 +431,13 @@ grpc::Status ConductorImpl::CreateWorldsFromSolution(
       update_result.skipped_scene_objects_size() > 0) {
     absl::Status status = execution_context_->SetEditWorldStatus(
         MakeEditWorldStatus(update_result));
+    if (!status.ok()) {
+      return resume_updater(ToGrpcStatus(status));
+    }
+  } else if (execution_context_->EditWorldStatus().has_value()) {
+    // Clears a warning from a previous composition (e.g., one recovered with
+    // the execution context) since the edit world was composed without errors.
+    absl::Status status = execution_context_->SetEditWorldStatus(std::nullopt);
     if (!status.ok()) {
       return resume_updater(ToGrpcStatus(status));
     }
@@ -1334,7 +1373,7 @@ absl::StatusOr<std::unique_ptr<ConductorImpl>> ConductorImpl::Create(
   INTR_ASSIGN_OR_RETURN(
       auto save_scene_monitor,
       SaveSceneMonitor::Create(
-          "init_world",
+          std::string(kInitWorldId),
           SaveSceneMonitorOptions{
               .resource_world = resource_world.get(),
               .hss_address = params.hss_service_address,

@@ -49,7 +49,6 @@ cc_library(
         "@intrinsic_apis//intrinsic/scene/proto/v1:scene_object_cc_proto",
         "@intrinsic_apis//intrinsic/world/proto:physics_component_cc_proto",
         "@or_tools//ortools/base:path",
-        "@tinygltf",
     ],
 )
 

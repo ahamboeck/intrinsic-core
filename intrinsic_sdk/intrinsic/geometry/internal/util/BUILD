@@ -91,7 +91,6 @@ cc_library(
         "@assimp",
         "@com_gitlab_libeigen_eigen//:eigen",
         "@or_tools//ortools/base:path",
-        "@tinygltf",
     ],
 )
 

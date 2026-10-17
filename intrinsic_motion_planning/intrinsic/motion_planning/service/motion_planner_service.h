@@ -113,7 +113,6 @@ struct WorldAndProto {
   World world;
   intrinsic_proto::world::internal::World world_proto;
 };
-
 // A gRPC server that handles motion planning requests.
 class MotionPlannerService : public intrinsic_proto::motion_planning::v1::
                                  MotionPlannerService::Service {

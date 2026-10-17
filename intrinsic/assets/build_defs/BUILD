@@ -133,6 +133,8 @@ go_binary(
         "//intrinsic/tools/inctl/util:traceutil",
         "//intrinsic/util/go:build",
         "//intrinsic/util/proto:protoio",
+        "//intrinsic/util/status:extstatus",
+        "//intrinsic_sdk/intrinsic/assets/proto/v1:solution_deployment_go_proto",
         "@com_github_cenkalti_backoff_v4//:go_default_library",
         "@com_github_golang_glog//:go_default_library",
         "@com_github_pkg_errors//:go_default_library",

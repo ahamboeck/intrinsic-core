@@ -41,11 +41,13 @@ import (
 	"intrinsic/storage/content_addressable_storage/pkg/filetocas"
 	"intrinsic/tools/inctl/cmd/apputil"
 	"intrinsic/tools/inctl/util/casgeometryuploader"
+	"intrinsic/tools/inctl/util/color"
 	"intrinsic/tools/inctl/util/introspection"
 	"intrinsic/tools/inctl/util/releaseutil"
 	"intrinsic/tools/inctl/util/traceutil"
 	"intrinsic/util/go/build"
 	"intrinsic/util/proto/protoio"
+	"intrinsic/util/status/extstatus"
 
 	lropb "cloud.google.com/go/longrunning/autogen/longrunningpb"
 	"github.com/bazelbuild/rules_go/go/runfiles"
@@ -59,6 +61,7 @@ import (
 
 	assetpb "intrinsic/assets/build_defs/asset_go_proto"
 	assetartifactspb "intrinsic/assets/proto/v1/asset_artifacts_go_proto"
+	solutiondeploymentpb "intrinsic/assets/proto/v1/solution_deployment_go_proto"
 	apb "intrinsic/config/proto/application_go_proto"
 	commonpb "intrinsic/config/proto/common_go_proto"
 	opmodepb "intrinsic/config/proto/operation_mode_go_proto"
@@ -76,6 +79,66 @@ func readLocalSolution(path string) (*assetpb.LocalSolution, error) {
 		return nil, fmt.Errorf("failed to read solution assets proto %q: %w", path, err)
 	}
 	return assets, nil
+}
+
+// updateSolutionDeployment updates the given solution deployment using the provided client with retry logic.
+func updateSolutionDeployment(ctx context.Context, client solutiondeploymentpb.SolutionDeploymentServiceClient, lroClient lropb.OperationsClient, sd *solutiondeploymentpb.SolutionDeployment) error {
+	ctx, span := trace.StartSpan(ctx, "solution_update.updateSolutionDeployment")
+	defer span.End()
+
+	deployRetries := 5
+	eb := backoff.NewExponentialBackOff()
+	eb.InitialInterval = 2 * time.Second
+	eb.RandomizationFactor = 0.5
+	deployBackoff := backoff.WithContext(backoff.WithMaxRetries(eb, uint64(deployRetries)), ctx)
+	return backoff.Retry(func() error {
+		op, err := client.UpdateSolutionDeployment(ctx, &solutiondeploymentpb.UpdateSolutionDeploymentRequest{
+			SolutionDeployment: sd,
+			AllowMissing:       true,
+		})
+		if err != nil {
+			// Retry to be resilient against transient infrastructure failures
+			if status.Code(err) == codes.Unavailable {
+				log.WarningContextf(ctx, "Retrying UpdateSolutionDeployment due to transient error: %v", err)
+				return err // Retry
+			}
+			return backoff.Permanent(err)
+		}
+
+		name := op.GetName()
+		for !op.GetDone() {
+			op, err = lroClient.WaitOperation(ctx, &lropb.WaitOperationRequest{
+				Name: name,
+			})
+			if err != nil {
+				if status.Code(err) == codes.Unavailable {
+					log.WarningContextf(ctx, "Retrying UpdateSolutionDeployment due to transient error: %v", err)
+					return err // Retry
+				}
+				return backoff.Permanent(fmt.Errorf("unable to check status of solution update operation %q: %w", name, err))
+			}
+		}
+
+		if err := status.ErrorProto(op.GetError()); err != nil {
+			if status.Code(err) == codes.Unavailable {
+				log.WarningContextf(ctx, "Retrying UpdateSolutionDeployment due to transient error: %v", err)
+				return err // Retry
+			}
+			return backoff.Permanent(fmt.Errorf("solution update operation %q failed: %w", name, err))
+		}
+
+		if op.GetMetadata() != nil {
+			metadata := &solutiondeploymentpb.UpdateSolutionDeploymentMetadata{}
+			if err := op.GetMetadata().UnmarshalTo(metadata); err != nil {
+				log.WarningContextf(ctx, "failed to check for warnings: failed to unmarshal operation metadata: %v", err)
+			} else if metadata.GetWarnings() != nil {
+				ext := extstatus.FromProto(metadata.GetWarnings())
+				color.C.Yellow().Printf("\nWARNING: Solution updated with warnings:\n%v\n", ext)
+			}
+		}
+
+		return nil // Success
+	}, deployBackoff)
 }
 
 // deployApplication deploys the given application using the provided client with retry logic.
@@ -268,12 +331,14 @@ $ bazel run //intrinsic/config:empty_application --\
 				return fmt.Errorf("--registry must be specified if --skip-direct-upload is used")
 			}
 
+			lroClient := lropb.NewOperationsClient(ingressConn)
+
 			// Process the application's assets as defined in the LocalSolution proto
 			// and populate the Assets and Instances maps in the Application proto.
 			startProcessAssets := time.Now()
 			baseRDProcessor := referenceddata.NewProcessor(
 				assetartifactspb.NewAssetArtifactsClient(ingressConn),
-				lropb.NewOperationsClient(ingressConn),
+				lroClient,
 			)
 			rdProcessor := cascopyprocessor.New(baseRDProcessor, project, casClient)
 			defer rdProcessor.Close()
@@ -300,25 +365,32 @@ $ bazel run //intrinsic/config:empty_application --\
 			if err != nil {
 				return fmt.Errorf("failed to process solution: %w", err)
 			}
-			app, err := solutionconversion.AsApplication(solutionDeployment)
-			if err != nil {
-				return fmt.Errorf("failed to convert solution deployment to application: %w", err)
-			}
 			if mode := operationmode.FromString(flagOperationMode); mode != opmodepb.OperationMode_OPERATION_MODE_UNSPECIFIED {
-				app.OperationMode = mode
+				solutionDeployment.OperationMode = mode
 			}
-			app.GetMetadata().LastUpdatedBy = apputil.CurrentUsername()
-			// This is required for backwards compatibility with old clusters that
-			// enforce category is either instance or branch in the deploy service.
-			// TODO: b/568089088 - remove when all clusters we want to support have
-			// go/inpr/56938.
-			app.GetMetadata().Category = commonpb.Metadata_INSTANCE
 			dProcessAssets := time.Since(startProcessAssets)
 
 			startDeployApplication := time.Now()
-			deployClient := deploygrpcpb.NewDeployServiceClient(ingressConn)
-			if err := deployApplication(ctx, deployClient, app); err != nil {
-				return fmt.Errorf("deploy application: %w", err)
+			solutionDeploymentClient := solutiondeploymentpb.NewSolutionDeploymentServiceClient(ingressConn)
+			if err := updateSolutionDeployment(ctx, solutionDeploymentClient, lroClient, solutionDeployment); status.Code(err) == codes.Unimplemented {
+				log.InfoContextf(ctx, "UpdateSolutionDeployment is not implemented, falling back to DeployApplication")
+				app, err := solutionconversion.AsApplication(solutionDeployment)
+				if err != nil {
+					return fmt.Errorf("failed to convert solution deployment to application: %w", err)
+				}
+				app.GetMetadata().LastUpdatedBy = apputil.CurrentUsername()
+				// This is required for backwards compatibility with old clusters that
+				// enforce category is either instance or branch in the deploy service.
+				// TODO: b/568089088 - remove when all clusters we want to support have
+				// go/inpr/56938.
+				app.GetMetadata().Category = commonpb.Metadata_INSTANCE
+
+				deployClient := deploygrpcpb.NewDeployServiceClient(ingressConn)
+				if err := deployApplication(ctx, deployClient, app); err != nil {
+					return fmt.Errorf("deploy application: %w", err)
+				}
+			} else if err != nil {
+				return fmt.Errorf("update solution deployment: %w", err)
 			}
 			dDeployApplication := time.Since(startDeployApplication)
 
